@@ -90,6 +90,7 @@
     <section class="bg-white border-b border-slate-200 sticky top-14 z-20 shadow-xs">
       <div class="max-w-7xl mx-auto px-3.5 sm:px-6 py-2.5 space-y-2">
         <div class="grid grid-cols-12 gap-2">
+          <!-- Từ tháng -->
           <div class="col-span-4 sm:col-span-3 relative">
             <span class="text-[9px] font-bold uppercase text-slate-400 absolute left-2 top-1">Từ tháng</span>
             <select id="filterFromMonth" onchange="onDateRangeChange('from')" class="w-full bg-slate-50 border border-slate-200 text-slate-900 text-xs rounded-xl pt-3.5 pb-1.5 px-2 font-bold focus:ring-emerald-600 focus:border-emerald-600">
@@ -97,6 +98,7 @@
             </select>
           </div>
 
+          <!-- Đến tháng -->
           <div class="col-span-4 sm:col-span-3 relative">
             <span class="text-[9px] font-bold uppercase text-slate-400 absolute left-2 top-1">Đến tháng</span>
             <select id="filterToMonth" onchange="onDateRangeChange('to')" class="w-full bg-slate-50 border border-slate-200 text-slate-900 text-xs rounded-xl pt-3.5 pb-1.5 px-2 font-bold focus:ring-emerald-600 focus:border-emerald-600">
@@ -104,6 +106,7 @@
             </select>
           </div>
 
+          <!-- Nhân viên Sale -->
           <div class="col-span-4 sm:col-span-6 relative">
             <span class="text-[9px] font-bold uppercase text-slate-400 absolute left-2 top-1">Nhân viên Sale</span>
             <select id="filterSalesRep" onchange="onFilterChange()" class="w-full bg-slate-50 border border-slate-200 text-slate-900 text-xs rounded-xl pt-3.5 pb-1.5 px-2 font-bold focus:ring-emerald-600 focus:border-emerald-600 disabled:opacity-80 disabled:bg-emerald-50/70 disabled:text-emerald-900">
@@ -572,7 +575,7 @@
 
       try {
         const { data, error } = await supabaseClient
-          .from('app_users')
+          .from('reconcile_users')
           .select('*')
           .eq('username', username)
           .eq('password', password)
@@ -644,7 +647,7 @@
     }
 
     async function loadUsersList() {
-      const { data } = await supabaseClient.from('app_users').select('*').order('created_at');
+      const { data } = await supabaseClient.from('reconcile_users').select('*').order('created_at');
       const container = document.getElementById('usersListContainer');
       container.innerHTML = (data || []).map(u => `
         <div class="p-3 rounded-xl border border-slate-200 bg-white flex items-center justify-between gap-2 text-xs">
@@ -673,7 +676,7 @@
       const rep = state.salesReps.find(r => r.id === salesRepId);
       const displayName = role === 'ADMIN' ? `Admin (${username})` : rep.full_name;
 
-      const { error } = await supabaseClient.from('app_users').insert({
+      const { error } = await supabaseClient.from('reconcile_users').insert({
         username, password, display_name: displayName, role, sales_rep_id: salesRepId
       });
       if (error) return alert('Lỗi tạo tài khoản: ' + error.message);
@@ -685,7 +688,7 @@
 
     async function deleteAppUser(id) {
       if (!confirm('Xóa tài khoản này?')) return;
-      await supabaseClient.from('app_users').delete().eq('id', id);
+      await supabaseClient.from('reconcile_users').delete().eq('id', id);
       await loadUsersList();
     }
 
