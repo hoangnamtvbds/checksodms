@@ -2,448 +2,387 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Đối Chiếu Sale KiotViet & DMS | Carlsberg Team BC</title>
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
-  <!-- SheetJS (XLSX) để đọc file Excel KiotViet & DMS trực tiếp trên trình duyệt -->
+  <!-- SheetJS (XLSX) -->
   <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
   <!-- Supabase JS v2 -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-    body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
-    .tab-active { border-bottom: 2px solid #047857; color: #047857; font-weight: 600; }
-    .tab-inactive { color: #64748b; }
-    .tab-inactive:hover { color: #0f172a; }
-    /* Custom scrollbar */
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: #f1f5f9; }
-    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #f1f5f9;
+      padding-bottom: 84px; /* Chừa chỗ cho Bottom Navigation Bar trên mobile */
+      -webkit-tap-highlight-color: transparent;
+    }
+    @media (min-width: 768px) {
+      body { padding-bottom: 24px; }
+    }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
   </style>
 </head>
-<body class="text-slate-800 antialiased">
+<body class="text-slate-800 antialiased select-none sm:select-auto">
 
-  <!-- TOP HEADER -->
-  <header class="bg-emerald-900 text-white shadow-md sticky top-0 z-30">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <div class="bg-emerald-700 p-2 rounded-lg">
-          <i data-lucide="scale" class="w-6 h-6 text-emerald-200"></i>
+  <!-- ==================== TOP APP BAR (GỌN NHẸ CHO MOBILE) ==================== -->
+  <header class="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-900 text-white shadow-md sticky top-0 z-30">
+    <div class="max-w-7xl mx-auto px-3.5 sm:px-6 h-14 flex items-center justify-between gap-2">
+      <div class="flex items-center gap-2.5 min-w-0">
+        <div class="bg-emerald-700/80 border border-emerald-500/30 p-1.5 rounded-xl shrink-0">
+          <i data-lucide="scale" class="w-5 h-5 text-emerald-200"></i>
         </div>
-        <div>
-          <h1 class="font-bold text-lg tracking-tight leading-tight">CARLSBERG • ĐỐI CHIẾU SALE THÔNG MINH</h1>
-          <p class="text-xs text-emerald-300">KiotViet vs DMS (NPP Viet Bill • Team Bến Cát)</p>
+        <div class="truncate">
+          <h1 class="font-extrabold text-sm sm:text-base tracking-tight truncate">ĐỐI CHIẾU SALE • TEAM BC</h1>
+          <div class="flex items-center gap-1.5 text-[11px] text-emerald-300">
+            <span id="dbStatusDot" class="w-2 h-2 rounded-full bg-amber-400 shrink-0"></span>
+            <span id="dbStatusText" class="truncate">Chưa kết nối Supabase</span>
+          </div>
         </div>
       </div>
 
-      <div class="flex items-center gap-2 sm:gap-3">
-        <span id="dbStatusBadge" class="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-800 text-emerald-200">
-          <span class="w-2 h-2 rounded-full bg-amber-400"></span> Chưa kết nối Supabase
-        </span>
-        <button onclick="openUploadModal()" class="inline-flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-semibold text-xs sm:text-sm px-3.5 py-2 rounded-lg shadow transition">
+      <div class="flex items-center gap-1.5 shrink-0">
+        <button onclick="openUploadModal()" class="inline-flex items-center gap-1 bg-amber-400 hover:bg-amber-500 active:scale-95 text-slate-950 font-bold text-xs px-3 py-2 rounded-xl shadow transition">
           <i data-lucide="upload-cloud" class="w-4 h-4"></i>
-          <span>Tải File Excel</span>
+          <span>Nạp Excel</span>
         </button>
-        <button onclick="openConfigModal()" class="p-2 rounded-lg bg-emerald-800 hover:bg-emerald-700 text-emerald-100 transition" title="Cấu hình Supabase">
-          <i data-lucide="settings" class="w-5 h-5"></i>
+        <button onclick="openConfigModal()" class="p-2 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-emerald-100 transition" title="Cài đặt Supabase">
+          <i data-lucide="settings" class="w-4 h-4"></i>
         </button>
       </div>
     </div>
   </header>
 
-  <!-- FILTER BAR -->
-  <section class="bg-white border-b border-slate-200 sticky top-16 z-20 shadow-sm">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-wrap items-center justify-between gap-3">
-      <div class="flex flex-wrap items-center gap-3">
-        <!-- Chọn Tháng -->
-        <div class="flex items-center gap-2">
-          <label class="text-xs font-semibold text-slate-500 uppercase">Tháng:</label>
-          <select id="filterMonth" onchange="onFilterChange()" class="bg-slate-50 border border-slate-300 text-slate-800 text-sm rounded-lg focus:ring-emerald-600 focus:border-emerald-600 px-3 py-1.5 font-medium">
-            <option value="">-- Đang tải tháng --</option>
+  <!-- ==================== COMPACT FILTER BAR (1 HÀNG TRÊN MOBILE) ==================== -->
+  <section class="bg-white border-b border-slate-200 sticky top-14 z-20 shadow-xs">
+    <div class="max-w-7xl mx-auto px-3.5 sm:px-6 py-2.5 space-y-2">
+      <!-- Hàng 1: Chọn Tháng + Chọn Sale -->
+      <div class="grid grid-cols-2 gap-2">
+        <div class="relative">
+          <span class="text-[10px] font-bold uppercase text-slate-400 absolute left-2.5 top-1">Tháng</span>
+          <select id="filterMonth" onchange="onFilterChange()" class="w-full bg-slate-50 border border-slate-200 text-slate-900 text-xs sm:text-sm rounded-xl pt-4 pb-1.5 px-2.5 font-bold focus:ring-emerald-600 focus:border-emerald-600">
+            <option value="">Đang tải...</option>
           </select>
         </div>
 
-        <!-- Chọn Sale -->
-        <div class="flex items-center gap-2">
-          <label class="text-xs font-semibold text-slate-500 uppercase">Nhân viên Sale:</label>
-          <select id="filterSalesRep" onchange="onFilterChange()" class="bg-slate-50 border border-slate-300 text-slate-800 text-sm rounded-lg focus:ring-emerald-600 focus:border-emerald-600 px-3 py-1.5 font-medium">
-            <option value="ALL">Tất cả 5 Sale (Team BC)</option>
-          </select>
-        </div>
-
-        <!-- Lọc Brand -->
-        <div class="flex items-center gap-2">
-          <label class="text-xs font-semibold text-slate-500 uppercase">Nhãn hàng:</label>
-          <select id="filterBrand" onchange="renderActiveTab()" class="bg-slate-50 border border-slate-300 text-slate-800 text-sm rounded-lg focus:ring-emerald-600 focus:border-emerald-600 px-3 py-1.5 font-medium">
-            <option value="ALL">Tất cả Brand Carlsberg</option>
-            <option value="Carlsberg">Carlsberg</option>
-            <option value="1664 Blanc">1664 Blanc</option>
-            <option value="Tuborg Ice">Tuborg Ice</option>
-            <option value="Tuborg Green">Tuborg Green</option>
-            <option value="Huda">Huda</option>
-            <option value="Somersby">Somersby</option>
+        <div class="relative">
+          <span class="text-[10px] font-bold uppercase text-slate-400 absolute left-2.5 top-1">Nhân viên Sale</span>
+          <select id="filterSalesRep" onchange="onFilterChange()" class="w-full bg-slate-50 border border-slate-200 text-slate-900 text-xs sm:text-sm rounded-xl pt-4 pb-1.5 px-2.5 font-bold focus:ring-emerald-600 focus:border-emerald-600">
+            <option value="ALL">Tất cả 5 Sale</option>
           </select>
         </div>
       </div>
 
-      <button onclick="refreshAllData()" class="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600 hover:text-emerald-700 bg-slate-100 hover:bg-emerald-50 px-3 py-1.5 rounded-lg transition">
-        <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Làm mới dữ liệu
-      </button>
+      <!-- Hàng 2: Thanh lọc nhanh Brand dạng Chips vuốt ngang -->
+      <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5" id="brandChipsContainer">
+        <button onclick="selectBrandChip('ALL')" data-brand="ALL" class="brand-chip px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap bg-emerald-700 text-white">Tất cả Brand</button>
+        <button onclick="selectBrandChip('1664 Blanc')" data-brand="1664 Blanc" class="brand-chip px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-slate-100 text-slate-600">1664 Blanc</button>
+        <button onclick="selectBrandChip('Tuborg Ice')" data-brand="Tuborg Ice" class="brand-chip px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-slate-100 text-slate-600">Tuborg Ice</button>
+        <button onclick="selectBrandChip('Tuborg Green')" data-brand="Tuborg Green" class="brand-chip px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-slate-100 text-slate-600">Tuborg Green</button>
+        <button onclick="selectBrandChip('Huda')" data-brand="Huda" class="brand-chip px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-slate-100 text-slate-600">Huda</button>
+        <button onclick="selectBrandChip('Carlsberg')" data-brand="Carlsberg" class="brand-chip px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-slate-100 text-slate-600">Carlsberg</button>
+        <button onclick="selectBrandChip('Somersby')" data-brand="Somersby" class="brand-chip px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-slate-100 text-slate-600">Somersby</button>
+      </div>
     </div>
 
-    <!-- MAIN NAVIGATION TABS -->
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex space-x-6 overflow-x-auto border-t border-slate-100">
-      <button id="tabBtn-reconcile" onclick="switchTab('reconcile')" class="py-3 text-sm whitespace-nowrap tab-active flex items-center gap-2">
-        <i data-lucide="bar-chart-3" class="w-4 h-4"></i> 1. Đối Chiếu Sản Lượng & Lũy Kế
+    <!-- DESKTOP TAB BAR (Ẩn trên Mobile vì Mobile dùng Bottom Nav) -->
+    <div class="hidden md:flex max-w-7xl mx-auto px-6 space-x-6 border-t border-slate-100">
+      <button onclick="switchTab('reconcile')" id="dTab-reconcile" class="py-3 text-sm font-semibold border-b-2 border-emerald-700 text-emerald-700 flex items-center gap-2">
+        <i data-lucide="bar-chart-3" class="w-4 h-4"></i> 1. Đối Chiếu & Lũy Kế
       </button>
-      <button id="tabBtn-kv" onclick="switchTab('kv')" class="py-3 text-sm whitespace-nowrap tab-inactive flex items-center gap-2">
+      <button onclick="switchTab('kv')" id="dTab-kv" class="py-3 text-sm font-medium text-slate-500 hover:text-slate-800 flex items-center gap-2">
         <i data-lucide="store" class="w-4 h-4"></i> 2. Khách Hàng KiotViet
       </button>
-      <button id="tabBtn-dms" onclick="switchTab('dms')" class="py-3 text-sm whitespace-nowrap tab-inactive flex items-center gap-2">
-        <i data-lucide="smartphone" class="w-4 h-4"></i> 3. Khách Hàng DMS (Viet Bill)
+      <button onclick="switchTab('dms')" id="dTab-dms" class="py-3 text-sm font-medium text-slate-500 hover:text-slate-800 flex items-center gap-2">
+        <i data-lucide="smartphone" class="w-4 h-4"></i> 3. Khách Hàng DMS
       </button>
-      <button id="tabBtn-custMatch" onclick="switchTab('custMatch')" class="py-3 text-sm whitespace-nowrap tab-inactive flex items-center gap-2">
-        <i data-lucide="git-merge" class="w-4 h-4"></i> 4. Ghép & Đối Chiếu Khách Hàng
+      <button onclick="switchTab('custMatch')" id="dTab-custMatch" class="py-3 text-sm font-medium text-slate-500 hover:text-slate-800 flex items-center gap-2">
+        <i data-lucide="git-merge" class="w-4 h-4"></i> 4. Ghép & Đối Chiếu KH
       </button>
-      <button id="tabBtn-promo" onclick="switchTab('promo')" class="py-3 text-sm whitespace-nowrap tab-inactive flex items-center gap-2">
-        <i data-lucide="gift" class="w-4 h-4"></i> 5. Hàng 0đ KV & Voucher DMS
+      <button onclick="switchTab('promo')" id="dTab-promo" class="py-3 text-sm font-medium text-slate-500 hover:text-slate-800 flex items-center gap-2">
+        <i data-lucide="gift" class="w-4 h-4"></i> 5. Hàng 0đ & Voucher
       </button>
     </div>
   </section>
 
-  <!-- MAIN CONTENT CONTAINER -->
-  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+  <!-- ==================== MAIN CONTENT ==================== -->
+  <main class="max-w-7xl mx-auto px-3.5 sm:px-6 py-4 space-y-4">
 
-    <!-- BANNER CẢNH BÁO MÃ SKU MỚI CHƯA PHÂN NHÓM -->
-    <div id="unmappedAlert" class="hidden mb-5 bg-amber-50 border border-amber-300 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-      <div class="flex items-start gap-3">
-        <i data-lucide="alert-triangle" class="w-5 h-5 text-amber-600 mt-0.5 shrink-0"></i>
+    <!-- CẢNH BÁO MÃ SKU MỚI -->
+    <div id="unmappedAlert" class="hidden bg-amber-50 border border-amber-300 rounded-2xl p-3.5 flex items-center justify-between gap-3">
+      <div class="flex items-start gap-2.5">
+        <i data-lucide="alert-triangle" class="w-5 h-5 text-amber-600 shrink-0 mt-0.5"></i>
         <div>
-          <h3 class="text-sm font-semibold text-amber-900">Phát hiện mã SKU mới chưa được gán nhóm sản phẩm!</h3>
-          <p id="unmappedText" class="text-xs text-amber-800 mt-0.5"></p>
+          <h3 class="text-xs font-bold text-amber-900">Có mã SKU mới chưa phân nhóm!</h3>
+          <p id="unmappedText" class="text-[11px] text-amber-800 mt-0.5"></p>
         </div>
       </div>
-      <button onclick="openSkuModal()" class="shrink-0 bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold px-3.5 py-2 rounded-lg">
-        Phân nhóm ngay
-      </button>
+      <button onclick="openSkuModal()" class="shrink-0 bg-amber-600 text-white text-xs font-bold px-3 py-1.5 rounded-xl">Gán nhóm</button>
     </div>
 
     <!-- ==================== TAB 1: ĐỐI CHIẾU SẢN LƯỢNG & LŨY KẾ ==================== -->
-    <div id="view-reconcile" class="space-y-6">
-      <!-- KPI Cards -->
-      <div class="grid grid-cols-2 lg:grid-cols-5 gap-4">
-        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-          <p class="text-xs font-medium text-slate-500">Bán KiotViet (Tính tiền)</p>
-          <p id="kpi-kvPaid" class="text-2xl font-bold text-slate-900 mt-1">0</p>
-          <p class="text-[11px] text-slate-400 mt-1">Gốc đối chiếu tháng chọn</p>
+    <div id="view-reconcile" class="space-y-4">
+
+      <!-- HERO CARD: TỔNG LŨY KẾ CUỐI KỲ (NỔI BẬT NHẤT TRÊN MOBILE) -->
+      <div class="bg-gradient-to-br from-emerald-950 via-emerald-900 to-teal-950 text-white rounded-2xl p-4 sm:p-5 shadow-md">
+        <div class="flex items-start justify-between gap-2">
+          <div>
+            <p class="text-xs font-medium text-emerald-300 uppercase tracking-wider">Tổng Lũy Kế Cuối Kỳ</p>
+            <div class="flex items-baseline gap-2.5 mt-1">
+              <span id="kpi-totalDiff" class="text-3xl sm:text-4xl font-extrabold tracking-tight">0</span>
+              <span class="text-xs text-emerald-200">thùng / két</span>
+            </div>
+            <p id="kpi-totalLabel" class="text-xs text-emerald-200 mt-1">Chưa có dữ liệu</p>
+          </div>
+          <button onclick="openSkuModal()" class="bg-white/10 hover:bg-white/20 text-emerald-100 text-[11px] font-semibold px-2.5 py-1.5 rounded-xl flex items-center gap-1 shrink-0">
+            <i data-lucide="layers" class="w-3.5 h-3.5"></i> Mã SKU
+          </button>
         </div>
-        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-          <p class="text-xs font-medium text-slate-500">Key DMS (Order)</p>
-          <p id="kpi-dmsOrder" class="text-2xl font-bold text-emerald-700 mt-1">0</p>
-          <p class="text-[11px] text-slate-400 mt-1">NPP Viet Bill (đã trừ Return)</p>
-        </div>
-        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-          <p class="text-xs font-medium text-slate-500">Lệch Tháng Trước Chuyển Sang</p>
-          <p id="kpi-prevDiff" class="text-2xl font-bold text-slate-700 mt-1">0</p>
-          <p class="text-[11px] text-slate-400 mt-1">Lũy kế đến hết tháng T-1</p>
-        </div>
-        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-          <p class="text-xs font-medium text-slate-500">Phát Sinh Tháng Này</p>
-          <p id="kpi-monthDiff" class="text-2xl font-bold mt-1">0</p>
-          <p class="text-[11px] text-slate-400 mt-1">= Key DMS - Bán KV</p>
-        </div>
-        <div class="bg-emerald-950 text-white p-4 rounded-xl shadow-sm col-span-2 lg:col-span-1">
-          <p class="text-xs font-medium text-emerald-300">Tổng Lũy Kế Cuối Kỳ</p>
-          <p id="kpi-totalDiff" class="text-2xl font-bold mt-1">0</p>
-          <p id="kpi-totalLabel" class="text-[11px] text-emerald-300 mt-1">Cân bằng số liệu</p>
+
+        <!-- 4 Chỉ số thành phần bên trong Hero Card -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mt-4 pt-3.5 border-t border-white/15">
+          <div class="bg-white/10 rounded-xl p-2.5">
+            <span class="text-[10px] text-emerald-200 block">Bán KV (Tính tiền)</span>
+            <span id="kpi-kvPaid" class="text-base sm:text-lg font-extrabold text-white">0</span>
+          </div>
+          <div class="bg-white/10 rounded-xl p-2.5">
+            <span class="text-[10px] text-emerald-200 block">Key DMS (Order)</span>
+            <span id="kpi-dmsOrder" class="text-base sm:text-lg font-extrabold text-amber-300">0</span>
+          </div>
+          <div class="bg-white/10 rounded-xl p-2.5">
+            <span class="text-[10px] text-emerald-200 block">Lệch Tháng Trước</span>
+            <span id="kpi-prevDiff" class="text-base sm:text-lg font-extrabold text-white">0</span>
+          </div>
+          <div class="bg-white/10 rounded-xl p-2.5">
+            <span class="text-[10px] text-emerald-200 block">Lệch Tháng Này</span>
+            <span id="kpi-monthDiff" class="text-base sm:text-lg font-extrabold text-white">0</span>
+          </div>
         </div>
       </div>
 
-      <!-- Bảng Đối Chiếu SKU Chuẩn -->
-      <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <div class="px-5 py-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div>
-            <h2 class="font-bold text-slate-800 text-base">Bảng Đối Chiếu Theo Nhóm SKU Chuẩn (Thùng / Két)</h2>
-            <p class="text-xs text-slate-500">Số dương (+): Key DMS dư so với bán KV • Số âm (-): Còn thiếu key trên DMS</p>
-          </div>
-          <button onclick="openSkuModal()" class="text-xs font-medium text-emerald-700 hover:underline flex items-center gap-1">
-            <i data-lucide="layers" class="w-3.5 h-3.5"></i> Xem bảng quy đổi mã SKU
-          </button>
-        </div>
-        <div class="overflow-x-auto">
-          <table class="w-full text-sm text-left">
-            <thead class="bg-slate-50 text-slate-600 font-semibold text-xs uppercase border-b border-slate-200">
-              <tr>
-                <th class="px-4 py-3">Nhãn Hàng</th>
-                <th class="px-4 py-3">Sản Phẩm Chuẩn (Gộp mã)</th>
-                <th class="px-4 py-3 text-right">Bán KV<br><span class="text-[10px] font-normal lowercase">(tính tiền)</span></th>
-                <th class="px-4 py-3 text-right">Key DMS<br><span class="text-[10px] font-normal lowercase">(order)</span></th>
-                <th class="px-4 py-3 text-right bg-slate-100/70">Lệch Tháng Trước<br><span class="text-[10px] font-normal lowercase">(tồn đầu kỳ)</span></th>
-                <th class="px-4 py-3 text-right">Lệch Tháng Này<br><span class="text-[10px] font-normal lowercase">(dms - kv)</span></th>
-                <th class="px-4 py-3 text-right bg-emerald-50/70 text-emerald-900">Tổng Lũy Kế<br><span class="text-[10px] font-normal lowercase">(cuối kỳ)</span></th>
-                <th class="px-4 py-3 text-right text-amber-700">Hàng 0đ KV<br><span class="text-[10px] font-normal lowercase">(tặng kèm)</span></th>
-              </tr>
-            </thead>
-            <tbody id="reconcileTableBody" class="divide-y divide-slate-100">
-              <tr><td colspan="8" class="px-4 py-8 text-center text-slate-400">Chưa có dữ liệu. Hãy cấu hình Supabase và tải file Excel lên.</td></tr>
-            </tbody>
-            <tfoot id="reconcileTableFoot" class="bg-slate-100 font-bold text-slate-900 border-t-2 border-slate-300">
-            </tfoot>
-          </table>
+      <!-- DANH SÁCH THẺ SẢN PHẨM CHUẨN (MOBILE CARD VIEW - KHÔNG CẦN KÉO NGANG) -->
+      <div class="flex items-center justify-between px-1">
+        <h2 class="font-bold text-slate-800 text-sm">Chi Tiết Theo Nhóm Sản Phẩm</h2>
+        <span class="text-[11px] text-slate-500">(-) Thiếu key DMS • (+) Dư key</span>
+      </div>
+
+      <div id="reconcileMobileCards" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div class="bg-white p-6 rounded-2xl border border-slate-200 text-center text-xs text-slate-400">
+          Chưa có dữ liệu đối chiếu. Bấm <b>Nạp Excel</b> ở góc trên để tải file lên.
         </div>
       </div>
     </div>
 
     <!-- ==================== TAB 2: KHÁCH HÀNG KIOTVIET ==================== -->
-    <div id="view-kv" class="hidden space-y-4">
-      <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div class="relative flex-1 max-w-md">
-          <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-2.5"></i>
-          <input type="text" id="searchKvCust" onkeyup="renderKvCustomersTab()" placeholder="Tìm tên quán, mã KH hoặc SĐT trên KiotViet..." class="w-full pl-9 pr-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-emerald-600 focus:border-emerald-600" />
-        </div>
-        <div class="text-xs text-slate-500">
-          Bấm vào từng khách hàng để xổ chi tiết sản phẩm đã mua trong tháng & 3 tháng gần nhất
-        </div>
+    <div id="view-kv" class="hidden space-y-3">
+      <div class="relative">
+        <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-3"></i>
+        <input type="text" id="searchKvCust" onkeyup="renderKvCustomersTab()" placeholder="Tìm tên quán, mã KH hoặc SĐT KiotViet..." class="w-full bg-white pl-10 pr-4 py-2.5 text-sm border border-slate-200 rounded-2xl shadow-xs focus:ring-emerald-600 focus:border-emerald-600" />
       </div>
       <div id="kvCustomersList" class="space-y-2.5"></div>
     </div>
 
     <!-- ==================== TAB 3: KHÁCH HÀNG DMS ==================== -->
-    <div id="view-dms" class="hidden space-y-4">
-      <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div class="relative flex-1 max-w-md">
-          <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-2.5"></i>
-          <input type="text" id="searchDmsCust" onkeyup="renderDmsCustomersTab()" placeholder="Tìm tên Outlet hoặc OutletCode trên DMS..." class="w-full pl-9 pr-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-emerald-600 focus:border-emerald-600" />
-        </div>
-        <div class="text-xs text-slate-500">
-          Chỉ hiển thị Outlet thuộc NPP Viet Bill (CD1084) • Bấm vào tên quán để xem chi tiết SKU đã key
-        </div>
+    <div id="view-dms" class="hidden space-y-3">
+      <div class="relative">
+        <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-3"></i>
+        <input type="text" id="searchDmsCust" onkeyup="renderDmsCustomersTab()" placeholder="Tìm tên Outlet hoặc mã DMS (Viet Bill)..." class="w-full bg-white pl-10 pr-4 py-2.5 text-sm border border-slate-200 rounded-2xl shadow-xs focus:ring-emerald-600 focus:border-emerald-600" />
       </div>
       <div id="dmsCustomersList" class="space-y-2.5"></div>
     </div>
 
     <!-- ==================== TAB 4: GHÉP & ĐỐI CHIẾU KHÁCH HÀNG ==================== -->
-    <div id="view-custMatch" class="hidden space-y-6">
-      <!-- Khu vực 1: Bộ lọc thông minh gợi ý ghép cặp KV <-> DMS -->
-      <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
-        <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-4 border-b border-slate-100">
+    <div id="view-custMatch" class="hidden space-y-4">
+      <!-- Gợi ý ghép thông minh -->
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-xs p-4">
+        <div class="flex items-center justify-between gap-2 pb-3 border-b border-slate-100">
           <div>
-            <h2 class="font-bold text-slate-800 text-base flex items-center gap-2">
-              <i data-lucide="sparkles" class="w-5 h-5 text-amber-500"></i> Ghép Cặp Khách Hàng KiotViet & DMS (Lưu vĩnh viễn)
+            <h2 class="font-bold text-slate-800 text-sm flex items-center gap-1.5">
+              <i data-lucide="sparkles" class="w-4 h-4 text-amber-500"></i> Gợi Ý Ghép Quán 2 Bên
             </h2>
-            <p class="text-xs text-slate-500 mt-0.5">Hệ thống tự lọc theo cùng Sale phụ trách và chấm điểm giống tên. Sale xác nhận 1 lần, các tháng sau tự động đối chiếu.</p>
+            <p class="text-[11px] text-slate-500">Xác nhận 1 lần, lưu vĩnh viễn cho các tháng sau</p>
           </div>
-          <div class="flex items-center gap-2">
-            <button onclick="openManualLinkModal()" class="bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold px-3.5 py-2 rounded-lg flex items-center gap-1.5">
-              <i data-lucide="link" class="w-3.5 h-3.5"></i> Ghép thủ công 2 quán
-            </button>
-          </div>
+          <button onclick="openManualLinkModal()" class="bg-emerald-700 active:scale-95 text-white text-xs font-bold px-3 py-2 rounded-xl flex items-center gap-1 shrink-0">
+            <i data-lucide="link" class="w-3.5 h-3.5"></i> Ghép tay
+          </button>
         </div>
-
-        <div id="suggestionsContainer" class="mt-4 space-y-2">
-          <p class="text-sm text-slate-400 text-center py-4">Đang tải gợi ý ghép khách hàng...</p>
-        </div>
+        <div id="suggestionsContainer" class="mt-3 space-y-2.5"></div>
       </div>
 
-      <!-- Khu vực 2: Bảng Đối Chiếu Trực Quan Các Khách Hàng Đã Ghép (Xem được lịch sử 3 tháng) -->
-      <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <div class="px-5 py-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <h2 class="font-bold text-slate-800 text-base">Đối Chiếu Trực Quan Khách Hàng Đã Ghép</h2>
-            <p class="text-xs text-slate-500">Bấm vào một khách hàng để xem chi tiết từng sản phẩm và lịch sử 3 tháng gần nhất</p>
-          </div>
-          <div class="relative w-full sm:w-72">
-            <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-2.5"></i>
-            <input type="text" id="searchLinkedCust" onkeyup="renderLinkedCustomersComparison()" placeholder="Tìm khách hàng đã ghép..." class="w-full pl-9 pr-3 py-1.5 text-sm border border-slate-300 rounded-lg" />
-          </div>
+      <!-- Danh sách đã ghép & đối chiếu 3 tháng -->
+      <div class="space-y-2.5">
+        <div class="flex items-center justify-between gap-2">
+          <h2 class="font-bold text-slate-800 text-sm">Quán Đã Ghép (Xem Lệch 3 Tháng)</h2>
         </div>
-        <div id="linkedComparisonList" class="divide-y divide-slate-200"></div>
+        <div class="relative">
+          <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-3"></i>
+          <input type="text" id="searchLinkedCust" onkeyup="renderLinkedCustomersComparison()" placeholder="Tìm khách hàng đã ghép..." class="w-full bg-white pl-10 pr-4 py-2.5 text-sm border border-slate-200 rounded-2xl shadow-xs" />
+        </div>
+        <div id="linkedComparisonList" class="space-y-2.5"></div>
       </div>
     </div>
 
-    <!-- ==================== TAB 5: HÀNG 0Đ KIOTVIET & VOUCHER DMS ==================== -->
-    <div id="view-promo" class="hidden grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <!-- Cột trái: Hàng 0đ KiotViet -->
-      <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <div class="px-5 py-4 bg-amber-50/70 border-b border-amber-200 flex items-center justify-between">
-          <div>
-            <h2 class="font-bold text-amber-950 text-base">Hàng Xuất 0đ Trên KiotViet</h2>
-            <p class="text-xs text-amber-800">Tách riêng khỏi số bán đối chiếu • Hiển thị kèm ghi chú CTKM</p>
-          </div>
-          <span id="badge-kvFreeTotal" class="bg-amber-600 text-white text-xs font-bold px-2.5 py-1 rounded-full">0 két/thùng</span>
-        </div>
-        <div class="overflow-x-auto max-h-[550px]">
-          <table class="w-full text-xs text-left">
-            <thead class="bg-slate-50 text-slate-600 font-semibold uppercase border-b sticky top-0">
-              <tr>
-                <th class="px-3 py-2.5">Ngày / HĐ</th>
-                <th class="px-3 py-2.5">Khách Hàng / Sale</th>
-                <th class="px-3 py-2.5">Sản Phẩm</th>
-                <th class="px-3 py-2.5 text-right">SL</th>
-                <th class="px-3 py-2.5">Ghi Chú</th>
-              </tr>
-            </thead>
-            <tbody id="kvFreeTableBody" class="divide-y divide-slate-100"></tbody>
-          </table>
-        </div>
+    <!-- ==================== TAB 5: HÀNG 0Đ KV & VOUCHER DMS ==================== -->
+    <div id="view-promo" class="hidden space-y-4">
+      <!-- Switcher con trên mobile giữa Hàng 0đ KV và Voucher DMS -->
+      <div class="grid grid-cols-2 bg-slate-200/80 p-1 rounded-xl">
+        <button id="subPromoBtn-kv" onclick="switchPromoSub('kv')" class="py-2 text-xs font-bold rounded-lg bg-white text-amber-800 shadow-xs">
+          Hàng 0đ KiotViet (<span id="badge-kvFreeTotal">0</span>)
+        </button>
+        <button id="subPromoBtn-dms" onclick="switchPromoSub('dms')" class="py-2 text-xs font-semibold rounded-lg text-slate-600">
+          Voucher DMS (<span id="badge-dmsVoucherTotal">0</span>)
+        </button>
       </div>
 
-      <!-- Cột phải: Suất Voucher trả NPP trên DMS -->
-      <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <div class="px-5 py-4 bg-emerald-50/70 border-b border-emerald-200 flex items-center justify-between">
-          <div>
-            <h2 class="font-bold text-emerald-950 text-base">Suất Voucher Giảm Giá Trên DMS</h2>
-            <p class="text-xs text-emerald-800">Tổng hợp phiếu giảm giá trả lại cho NPP Viet Bill</p>
-          </div>
-          <span id="badge-dmsVoucherTotal" class="bg-emerald-700 text-white text-xs font-bold px-2.5 py-1 rounded-full">0 suất</span>
-        </div>
-        <div class="p-4 border-b border-slate-100 bg-slate-50/50" id="dmsVoucherSummaryCards"></div>
-        <div class="overflow-x-auto max-h-[450px]">
-          <table class="w-full text-xs text-left">
-            <thead class="bg-slate-50 text-slate-600 font-semibold uppercase border-b sticky top-0">
-              <tr>
-                <th class="px-3 py-2.5">Ngày / Đơn</th>
-                <th class="px-3 py-2.5">Outlet / Sale</th>
-                <th class="px-3 py-2.5">Loại Phiếu Giảm Giá</th>
-                <th class="px-3 py-2.5 text-right">SL</th>
-              </tr>
-            </thead>
-            <tbody id="dmsVoucherTableBody" class="divide-y divide-slate-100"></tbody>
-          </table>
-        </div>
+      <!-- List Hàng 0đ KV -->
+      <div id="promoSub-kv" class="space-y-2.5"></div>
+
+      <!-- List Voucher DMS -->
+      <div id="promoSub-dms" class="hidden space-y-3">
+        <div id="dmsVoucherSummaryCards" class="flex flex-wrap gap-2"></div>
+        <div id="dmsVoucherList" class="space-y-2"></div>
       </div>
     </div>
 
   </main>
 
+  <!-- ==================== MOBILE BOTTOM NAVIGATION BAR ==================== -->
+  <nav class="md:hidden fixed bottom-0 inset-x-0 bg-white border-t border-slate-200 z-40 px-1 py-1.5 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
+    <div class="grid grid-cols-5 gap-1">
+      <button onclick="switchTab('reconcile')" id="mTab-reconcile" class="flex flex-col items-center justify-center py-1 rounded-xl text-emerald-700 font-bold">
+        <i data-lucide="bar-chart-3" class="w-5 h-5"></i>
+        <span class="text-[10px] mt-0.5">Đối chiếu</span>
+      </button>
+      <button onclick="switchTab('kv')" id="mTab-kv" class="flex flex-col items-center justify-center py-1 rounded-xl text-slate-400">
+        <i data-lucide="store" class="w-5 h-5"></i>
+        <span class="text-[10px] mt-0.5">KH Kiot</span>
+      </button>
+      <button onclick="switchTab('dms')" id="mTab-dms" class="flex flex-col items-center justify-center py-1 rounded-xl text-slate-400">
+        <i data-lucide="smartphone" class="w-5 h-5"></i>
+        <span class="text-[10px] mt-0.5">KH DMS</span>
+      </button>
+      <button onclick="switchTab('custMatch')" id="mTab-custMatch" class="flex flex-col items-center justify-center py-1 rounded-xl text-slate-400">
+        <i data-lucide="git-merge" class="w-5 h-5"></i>
+        <span class="text-[10px] mt-0.5">Ghép KH</span>
+      </button>
+      <button onclick="switchTab('promo')" id="mTab-promo" class="flex flex-col items-center justify-center py-1 rounded-xl text-slate-400">
+        <i data-lucide="gift" class="w-5 h-5"></i>
+        <span class="text-[10px] mt-0.5">0đ & KM</span>
+      </button>
+    </div>
+  </nav>
+
   <!-- ==================== MODAL 1: CẤU HÌNH SUPABASE ==================== -->
-  <div id="configModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4">
+  <div id="configModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white rounded-t-3xl sm:rounded-2xl max-w-md w-full p-5 sm:p-6 shadow-xl space-y-4">
       <div class="flex items-center justify-between border-b pb-3">
-        <h3 class="font-bold text-slate-800 text-lg flex items-center gap-2">
+        <h3 class="font-bold text-slate-800 text-base flex items-center gap-2">
           <i data-lucide="database" class="w-5 h-5 text-emerald-700"></i> Kết Nối Supabase Cloud
         </h3>
-        <button onclick="closeModal('configModal')" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+        <button onclick="closeModal('configModal')" class="text-slate-400 p-1"><i data-lucide="x" class="w-5 h-5"></i></button>
       </div>
-      <p class="text-xs text-slate-500">Lấy thông tin tại <b>Supabase Dashboard &rarr; Project Settings &rarr; API</b>. Thông tin được lưu an toàn trên trình duyệt của anh.</p>
+      <p class="text-xs text-slate-500">Vào <b>Supabase &rarr; Project Settings &rarr; API</b> để copy 2 mã bên dưới:</p>
       <div class="space-y-3">
         <div>
-          <label class="block text-xs font-semibold text-slate-700 mb-1">Project URL</label>
-          <input type="text" id="cfgSupabaseUrl" placeholder="https://xxxxxxxxxxxx.supabase.co" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg" />
+          <label class="block text-xs font-bold text-slate-700 mb-1">1. Project URL</label>
+          <input type="text" id="cfgSupabaseUrl" placeholder="https://xxxxxxxxxxxx.supabase.co" class="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-xl" />
         </div>
         <div>
-          <label class="block text-xs font-semibold text-slate-700 mb-1">Anon Public Key</label>
-          <input type="password" id="cfgSupabaseKey" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg" />
+          <label class="block text-xs font-bold text-slate-700 mb-1">2. Anon Public Key</label>
+          <input type="text" id="cfgSupabaseKey" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." class="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-xl" />
         </div>
       </div>
       <div class="flex justify-end gap-2 pt-2">
-        <button onclick="closeModal('configModal')" class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">Đóng</button>
-        <button onclick="saveSupabaseConfig()" class="px-4 py-2 text-sm font-semibold bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg">Lưu & Kết Nối</button>
+        <button onclick="closeModal('configModal')" class="px-4 py-2.5 text-sm text-slate-600 rounded-xl">Đóng</button>
+        <button onclick="saveSupabaseConfig()" class="px-5 py-2.5 text-sm font-bold bg-emerald-700 text-white rounded-xl">Lưu & Kết Nối</button>
       </div>
     </div>
   </div>
 
-  <!-- ==================== MODAL 2: TẢI FILE EXCEL KIOTVIET & DMS ==================== -->
-  <div id="uploadModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl max-w-xl w-full p-6 shadow-xl space-y-4">
+  <!-- ==================== MODAL 2: TẢI FILE EXCEL ==================== -->
+  <div id="uploadModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white rounded-t-3xl sm:rounded-2xl max-w-xl w-full p-5 sm:p-6 shadow-xl space-y-4">
       <div class="flex items-center justify-between border-b pb-3">
-        <h3 class="font-bold text-slate-800 text-lg flex items-center gap-2">
-          <i data-lucide="file-spreadsheet" class="w-5 h-5 text-amber-600"></i> Tải Dữ Liệu Excel Lên Supabase
+        <h3 class="font-bold text-slate-800 text-base flex items-center gap-2">
+          <i data-lucide="file-spreadsheet" class="w-5 h-5 text-amber-600"></i> Nạp File Excel (1–12 Tháng)
         </h3>
-        <button onclick="closeModal('uploadModal')" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+        <button onclick="closeModal('uploadModal')" class="text-slate-400 p-1"><i data-lucide="x" class="w-5 h-5"></i></button>
       </div>
-      <p class="text-xs text-slate-600 bg-slate-50 p-3 rounded-lg border border-slate-200">
-        Hỗ trợ file lẻ 1 tháng hoặc file gộp <b>3, 4, 6, 12 tháng</b>. Hệ thống tự động chống trùng đơn cũ, lọc đúng nhóm hàng Carlsberg bên KiotViet và chỉ lấy <b>NPP Viet Bill (CD1084)</b> bên DMS.
-      </p>
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div class="border-2 border-dashed border-slate-300 rounded-xl p-4 text-center hover:border-emerald-600 transition">
-          <p class="font-bold text-sm text-slate-800">1. File KiotViet (.xlsx)</p>
-          <p class="text-[11px] text-slate-500 mt-0.5 mb-3">Danh sách chi tiết hóa đơn</p>
-          <input type="file" id="fileInputKv" accept=".xlsx,.xls" class="text-xs w-full file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100" />
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div class="border-2 border-dashed border-slate-300 rounded-2xl p-3.5 text-center">
+          <p class="font-bold text-xs text-slate-800">1. File KiotViet (.xlsx)</p>
+          <p class="text-[11px] text-slate-400 mb-2">Chi tiết hóa đơn bán hàng</p>
+          <input type="file" id="fileInputKv" accept=".xlsx,.xls" class="text-xs w-full file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-emerald-50 file:text-emerald-700" />
         </div>
 
-        <div class="border-2 border-dashed border-slate-300 rounded-xl p-4 text-center hover:border-emerald-600 transition">
-          <p class="font-bold text-sm text-slate-800">2. File DMS (.xlsx)</p>
-          <p class="text-[11px] text-slate-500 mt-0.5 mb-3">Sheet Detail (Sec 6)</p>
-          <input type="file" id="fileInputDms" accept=".xlsx,.xls" class="text-xs w-full file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-amber-50 file:text-amber-800 hover:file:bg-amber-100" />
+        <div class="border-2 border-dashed border-slate-300 rounded-2xl p-3.5 text-center">
+          <p class="font-bold text-xs text-slate-800">2. File DMS (.xlsx)</p>
+          <p class="text-[11px] text-slate-400 mb-2">Sheet Detail (lọc NPP Viet Bill)</p>
+          <input type="file" id="fileInputDms" accept=".xlsx,.xls" class="text-xs w-full file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-amber-50 file:text-amber-800" />
         </div>
       </div>
 
-      <div id="uploadLogBox" class="hidden bg-slate-900 text-emerald-300 font-mono text-xs p-3 rounded-lg max-h-40 overflow-y-auto space-y-1"></div>
+      <div id="uploadLogBox" class="hidden bg-slate-900 text-emerald-300 font-mono text-[11px] p-3 rounded-xl max-h-36 overflow-y-auto space-y-1"></div>
 
-      <div class="flex justify-end gap-2 pt-2">
-        <button onclick="closeModal('uploadModal')" class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">Đóng</button>
-        <button id="btnProcessUpload" onclick="processExcelUploads()" class="px-4 py-2 text-sm font-semibold bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg flex items-center gap-1.5">
-          <i data-lucide="play" class="w-4 h-4"></i> Bắt Đầu Xử Lý & Lưu
+      <div class="flex justify-end gap-2 pt-1">
+        <button onclick="closeModal('uploadModal')" class="px-4 py-2.5 text-sm text-slate-600 rounded-xl">Đóng</button>
+        <button id="btnProcessUpload" onclick="processExcelUploads()" class="px-5 py-2.5 text-sm font-bold bg-emerald-700 text-white rounded-xl flex items-center gap-1.5">
+          <i data-lucide="play" class="w-4 h-4"></i> Xử Lý & Lưu
         </button>
       </div>
     </div>
   </div>
 
-  <!-- ==================== MODAL 3: QUẢN LÝ MÃ SKU & PHÂN NHÓM ==================== -->
-  <div id="skuModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl max-w-3xl w-full p-6 shadow-xl space-y-4 max-h-[85vh] flex flex-col">
+  <!-- ==================== MODAL 3: QUẢN LÝ MÃ SKU ==================== -->
+  <div id="skuModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white rounded-t-3xl sm:rounded-2xl max-w-3xl w-full p-5 shadow-xl space-y-3 max-h-[85vh] flex flex-col">
       <div class="flex items-center justify-between border-b pb-3">
-        <h3 class="font-bold text-slate-800 text-lg">Bảng Quy Đổi Mã SKU KiotViet & DMS Về Nhóm Chuẩn</h3>
-        <button onclick="closeModal('skuModal')" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+        <h3 class="font-bold text-slate-800 text-base">Bảng Quy Đổi Mã SKU Về Nhóm Chuẩn</h3>
+        <button onclick="closeModal('skuModal')" class="text-slate-400 p-1"><i data-lucide="x" class="w-5 h-5"></i></button>
       </div>
-      <div class="overflow-y-auto flex-1">
-        <table class="w-full text-xs text-left">
-          <thead class="bg-slate-100 text-slate-700 font-semibold uppercase sticky top-0">
-            <tr>
-              <th class="px-3 py-2">Hệ thống</th>
-              <th class="px-3 py-2">Mã gốc</th>
-              <th class="px-3 py-2">Tên gốc trong file</th>
-              <th class="px-3 py-2">Nhóm sản phẩm chuẩn</th>
-            </tr>
-          </thead>
-          <tbody id="skuMappingTableBody" class="divide-y divide-slate-200"></tbody>
-        </table>
-      </div>
+      <div class="overflow-y-auto flex-1 space-y-2" id="skuMappingList"></div>
     </div>
   </div>
 
   <!-- ==================== MODAL 4: GHÉP THỦ CÔNG KHÁCH HÀNG ==================== -->
-  <div id="manualLinkModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-xl space-y-4">
+  <div id="manualLinkModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white rounded-t-3xl sm:rounded-2xl max-w-lg w-full p-5 shadow-xl space-y-4">
       <div class="flex items-center justify-between border-b pb-3">
-        <h3 class="font-bold text-slate-800 text-lg">Ghép Thủ Công Khách Hàng KiotViet &harr; DMS</h3>
-        <button onclick="closeModal('manualLinkModal')" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+        <h3 class="font-bold text-slate-800 text-base">Ghép Thủ Công Khách Hàng 2 Bên</h3>
+        <button onclick="closeModal('manualLinkModal')" class="text-slate-400 p-1"><i data-lucide="x" class="w-5 h-5"></i></button>
       </div>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div class="space-y-3">
         <div>
-          <label class="block text-xs font-semibold text-slate-700 mb-1">1. Chọn Khách Hàng KiotViet (Chưa ghép)</label>
-          <select id="manualKvSelect" class="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg"></select>
+          <label class="block text-xs font-bold text-slate-700 mb-1">1. Khách Hàng KiotViet (Chưa ghép)</label>
+          <select id="manualKvSelect" class="w-full px-3 py-2.5 text-xs border border-slate-300 rounded-xl"></select>
         </div>
         <div>
-          <label class="block text-xs font-semibold text-slate-700 mb-1">2. Chọn Outlet DMS (Chưa ghép)</label>
-          <select id="manualDmsSelect" class="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg"></select>
+          <label class="block text-xs font-bold text-slate-700 mb-1">2. Outlet DMS (Chưa ghép)</label>
+          <select id="manualDmsSelect" class="w-full px-3 py-2.5 text-xs border border-slate-300 rounded-xl"></select>
         </div>
       </div>
       <div class="flex justify-end gap-2 pt-2">
-        <button onclick="closeModal('manualLinkModal')" class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">Hủy</button>
-        <button onclick="saveManualLink()" class="px-4 py-2 text-sm font-semibold bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg">Xác Nhận Ghép 1-1</button>
+        <button onclick="closeModal('manualLinkModal')" class="px-4 py-2 text-sm text-slate-600 rounded-xl">Hủy</button>
+        <button onclick="saveManualLink()" class="px-5 py-2 text-sm font-bold bg-emerald-700 text-white rounded-xl">Xác Nhận Ghép</button>
       </div>
     </div>
   </div>
 
   <!-- ==================== JAVASCRIPT LOGIC ==================== -->
   <script>
-    // =========================================================================
-    // 1. KHỞI TẠO SUPABASE CLIENT & STATE TOÀN CỤC
-    // =========================================================================
-    // Anh có thể điền cứng URL và Anon Key ở 2 dòng dưới đây để khỏi phải nhập tay trên trình duyệt:
-    const DEFAULT_SUPABASE_URL = "";
-    const DEFAULT_SUPABASE_ANON_KEY = "";
+    // ĐIỀN SẴN URL VÀ ANON KEY Ở ĐÂY ĐỂ ANH EM SALE MỞ LINK LÀ VÀO THẲNG KHÔNG CẦN NHẬP TAY:
+    const DEFAULT_SUPABASE_URL = "https://incbokfnoabjhvbwxkli.supabase.co";
+    const DEFAULT_SUPABASE_ANON_KEY = "sb_publishable_VQwy6zq_YDNeGPYf5cOJng_Flt2WUk-";
 
     let supabaseClient = null;
     let activeTab = 'reconcile';
+    let selectedBrand = 'ALL';
 
-    // Cache dữ liệu trong phiên làm việc
     let state = {
       salesReps: [],
       productGroups: [],
@@ -473,27 +412,20 @@
         document.getElementById('cfgSupabaseUrl').value = url;
         document.getElementById('cfgSupabaseKey').value = key;
         supabaseClient = window.supabase.createClient(url, key);
-        updateDbStatus(true);
+        document.getElementById('dbStatusDot').className = 'w-2 h-2 rounded-full bg-emerald-400 shrink-0';
+        document.getElementById('dbStatusText').innerText = 'Đã kết nối Supabase';
         refreshAllData();
       } else {
-        updateDbStatus(false);
+        document.getElementById('dbStatusDot').className = 'w-2 h-2 rounded-full bg-amber-400 shrink-0';
+        document.getElementById('dbStatusText').innerText = 'Chưa kết nối Supabase';
         openConfigModal();
-      }
-    }
-
-    function updateDbStatus(connected) {
-      const badge = document.getElementById('dbStatusBadge');
-      if (connected) {
-        badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400"></span> Đã kết nối Supabase`;
-      } else {
-        badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-400"></span> Chưa kết nối Supabase`;
       }
     }
 
     function saveSupabaseConfig() {
       const url = document.getElementById('cfgSupabaseUrl').value.trim();
       const key = document.getElementById('cfgSupabaseKey').value.trim();
-      if (!url || !key) return alert('Vui lòng nhập đầy đủ Project URL và Anon Key!');
+      if (!url || !key) return alert('Vui lòng nhập đầy đủ Project URL và Anon Public Key!');
       localStorage.setItem('sb_url', url);
       localStorage.setItem('sb_key', key);
       closeModal('configModal');
@@ -504,13 +436,42 @@
     function openUploadModal() { document.getElementById('uploadModal').classList.remove('hidden'); }
     function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
 
-    // =========================================================================
-    // 2. TẢI DỮ LIỆU TỪ SUPABASE & BỘ LỌC
-    // =========================================================================
+    function selectBrandChip(brand) {
+      selectedBrand = brand;
+      document.querySelectorAll('.brand-chip').forEach(btn => {
+        const isSelected = btn.getAttribute('data-brand') === brand;
+        btn.className = isSelected
+          ? 'brand-chip px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap bg-emerald-700 text-white shadow-xs'
+          : 'brand-chip px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-slate-100 text-slate-600';
+      });
+      renderActiveTab();
+    }
+
+    function switchTab(tabName) {
+      activeTab = tabName;
+      ['reconcile', 'kv', 'dms', 'custMatch', 'promo'].forEach(t => {
+        document.getElementById(`view-${t}`).classList.toggle('hidden', t !== tabName);
+        const mBtn = document.getElementById(`mTab-${t}`);
+        if (mBtn) mBtn.className = `flex flex-col items-center justify-center py-1 rounded-xl ${t === tabName ? 'text-emerald-700 font-bold' : 'text-slate-400'}`;
+        const dBtn = document.getElementById(`dTab-${t}`);
+        if (dBtn) dBtn.className = `py-3 text-sm flex items-center gap-2 ${t === tabName ? 'font-bold border-b-2 border-emerald-700 text-emerald-700' : 'font-medium text-slate-500 hover:text-slate-800'}`;
+      });
+      renderActiveTab();
+    }
+
+    function switchPromoSub(sub) {
+      document.getElementById('promoSub-kv').classList.toggle('hidden', sub !== 'kv');
+      document.getElementById('promoSub-dms').classList.toggle('hidden', sub !== 'dms');
+      document.getElementById('subPromoBtn-kv').className = sub === 'kv'
+        ? 'py-2 text-xs font-bold rounded-lg bg-white text-amber-800 shadow-xs'
+        : 'py-2 text-xs font-semibold rounded-lg text-slate-600';
+      document.getElementById('subPromoBtn-dms').className = sub === 'dms'
+        ? 'py-2 text-xs font-bold rounded-lg bg-white text-emerald-800 shadow-xs'
+        : 'py-2 text-xs font-semibold rounded-lg text-slate-600';
+    }
+
     async function refreshAllData() {
       if (!supabaseClient) return;
-
-      // 1. Tải danh mục Sale, Nhóm SP, SKU Mappings
       const [resReps, resGroups, resMaps] = await Promise.all([
         supabaseClient.from('sales_reps').select('*').order('full_name'),
         supabaseClient.from('product_groups').select('*').order('display_order'),
@@ -521,25 +482,21 @@
       state.productGroups = resGroups.data || [];
       state.skuMappings = resMaps.data || [];
 
-      // Kiểm tra mã SKU mới chưa gán nhóm
       const unmapped = state.skuMappings.filter(m => !m.product_group_id);
       const alertBox = document.getElementById('unmappedAlert');
       if (unmapped.length > 0) {
         alertBox.classList.remove('hidden');
-        document.getElementById('unmappedText').innerText =
-          `Có ${unmapped.length} mã mới (${unmapped.map(u => u.raw_code).join(', ')}) chưa được phân nhóm nên chưa cộng vào bảng đối chiếu.`;
+        document.getElementById('unmappedText').innerText = `${unmapped.length} mã mới (${unmapped.map(u => u.raw_code).join(', ')}) chưa phân nhóm.`;
       } else {
         alertBox.classList.add('hidden');
       }
 
-      // Populate dropdown Sale
       const repSelect = document.getElementById('filterSalesRep');
       const currentRep = repSelect.value;
-      repSelect.innerHTML = `<option value="ALL">Tất cả 5 Sale (Team BC)</option>` +
+      repSelect.innerHTML = `<option value="ALL">Tất cả 5 Sale</option>` +
         state.salesReps.map(r => `<option value="${r.id}">${r.full_name}</option>`).join('');
       if ([...repSelect.options].some(o => o.value === currentRep)) repSelect.value = currentRep;
 
-      // 2. Lấy danh sách các tháng đang có dữ liệu
       const [mKv, mDms] = await Promise.all([
         supabaseClient.from('kv_sales_lines').select('sale_month'),
         supabaseClient.from('dms_order_lines').select('order_month')
@@ -553,7 +510,7 @@
       const monthSelect = document.getElementById('filterMonth');
       const currentMonth = monthSelect.value;
       if (state.availableMonths.length === 0) {
-        monthSelect.innerHTML = `<option value="">-- Chưa có dữ liệu --</option>`;
+        monthSelect.innerHTML = `<option value="">Chưa có dữ liệu</option>`;
       } else {
         monthSelect.innerHTML = state.availableMonths.map(m => {
           const [y, mm] = m.split('-');
@@ -571,12 +528,10 @@
       const selectedRep = document.getElementById('filterSalesRep').value;
       if (!selectedMonth) return;
 
-      // Tính mốc 3 tháng gần nhất tính đến tháng đang chọn (để xem lịch sử 3 tháng của từng KH)
       const dt = new Date(selectedMonth + 'T00:00:00');
       dt.setMonth(dt.getMonth() - 2);
       const threeMonthsAgo = dt.toISOString().slice(0, 10);
 
-      // Query song song: View đối chiếu, KV lines tháng chọn, DMS lines tháng chọn, dữ liệu 3 tháng, KH & Links
       let qReconcile = supabaseClient.from('v_monthly_reconciliation').select('*').eq('month_date', selectedMonth);
       let qKvMonth = supabaseClient.from('kv_sales_lines').select('*').eq('sale_month', selectedMonth);
       let qDmsMonth = supabaseClient.from('dms_order_lines').select('*').eq('order_month', selectedMonth).eq('dis_code', 'CD1084');
@@ -592,11 +547,7 @@
       }
 
       const [resRec, resKvM, resDmsM, resKv3M, resDms3M, resKvC, resDmsO, resLinks, resSug] = await Promise.all([
-        qReconcile,
-        qKvMonth,
-        qDmsMonth,
-        qKv3M,
-        qDms3M,
+        qReconcile, qKvMonth, qDmsMonth, qKv3M, qDms3M,
         supabaseClient.from('kv_customers').select('*'),
         supabaseClient.from('dms_outlets').select('*'),
         supabaseClient.from('customer_links').select('*'),
@@ -616,16 +567,6 @@
       renderActiveTab();
     }
 
-    function switchTab(tabName) {
-      activeTab = tabName;
-      ['reconcile', 'kv', 'dms', 'custMatch', 'promo'].forEach(t => {
-        document.getElementById(`view-${t}`).classList.toggle('hidden', t !== tabName);
-        const btn = document.getElementById(`tabBtn-${t}`);
-        btn.className = `py-3 text-sm whitespace-nowrap flex items-center gap-2 ${t === tabName ? 'tab-active' : 'tab-inactive'}`;
-      });
-      renderActiveTab();
-    }
-
     function renderActiveTab() {
       if (activeTab === 'reconcile') renderReconcileTab();
       if (activeTab === 'kv') renderKvCustomersTab();
@@ -636,15 +577,13 @@
     }
 
     // =========================================================================
-    // 3. RENDER TAB 1: ĐỐI CHIẾU SẢN LƯỢNG & LŨY KẾ
+    // TAB 1: MOBILE-FIRST CARD VIEW ĐỐI CHIẾU SẢN LƯỢNG & LŨY KẾ
     // =========================================================================
     function renderReconcileTab() {
-      const brandFilter = document.getElementById('filterBrand').value;
-      // Gom nhóm theo product_group_id (vì nếu chọn ALL sale thì mỗi SKU có 5 dòng của 5 sale)
       const groupedMap = new Map();
 
       state.reconcileRows.forEach(r => {
-        if (brandFilter !== 'ALL' && r.brand !== brandFilter) return;
+        if (selectedBrand !== 'ALL' && r.brand !== selectedBrand) return;
         if (!groupedMap.has(r.product_group_id)) {
           groupedMap.set(r.product_group_id, {
             product_group_id: r.product_group_id,
@@ -671,13 +610,12 @@
       const rows = Array.from(groupedMap.values()).sort((a, b) => a.display_order - b.display_order);
 
       let totKvPaid = 0, totKvFree = 0, totDms = 0, totPrev = 0, totMonth = 0, totCum = 0;
-      const tbody = document.getElementById('reconcileTableBody');
+      const cardsContainer = document.getElementById('reconcileMobileCards');
 
       if (rows.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="8" class="px-4 py-8 text-center text-slate-400">Không có phát sinh sản lượng cho bộ lọc này.</td></tr>`;
-        document.getElementById('reconcileTableFoot').innerHTML = '';
+        cardsContainer.innerHTML = `<div class="col-span-full bg-white p-8 rounded-2xl border border-slate-200 text-center text-xs text-slate-400">Không có phát sinh sản lượng cho bộ lọc này.</div>`;
       } else {
-        tbody.innerHTML = rows.map(r => {
+        cardsContainer.innerHTML = rows.map(r => {
           totKvPaid += r.kv_paid_qty;
           totKvFree += r.kv_free_qty;
           totDms += r.dms_order_qty;
@@ -685,66 +623,84 @@
           totMonth += r.monthly_diff;
           totCum += r.total_cumulative_diff;
 
+          const badgeClass = r.total_cumulative_diff < 0
+            ? 'bg-rose-100 text-rose-700 border-rose-200'
+            : r.total_cumulative_diff > 0
+            ? 'bg-blue-100 text-blue-700 border-blue-200'
+            : 'bg-emerald-100 text-emerald-700 border-emerald-200';
+
           return `
-            <tr class="hover:bg-slate-50 transition">
-              <td class="px-4 py-3 font-semibold text-slate-700">${r.brand}</td>
-              <td class="px-4 py-3 font-medium text-slate-900">${r.group_name}</td>
-              <td class="px-4 py-3 text-right font-semibold">${fmtNum(r.kv_paid_qty)}</td>
-              <td class="px-4 py-3 text-right font-semibold text-emerald-700">${fmtNum(r.dms_order_qty)}</td>
-              <td class="px-4 py-3 text-right bg-slate-50/80 ${diffColor(r.prev_cumulative_diff)}">${fmtDiff(r.prev_cumulative_diff)}</td>
-              <td class="px-4 py-3 text-right font-semibold ${diffColor(r.monthly_diff)}">${fmtDiff(r.monthly_diff)}</td>
-              <td class="px-4 py-3 text-right font-bold bg-emerald-50/40 ${diffColor(r.total_cumulative_diff)}">${fmtDiff(r.total_cumulative_diff)}</td>
-              <td class="px-4 py-3 text-right text-amber-700 font-medium">${r.kv_free_qty > 0 ? fmtNum(r.kv_free_qty) : '-'}</td>
-            </tr>
+            <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs space-y-3">
+              <!-- Header thẻ SKU -->
+              <div class="flex items-start justify-between gap-2">
+                <div>
+                  <span class="text-[10px] font-extrabold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">${r.brand}</span>
+                  <h3 class="font-bold text-slate-900 text-sm sm:text-base mt-1">${r.group_name}</h3>
+                </div>
+                <div class="text-right shrink-0">
+                  <span class="text-[10px] text-slate-400 block">Tổng lũy kế</span>
+                  <span class="inline-block mt-0.5 px-2.5 py-1 rounded-xl border text-xs font-extrabold ${badgeClass}">
+                    ${fmtDiff(r.total_cumulative_diff)}
+                  </span>
+                </div>
+              </div>
+
+              <!-- 4 ô số liệu trực quan -->
+              <div class="grid grid-cols-4 gap-1.5 bg-slate-50 p-2.5 rounded-xl text-center">
+                <div>
+                  <span class="text-[10px] text-slate-500 block">Bán KV</span>
+                  <span class="text-xs sm:text-sm font-extrabold text-slate-900">${fmtNum(r.kv_paid_qty)}</span>
+                </div>
+                <div>
+                  <span class="text-[10px] text-slate-500 block">Key DMS</span>
+                  <span class="text-xs sm:text-sm font-extrabold text-emerald-700">${fmtNum(r.dms_order_qty)}</span>
+                </div>
+                <div>
+                  <span class="text-[10px] text-slate-500 block">Tồn trước</span>
+                  <span class="text-xs sm:text-sm font-bold ${diffColor(r.prev_cumulative_diff)}">${fmtDiff(r.prev_cumulative_diff)}</span>
+                </div>
+                <div>
+                  <span class="text-[10px] text-slate-500 block">Tháng này</span>
+                  <span class="text-xs sm:text-sm font-extrabold ${diffColor(r.monthly_diff)}">${fmtDiff(r.monthly_diff)}</span>
+                </div>
+              </div>
+
+              ${r.kv_free_qty > 0 ? `
+                <div class="flex items-center justify-between text-[11px] bg-amber-50 text-amber-800 px-3 py-1.5 rounded-xl border border-amber-200/70">
+                  <span class="flex items-center gap-1 font-medium"><i data-lucide="gift" class="w-3.5 h-3.5 text-amber-600"></i> Xuất tặng 0đ trên KiotViet:</span>
+                  <span class="font-extrabold">${fmtNum(r.kv_free_qty)} thùng/két</span>
+                </div>
+              ` : ''}
+            </div>
           `;
         }).join('');
-
-        document.getElementById('reconcileTableFoot').innerHTML = `
-          <tr>
-            <td colspan="2" class="px-4 py-3 uppercase text-xs">Tổng Cộng Toàn Bộ</td>
-            <td class="px-4 py-3 text-right">${fmtNum(totKvPaid)}</td>
-            <td class="px-4 py-3 text-right text-emerald-800">${fmtNum(totDms)}</td>
-            <td class="px-4 py-3 text-right ${diffColor(totPrev)}">${fmtDiff(totPrev)}</td>
-            <td class="px-4 py-3 text-right ${diffColor(totMonth)}">${fmtDiff(totMonth)}</td>
-            <td class="px-4 py-3 text-right text-base ${diffColor(totCum)}">${fmtDiff(totCum)}</td>
-            <td class="px-4 py-3 text-right text-amber-800">${fmtNum(totKvFree)}</td>
-          </tr>
-        `;
       }
 
-      // Cập nhật 5 thẻ KPI
       document.getElementById('kpi-kvPaid').innerText = fmtNum(totKvPaid);
       document.getElementById('kpi-dmsOrder').innerText = fmtNum(totDms);
       document.getElementById('kpi-prevDiff').innerText = fmtDiff(totPrev);
-      document.getElementById('kpi-prevDiff').className = `text-2xl font-bold mt-1 ${diffColor(totPrev)}`;
       document.getElementById('kpi-monthDiff').innerText = fmtDiff(totMonth);
-      document.getElementById('kpi-monthDiff').className = `text-2xl font-bold mt-1 ${diffColor(totMonth)}`;
       document.getElementById('kpi-totalDiff').innerText = fmtDiff(totCum);
       document.getElementById('kpi-totalLabel').innerText =
-        totCum < 0 ? `Còn thiếu ${fmtNum(Math.abs(totCum))} két/thùng chưa key DMS`
-        : totCum > 0 ? `Đang key dư ${fmtNum(totCum)} két/thùng trên DMS`
-        : 'Đã khớp 100% số liệu';
+        totCum < 0 ? `Đang thiếu ${fmtNum(Math.abs(totCum))} thùng/két chưa key về DMS`
+        : totCum > 0 ? `Đang dư ${fmtNum(totCum)} thùng/két trên DMS`
+        : 'Đã khớp 100% số liệu bán và key';
     }
 
     // =========================================================================
-    // 4. RENDER TAB 2: KHÁCH HÀNG KIOTVIET (Ẩn SKU, bấm để xổ chi tiết)
+    // TAB 2: KHÁCH HÀNG KIOTVIET
     // =========================================================================
     function renderKvCustomersTab() {
       const kw = document.getElementById('searchKvCust').value.toLowerCase().trim();
       const custMap = new Map(state.kvCustomers.map(c => [c.kv_customer_code, c]));
       const repMap = new Map(state.salesReps.map(r => [r.id, r.full_name]));
 
-      // Gom đơn tháng chọn theo khách hàng
       const agg = new Map();
       state.kvLinesMonth.forEach(line => {
-        if (!agg.has(line.kv_customer_code)) {
-          agg.set(line.kv_customer_code, { paid: 0, free: 0, rev: 0, lines: [] });
-        }
+        if (!agg.has(line.kv_customer_code)) agg.set(line.kv_customer_code, { paid: 0, free: 0 });
         const entry = agg.get(line.kv_customer_code);
         if (line.is_free_gift) entry.free += Number(line.quantity);
         else entry.paid += Number(line.quantity);
-        entry.rev += Number(line.total_amount);
-        entry.lines.push(line);
       });
 
       const list = Array.from(agg.entries()).filter(([code]) => {
@@ -754,64 +710,56 @@
 
       const container = document.getElementById('kvCustomersList');
       if (list.length === 0) {
-        container.innerHTML = `<div class="bg-white p-8 rounded-xl border text-center text-slate-400 text-sm">Không tìm thấy khách hàng KiotViet phát sinh trong tháng này.</div>`;
+        container.innerHTML = `<div class="bg-white p-8 rounded-2xl border text-center text-slate-400 text-xs">Không tìm thấy khách hàng KiotViet trong tháng này.</div>`;
         return;
       }
 
       container.innerHTML = list.map(([code, data]) => {
         const c = custMap.get(code) || { kv_customer_name: code };
         const repName = repMap.get(c.sales_rep_id) || 'Chưa gán sale';
-        // Lấy thêm lịch sử 3 tháng của KH này
         const hist3M = state.kvLines3M.filter(l => l.kv_customer_code === code);
         const histByMonth = {};
         hist3M.forEach(h => {
           const m = h.sale_month.slice(0, 7);
           if (!histByMonth[m]) histByMonth[m] = {};
-          const key = `${h.raw_product_name} ${h.is_free_gift ? '(0đ)' : ''}`;
+          const key = `${h.raw_product_name}${h.is_free_gift ? ' [0đ]' : ''}`;
           histByMonth[m][key] = (histByMonth[m][key] || 0) + Number(h.quantity);
         });
 
         return `
-          <div class="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
-            <button onclick="toggleAccordion('kv-det-${code}')" class="w-full px-5 py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-left hover:bg-slate-50 transition">
-              <div>
-                <div class="flex items-center gap-2">
-                  <span class="text-xs font-mono bg-slate-100 text-slate-600 px-2 py-0.5 rounded">${code}</span>
-                  <span class="font-bold text-slate-800 text-sm">${c.kv_customer_name}</span>
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+            <button onclick="toggleAccordion('kv-det-${code}')" class="w-full p-3.5 flex items-center justify-between gap-2 text-left active:bg-slate-50">
+              <div class="min-w-0">
+                <div class="flex items-center gap-1.5">
+                  <span class="text-[10px] font-mono bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded shrink-0">${code}</span>
+                  <span class="text-[11px] font-semibold text-emerald-700 truncate">${repName}</span>
                 </div>
-                <p class="text-xs text-slate-500 mt-1">Sale: <b>${repName}</b> ${c.phone ? `• SĐT: ${c.phone}` : ''}</p>
+                <p class="font-bold text-slate-900 text-sm mt-0.5 line-clamp-1">${c.kv_customer_name}</p>
               </div>
-              <div class="flex items-center gap-4">
+              <div class="flex items-center gap-2.5 shrink-0">
                 <div class="text-right">
-                  <span class="text-xs text-slate-500 block">Mua tính tiền</span>
-                  <span class="font-bold text-slate-900 text-sm">${fmtNum(data.paid)} két/thùng</span>
+                  <span class="font-extrabold text-slate-900 text-sm block">${fmtNum(data.paid)}</span>
+                  ${data.free > 0 ? `<span class="text-[10px] font-bold text-amber-600">+${fmtNum(data.free)} 0đ</span>` : `<span class="text-[10px] text-slate-400">thùng/két</span>`}
                 </div>
-                ${data.free > 0 ? `
-                <div class="text-right">
-                  <span class="text-xs text-amber-600 block">Tặng 0đ</span>
-                  <span class="font-bold text-amber-700 text-sm">+${fmtNum(data.free)}</span>
-                </div>` : ''}
                 <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400"></i>
               </div>
             </button>
 
-            <div id="kv-det-${code}" class="hidden border-t border-slate-100 bg-slate-50/70 p-4 space-y-3">
-              <p class="text-xs font-bold text-slate-700 uppercase">Lịch sử 3 tháng gần nhất trên KiotViet:</p>
-              <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                ${Object.entries(histByMonth).sort().reverse().map(([m, prods]) => `
-                  <div class="bg-white p-3 rounded-lg border border-slate-200 text-xs">
-                    <div class="font-bold text-emerald-800 border-b pb-1 mb-1.5">Tháng ${m}</div>
-                    <ul class="space-y-1">
-                      ${Object.entries(prods).map(([pName, q]) => `
-                        <li class="flex justify-between gap-2">
-                          <span class="text-slate-600 truncate" title="${pName}">${pName}</span>
-                          <span class="font-semibold text-slate-900 shrink-0">${fmtNum(q)}</span>
-                        </li>
-                      `).join('')}
-                    </ul>
-                  </div>
-                `).join('')}
-              </div>
+            <div id="kv-det-${code}" class="hidden border-t border-slate-100 bg-slate-50 p-3.5 space-y-2.5">
+              <p class="text-[11px] font-bold text-slate-600 uppercase">Lịch sử mua 3 tháng gần nhất:</p>
+              ${Object.entries(histByMonth).sort().reverse().map(([m, prods]) => `
+                <div class="bg-white p-2.5 rounded-xl border border-slate-200 text-xs">
+                  <div class="font-bold text-emerald-800 border-b pb-1 mb-1">Tháng ${m}</div>
+                  <ul class="space-y-1">
+                    ${Object.entries(prods).map(([pName, q]) => `
+                      <li class="flex justify-between gap-2">
+                        <span class="text-slate-600">${pName}</span>
+                        <span class="font-bold text-slate-900 shrink-0">${fmtNum(q)}</span>
+                      </li>
+                    `).join('')}
+                  </ul>
+                </div>
+              `).join('')}
             </div>
           </div>
         `;
@@ -819,7 +767,7 @@
     }
 
     // =========================================================================
-    // 5. RENDER TAB 3: KHÁCH HÀNG DMS (Ẩn SKU, bấm để xổ chi tiết)
+    // TAB 3: KHÁCH HÀNG DMS
     // =========================================================================
     function renderDmsCustomersTab() {
       const kw = document.getElementById('searchDmsCust').value.toLowerCase().trim();
@@ -828,12 +776,8 @@
 
       const agg = new Map();
       state.dmsLinesMonth.filter(l => l.order_type === 'Order' && !l.is_posm_voucher).forEach(line => {
-        if (!agg.has(line.dms_outlet_code)) {
-          agg.set(line.dms_outlet_code, { qty: 0, rev: 0 });
-        }
-        const entry = agg.get(line.dms_outlet_code);
-        entry.qty += Number(line.quantity);
-        entry.rev += Number(line.revenue);
+        if (!agg.has(line.dms_outlet_code)) agg.set(line.dms_outlet_code, { qty: 0 });
+        agg.get(line.dms_outlet_code).qty += Number(line.quantity);
       });
 
       const list = Array.from(agg.entries()).filter(([code]) => {
@@ -843,7 +787,7 @@
 
       const container = document.getElementById('dmsCustomersList');
       if (list.length === 0) {
-        container.innerHTML = `<div class="bg-white p-8 rounded-xl border text-center text-slate-400 text-sm">Không tìm thấy Outlet DMS phát sinh trong tháng này.</div>`;
+        container.innerHTML = `<div class="bg-white p-8 rounded-2xl border text-center text-slate-400 text-xs">Không tìm thấy Outlet DMS trong tháng này.</div>`;
         return;
       }
 
@@ -859,41 +803,39 @@
         });
 
         return `
-          <div class="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
-            <button onclick="toggleAccordion('dms-det-${code}')" class="w-full px-5 py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-left hover:bg-slate-50 transition">
-              <div>
-                <div class="flex items-center gap-2">
-                  <span class="text-xs font-mono bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded">${code}</span>
-                  <span class="font-bold text-slate-800 text-sm">${o.dms_outlet_name}</span>
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+            <button onclick="toggleAccordion('dms-det-${code}')" class="w-full p-3.5 flex items-center justify-between gap-2 text-left active:bg-slate-50">
+              <div class="min-w-0">
+                <div class="flex items-center gap-1.5">
+                  <span class="text-[10px] font-mono bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded shrink-0">${code}</span>
+                  <span class="text-[11px] font-semibold text-slate-500 truncate">${repName}</span>
                 </div>
-                <p class="text-xs text-slate-500 mt-1">Sale: <b>${repName}</b> ${o.channel ? `• Kênh: ${o.channel}` : ''}</p>
+                <p class="font-bold text-slate-900 text-sm mt-0.5 line-clamp-1">${o.dms_outlet_name}</p>
               </div>
-              <div class="flex items-center gap-4">
+              <div class="flex items-center gap-2.5 shrink-0">
                 <div class="text-right">
-                  <span class="text-xs text-slate-500 block">Đã Key DMS</span>
-                  <span class="font-bold text-emerald-700 text-sm">${fmtNum(data.qty)} pack</span>
+                  <span class="font-extrabold text-emerald-700 text-sm block">${fmtNum(data.qty)}</span>
+                  <span class="text-[10px] text-slate-400">pack key</span>
                 </div>
                 <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400"></i>
               </div>
             </button>
 
-            <div id="dms-det-${code}" class="hidden border-t border-slate-100 bg-slate-50/70 p-4 space-y-3">
-              <p class="text-xs font-bold text-slate-700 uppercase">Lịch sử key 3 tháng gần nhất trên DMS:</p>
-              <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                ${Object.entries(histByMonth).sort().reverse().map(([m, prods]) => `
-                  <div class="bg-white p-3 rounded-lg border border-slate-200 text-xs">
-                    <div class="font-bold text-emerald-800 border-b pb-1 mb-1.5">Tháng ${m}</div>
-                    <ul class="space-y-1">
-                      ${Object.entries(prods).map(([pName, q]) => `
-                        <li class="flex justify-between gap-2">
-                          <span class="text-slate-600 truncate">${pName}</span>
-                          <span class="font-semibold text-slate-900 shrink-0">${fmtNum(q)}</span>
-                        </li>
-                      `).join('')}
-                    </ul>
-                  </div>
-                `).join('')}
-              </div>
+            <div id="dms-det-${code}" class="hidden border-t border-slate-100 bg-slate-50 p-3.5 space-y-2.5">
+              <p class="text-[11px] font-bold text-slate-600 uppercase">Lịch sử key 3 tháng gần nhất:</p>
+              ${Object.entries(histByMonth).sort().reverse().map(([m, prods]) => `
+                <div class="bg-white p-2.5 rounded-xl border border-slate-200 text-xs">
+                  <div class="font-bold text-emerald-800 border-b pb-1 mb-1">Tháng ${m}</div>
+                  <ul class="space-y-1">
+                    ${Object.entries(prods).map(([pName, q]) => `
+                      <li class="flex justify-between gap-2">
+                        <span class="text-slate-600">${pName}</span>
+                        <span class="font-bold text-slate-900 shrink-0">${fmtNum(q)}</span>
+                      </li>
+                    `).join('')}
+                  </ul>
+                </div>
+              `).join('')}
             </div>
           </div>
         `;
@@ -901,7 +843,7 @@
     }
 
     // =========================================================================
-    // 6. RENDER TAB 4: GHÉP & ĐỐI CHIẾU KHÁCH HÀNG (1-1 & Lịch sử 3 tháng)
+    // TAB 4: GHÉP & ĐỐI CHIẾU KHÁCH HÀNG
     // =========================================================================
     function renderCustomerMatchTab() {
       const selectedRep = document.getElementById('filterSalesRep').value;
@@ -909,23 +851,21 @@
       const sugContainer = document.getElementById('suggestionsContainer');
 
       if (sugs.length === 0) {
-        sugContainer.innerHTML = `<p class="text-xs text-slate-400 text-center py-3">Không có gợi ý tự động mới. Anh có thể dùng nút "Ghép thủ công 2 quán" ở góc phải.</p>`;
+        sugContainer.innerHTML = `<p class="text-xs text-slate-400 text-center py-2">Không có gợi ý tự động mới. Bấm "Ghép tay" nếu cần nối thêm.</p>`;
       } else {
         sugContainer.innerHTML = sugs.slice(0, 15).map(s => `
-          <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3 p-3 rounded-xl border border-slate-200 bg-slate-50/60 hover:bg-white transition">
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 flex-1 text-xs">
-              <div class="bg-white p-2.5 rounded-lg border border-slate-200">
-                <span class="text-[10px] font-bold uppercase text-slate-400">KiotViet (${s.kv_customer_code})</span>
-                <p class="font-bold text-slate-800 text-sm mt-0.5">${s.kv_customer_name}</p>
-                <p class="text-slate-500 mt-0.5">Sale: ${s.sales_rep_name || '-'} ${s.kv_phone ? `• ${s.kv_phone}` : ''}</p>
+          <div class="p-3 rounded-xl border border-slate-200 bg-slate-50 space-y-2.5">
+            <div class="space-y-1.5 text-xs">
+              <div class="bg-white p-2 rounded-lg border border-slate-200">
+                <span class="text-[10px] font-bold text-slate-400">KIOTVIET • ${s.kv_customer_code}</span>
+                <p class="font-bold text-slate-900">${s.kv_customer_name}</p>
               </div>
-              <div class="bg-white p-2.5 rounded-lg border border-emerald-200">
-                <span class="text-[10px] font-bold uppercase text-emerald-600">DMS (${s.dms_outlet_code})</span>
-                <p class="font-bold text-emerald-900 text-sm mt-0.5">${s.dms_outlet_name}</p>
-                <p class="text-slate-500 mt-0.5">Độ giống tên: <b class="text-amber-600">${s.similarity_score}%</b></p>
+              <div class="bg-white p-2 rounded-lg border border-emerald-200">
+                <span class="text-[10px] font-bold text-emerald-600">DMS • ${s.dms_outlet_code} (Giống ${s.similarity_score}%)</span>
+                <p class="font-bold text-emerald-900">${s.dms_outlet_name}</p>
               </div>
             </div>
-            <button onclick="confirmCustomerLink('${s.kv_customer_code}', '${s.dms_outlet_code}', ${s.similarity_score}, 'AUTO_NAME')" class="shrink-0 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold px-4 py-2.5 rounded-lg flex items-center justify-center gap-1.5">
+            <button onclick="confirmCustomerLink('${s.kv_customer_code}', '${s.dms_outlet_code}', ${s.similarity_score}, 'AUTO_NAME')" class="w-full bg-emerald-700 active:scale-98 text-white text-xs font-bold py-2 rounded-xl flex items-center justify-center gap-1.5">
               <i data-lucide="check-circle-2" class="w-4 h-4"></i> Xác Nhận Là 1 Quán
             </button>
           </div>
@@ -938,12 +878,9 @@
     async function confirmCustomerLink(kvCode, dmsCode, score, method) {
       if (!supabaseClient) return;
       const { error } = await supabaseClient.from('customer_links').upsert({
-        kv_customer_code: kvCode,
-        dms_outlet_code: dmsCode,
-        match_score: score,
-        match_method: method
+        kv_customer_code: kvCode, dms_outlet_code: dmsCode, match_score: score, match_method: method
       });
-      if (error) return alert('Lỗi khi ghép khách hàng: ' + error.message);
+      if (error) return alert('Lỗi ghép khách hàng: ' + error.message);
       await onFilterChange();
     }
 
@@ -992,7 +929,7 @@
       });
 
       if (filteredLinks.length === 0) {
-        container.innerHTML = `<div class="p-8 text-center text-sm text-slate-400">Chưa có cặp khách hàng nào được ghép. Hãy xác nhận gợi ý ở khung phía trên.</div>`;
+        container.innerHTML = `<div class="bg-white p-6 rounded-2xl border text-center text-xs text-slate-400">Chưa có cặp quán nào được ghép.</div>`;
         return;
       }
 
@@ -1000,7 +937,6 @@
         const kv = kvMap.get(l.kv_customer_code) || { kv_customer_name: l.kv_customer_code };
         const dms = dmsMap.get(l.dms_outlet_code) || { dms_outlet_name: l.dms_outlet_code };
 
-        // Tính tổng 3 tháng gần nhất theo từng nhóm SKU chuẩn cho khách hàng này
         const skuMatrix = {};
         state.kvLines3M.filter(x => x.kv_customer_code === l.kv_customer_code && !x.is_free_gift).forEach(x => {
           const gName = skuToGroup.get(`KIOTVIET_${x.raw_product_code}`) || x.raw_product_name;
@@ -1018,49 +954,37 @@
         const diff3M = sumDms3M - sumKv3M;
 
         return `
-          <div class="p-4 hover:bg-slate-50/60 transition">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 cursor-pointer" onclick="toggleAccordion('link-det-${l.id}')">
-              <div>
-                <div class="flex flex-wrap items-center gap-2">
-                  <span class="font-bold text-slate-900 text-sm">${kv.kv_customer_name}</span>
-                  <span class="text-xs text-slate-400">&harr;</span>
-                  <span class="font-semibold text-emerald-800 text-sm">${dms.dms_outlet_name}</span>
-                </div>
-                <p class="text-[11px] text-slate-400 mt-0.5">KV: ${l.kv_customer_code} • DMS: ${l.dms_outlet_code}</p>
+          <div class="bg-white rounded-2xl border border-slate-200 p-3.5 shadow-xs">
+            <div class="flex items-start justify-between gap-2 cursor-pointer" onclick="toggleAccordion('link-det-${l.id}')">
+              <div class="min-w-0">
+                <p class="font-bold text-slate-900 text-sm line-clamp-1">${kv.kv_customer_name}</p>
+                <p class="text-xs text-emerald-700 font-medium line-clamp-1">&harr; ${dms.dms_outlet_name}</p>
               </div>
-              <div class="flex items-center gap-4 text-xs">
-                <div>KV (3T): <b>${fmtNum(sumKv3M)}</b></div>
-                <div>DMS (3T): <b class="text-emerald-700">${fmtNum(sumDms3M)}</b></div>
-                <div class="px-2 py-1 rounded font-bold ${diff3M === 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">
-                  Lệch: ${fmtDiff(diff3M)}
-                </div>
-                <button onclick="event.stopPropagation(); unlinkCustomer('${l.id}')" class="text-slate-400 hover:text-rose-600 p-1" title="Hủy ghép">
-                  <i data-lucide="unlink" class="w-3.5 h-3.5"></i>
-                </button>
+              <div class="flex items-center gap-2 shrink-0">
+                <span class="px-2 py-1 rounded-xl text-xs font-extrabold ${diff3M === 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-700'}">
+                  ${fmtDiff(diff3M)}
+                </span>
+                <button onclick="event.stopPropagation(); unlinkCustomer('${l.id}')" class="text-slate-400 p-1"><i data-lucide="unlink" class="w-3.5 h-3.5"></i></button>
               </div>
             </div>
 
-            <div id="link-det-${l.id}" class="hidden mt-3 pt-3 border-t border-slate-200">
-              <table class="w-full text-xs text-left bg-white rounded-lg border">
-                <thead class="bg-slate-100 text-slate-600 font-semibold">
-                  <tr>
-                    <th class="px-3 py-2">Nhóm Sản Phẩm (3 Tháng Qua)</th>
-                    <th class="px-3 py-2 text-right">Bán KiotViet</th>
-                    <th class="px-3 py-2 text-right">Key DMS</th>
-                    <th class="px-3 py-2 text-right">Chênh Lệch</th>
-                  </tr>
-                </thead>
-                <tbody class="divide-y">
-                  ${Object.entries(skuMatrix).map(([gName, val]) => `
-                    <tr>
-                      <td class="px-3 py-2 font-medium">${gName}</td>
-                      <td class="px-3 py-2 text-right">${fmtNum(val.kv)}</td>
-                      <td class="px-3 py-2 text-right text-emerald-700">${fmtNum(val.dms)}</td>
-                      <td class="px-3 py-2 text-right font-bold ${diffColor(val.dms - val.kv)}">${fmtDiff(val.dms - val.kv)}</td>
-                    </tr>
-                  `).join('')}
-                </tbody>
-              </table>
+            <div class="grid grid-cols-3 gap-2 mt-2.5 pt-2 border-t border-slate-100 text-center text-xs">
+              <div><span class="text-[10px] text-slate-400 block">KV (3 Tháng)</span><b>${fmtNum(sumKv3M)}</b></div>
+              <div><span class="text-[10px] text-slate-400 block">DMS (3 Tháng)</span><b class="text-emerald-700">${fmtNum(sumDms3M)}</b></div>
+              <div><span class="text-[10px] text-slate-400 block">Chênh lệch</span><b class="${diffColor(diff3M)}">${fmtDiff(diff3M)}</b></div>
+            </div>
+
+            <div id="link-det-${l.id}" class="hidden mt-3 pt-2.5 border-t border-slate-200 space-y-1.5">
+              ${Object.entries(skuMatrix).map(([gName, val]) => `
+                <div class="flex items-center justify-between text-xs bg-slate-50 px-2.5 py-1.5 rounded-lg">
+                  <span class="font-medium text-slate-700 truncate pr-2">${gName}</span>
+                  <div class="flex items-center gap-2 shrink-0 font-mono">
+                    <span>KV:${fmtNum(val.kv)}</span>
+                    <span class="text-emerald-700">DMS:${fmtNum(val.dms)}</span>
+                    <span class="font-bold ${diffColor(val.dms - val.kv)}">(${fmtDiff(val.dms - val.kv)})</span>
+                  </div>
+                </div>
+              `).join('')}
             </div>
           </div>
         `;
@@ -1068,7 +992,7 @@
     }
 
     // =========================================================================
-    // 7. RENDER TAB 5: HÀNG 0Đ KIOTVIET & VOUCHER DMS
+    // TAB 5: HÀNG 0Đ KV & VOUCHER DMS
     // =========================================================================
     function renderPromoTab() {
       const custMap = new Map(state.kvCustomers.map(c => [c.kv_customer_code, c.kv_customer_name]));
@@ -1078,91 +1002,80 @@
       // 1. Hàng 0đ KV
       const freeLines = state.kvLinesMonth.filter(l => l.is_free_gift);
       const totalFree = freeLines.reduce((s, l) => s + Number(l.quantity), 0);
-      document.getElementById('badge-kvFreeTotal').innerText = `${fmtNum(totalFree)} két/thùng`;
+      document.getElementById('badge-kvFreeTotal').innerText = fmtNum(totalFree);
 
-      document.getElementById('kvFreeTableBody').innerHTML = freeLines.length === 0
-        ? `<tr><td colspan="5" class="px-4 py-8 text-center text-slate-400">Không có hàng xuất 0đ trong tháng này.</td></tr>`
+      document.getElementById('promoSub-kv').innerHTML = freeLines.length === 0
+        ? `<div class="bg-white p-8 rounded-2xl border text-center text-xs text-slate-400">Không có hàng xuất 0đ trong tháng này.</div>`
         : freeLines.map(l => `
-          <tr class="hover:bg-amber-50/40">
-            <td class="px-3 py-2.5 whitespace-nowrap">
-              <div class="font-medium text-slate-800">${l.sale_date.slice(0, 10)}</div>
-              <div class="text-[10px] text-slate-400">${l.invoice_code}</div>
-            </td>
-            <td class="px-3 py-2.5">
-              <div class="font-medium text-slate-800 line-clamp-1">${custMap.get(l.kv_customer_code) || l.kv_customer_code}</div>
-              <div class="text-[10px] text-slate-500">${repMap.get(l.sales_rep_id) || ''}</div>
-            </td>
-            <td class="px-3 py-2.5 text-slate-700">${l.raw_product_name}</td>
-            <td class="px-3 py-2.5 text-right font-bold text-amber-700">${fmtNum(l.quantity)}</td>
-            <td class="px-3 py-2.5 text-slate-600 italic">${l.combined_note || '-'}</td>
-          </tr>
+          <div class="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs space-y-1.5">
+            <div class="flex items-start justify-between gap-2">
+              <p class="font-bold text-slate-900 text-xs sm:text-sm line-clamp-1">${custMap.get(l.kv_customer_code) || l.kv_customer_code}</p>
+              <span class="bg-amber-100 text-amber-800 font-extrabold text-xs px-2 py-0.5 rounded-lg shrink-0">+${fmtNum(l.quantity)}</span>
+            </div>
+            <p class="text-xs text-slate-700">${l.raw_product_name}</p>
+            <div class="flex items-center justify-between text-[11px] text-slate-500 pt-1 border-t border-slate-100">
+              <span>${l.sale_date.slice(0, 10)} • ${repMap.get(l.sales_rep_id) || ''}</span>
+              <span class="italic text-amber-700 font-medium">${l.combined_note || ''}</span>
+            </div>
+          </div>
         `).join('');
 
-      // 2. Voucher DMS (Brand = POSM)
+      // 2. Voucher DMS
       const voucherLines = state.dmsLinesMonth.filter(l => l.is_posm_voucher && l.order_type === 'Order');
       const totalVouchers = voucherLines.reduce((s, l) => s + Number(l.quantity), 0);
-      document.getElementById('badge-dmsVoucherTotal').innerText = `${fmtNum(totalVouchers)} suất`;
+      document.getElementById('badge-dmsVoucherTotal').innerText = fmtNum(totalVouchers);
 
-      // Gom nhóm loại voucher trả NPP
       const vGroup = {};
       voucherLines.forEach(v => { vGroup[v.raw_product_name] = (vGroup[v.raw_product_name] || 0) + Number(v.quantity); });
-      document.getElementById('dmsVoucherSummaryCards').innerHTML = Object.keys(vGroup).length === 0
-        ? `<p class="text-xs text-slate-400 text-center">Không có suất voucher nào trong tháng.</p>`
-        : `<div class="flex flex-wrap gap-2">` + Object.entries(vGroup).map(([name, cnt]) => `
-            <div class="bg-white border border-emerald-200 px-3 py-1.5 rounded-lg text-xs">
-              <span class="text-slate-600">${name}:</span> <b class="text-emerald-800">${fmtNum(cnt)} suất</b>
-            </div>
-          `).join('') + `</div>`;
+      document.getElementById('dmsVoucherSummaryCards').innerHTML = Object.entries(vGroup).map(([name, cnt]) => `
+        <div class="bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl text-xs">
+          <span class="text-emerald-900">${name}:</span> <b class="text-emerald-700">${fmtNum(cnt)} suất</b>
+        </div>
+      `).join('');
 
-      document.getElementById('dmsVoucherTableBody').innerHTML = voucherLines.length === 0
-        ? `<tr><td colspan="4" class="px-4 py-8 text-center text-slate-400">Không có dữ liệu voucher DMS.</td></tr>`
+      document.getElementById('dmsVoucherList').innerHTML = voucherLines.length === 0
+        ? `<div class="bg-white p-8 rounded-2xl border text-center text-xs text-slate-400">Không có voucher DMS trong tháng này.</div>`
         : voucherLines.map(v => `
-          <tr class="hover:bg-emerald-50/40">
-            <td class="px-3 py-2.5 whitespace-nowrap">
-              <div class="font-medium text-slate-800">${v.ordered_date.slice(0, 10)}</div>
-              <div class="text-[10px] text-slate-400">${v.order_code.slice(-8)}</div>
-            </td>
-            <td class="px-3 py-2.5">
-              <div class="font-medium text-slate-800">${outMap.get(v.dms_outlet_code) || v.dms_outlet_code}</div>
-              <div class="text-[10px] text-slate-500">${repMap.get(v.sales_rep_id) || ''}</div>
-            </td>
-            <td class="px-3 py-2.5 text-slate-700">${v.raw_product_name}</td>
-            <td class="px-3 py-2.5 text-right font-bold text-emerald-700">${fmtNum(v.quantity)}</td>
-          </tr>
+          <div class="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between gap-2">
+            <div class="min-w-0">
+              <p class="font-bold text-slate-900 text-xs sm:text-sm truncate">${outMap.get(v.dms_outlet_code) || v.dms_outlet_code}</p>
+              <p class="text-xs text-emerald-700 font-medium mt-0.5">${v.raw_product_name}</p>
+              <p class="text-[11px] text-slate-400 mt-0.5">${v.ordered_date.slice(0, 10)} • ${repMap.get(v.sales_rep_id) || ''}</p>
+            </div>
+            <span class="bg-emerald-100 text-emerald-800 font-extrabold text-xs px-2.5 py-1 rounded-xl shrink-0">${fmtNum(v.quantity)} suất</span>
+          </div>
         `).join('');
     }
 
     // =========================================================================
-    // 8. QUẢN LÝ MÃ SKU MỚI & PHÂN NHÓM
+    // QUẢN LÝ MÃ SKU MỚI & PHÂN NHÓM
     // =========================================================================
     function openSkuModal() {
-      const tbody = document.getElementById('skuMappingTableBody');
-      tbody.innerHTML = state.skuMappings.map(m => `
-        <tr class="${!m.product_group_id ? 'bg-amber-50' : ''}">
-          <td class="px-3 py-2 font-semibold">${m.source_system}</td>
-          <td class="px-3 py-2 font-mono">${m.raw_code}</td>
-          <td class="px-3 py-2">${m.raw_name}</td>
-          <td class="px-3 py-2">
-            <select onchange="updateSkuGroup('${m.id}', this.value)" class="border border-slate-300 rounded px-2 py-1 text-xs w-full">
-              <option value="">-- Chưa phân nhóm --</option>
-              ${state.productGroups.map(g => `<option value="${g.id}" ${g.id === m.product_group_id ? 'selected' : ''}>${g.group_name}</option>`).join('')}
-            </select>
-          </td>
-        </tr>
+      const container = document.getElementById('skuMappingList');
+      container.innerHTML = state.skuMappings.map(m => `
+        <div class="p-3 rounded-xl border ${!m.product_group_id ? 'bg-amber-50 border-amber-300' : 'bg-slate-50 border-slate-200'} space-y-1.5">
+          <div class="flex items-center justify-between text-xs">
+            <span class="font-bold text-emerald-800">${m.source_system} • ${m.raw_code}</span>
+          </div>
+          <p class="text-xs text-slate-700 font-medium">${m.raw_name}</p>
+          <select onchange="updateSkuGroup('${m.id}', this.value)" class="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs font-semibold">
+            <option value="">-- Chọn nhóm chuẩn --</option>
+            ${state.productGroups.map(g => `<option value="${g.id}" ${g.id === m.product_group_id ? 'selected' : ''}>${g.group_name}</option>`).join('')}
+          </select>
+        </div>
       `).join('');
       document.getElementById('skuModal').classList.remove('hidden');
     }
 
     async function updateSkuGroup(mappingId, groupId) {
       await supabaseClient.from('sku_mappings').update({
-        product_group_id: groupId || null,
-        is_verified: Boolean(groupId)
+        product_group_id: groupId || null, is_verified: Boolean(groupId)
       }).eq('id', mappingId);
       await refreshAllData();
     }
 
     // =========================================================================
-    // 9. XỬ LÝ ĐỌC EXCEL (KIOTVIET & DMS) VÀ ĐẨY LÊN SUPABASE
+    // ĐỌC EXCEL & ĐẨY LÊN SUPABASE
     // =========================================================================
     function logUpload(msg) {
       const box = document.getElementById('uploadLogBox');
@@ -1175,7 +1088,7 @@
       if (!supabaseClient) return alert('Chưa kết nối Supabase!');
       const fileKv = document.getElementById('fileInputKv').files[0];
       const fileDms = document.getElementById('fileInputDms').files[0];
-      if (!fileKv && !fileDms) return alert('Vui lòng chọn ít nhất 1 file Excel (KiotViet hoặc DMS)!');
+      if (!fileKv && !fileDms) return alert('Vui lòng chọn ít nhất 1 file Excel!');
 
       const btn = document.getElementById('btnProcessUpload');
       btn.disabled = true;
@@ -1184,7 +1097,7 @@
       try {
         if (fileKv) await importKiotVietExcel(fileKv);
         if (fileDms) await importDmsExcel(fileDms);
-        logUpload('HOÀN TẤT ĐỒNG BỘ! Đang làm mới báo cáo...');
+        logUpload('HOÀN TẤT! Đang tải lại số liệu...');
         await refreshAllData();
       } catch (err) {
         console.error(err);
@@ -1197,11 +1110,7 @@
     function parseExcelDate(val) {
       if (!val) return null;
       if (val instanceof Date) return val;
-      if (typeof val === 'number') {
-        // Excel serial date
-        const utcDays = Math.floor(val - 25569);
-        return new Date(utcDays * 86400 * 1000);
-      }
+      if (typeof val === 'number') return new Date(Math.floor(val - 25569) * 86400 * 1000);
       const d = new Date(val);
       return isNaN(d.getTime()) ? null : d;
     }
@@ -1211,7 +1120,6 @@
       const norm = rawSeller.trim().toLowerCase();
       for (const rep of state.salesReps) {
         if ((rep.kv_seller_names || []).some(n => n.trim().toLowerCase() === norm)) return rep.id;
-        // Fallback so khớp theo số điện thoại hoặc tên không dấu
         if (rep.phone && norm.includes(rep.phone)) return rep.id;
       }
       return null;
@@ -1225,12 +1133,10 @@
     }
 
     async function importKiotVietExcel(file) {
-      logUpload(`Đang đọc file KiotViet: ${file.name}...`);
+      logUpload(`Đọc KiotViet: ${file.name}...`);
       const buf = await file.arrayBuffer();
       const wb = XLSX.read(buf, { type: 'array', cellDates: true });
-      const sheet = wb.Sheets[wb.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json(sheet, { defval: null });
-      logUpload(`Tổng số dòng đọc được: ${rows.length}`);
+      const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: null });
 
       const CARLSBERG_KEYWORDS = ['carlsberg', 'tuborg', 'blanc', 'huda', 'somersby'];
       const customersMap = new Map();
@@ -1241,8 +1147,7 @@
       for (const r of rows) {
         const nhomHang = String(r['Nhóm hàng'] || '').toLowerCase();
         const tenHang = String(r['Tên hàng'] || '').toLowerCase();
-        const isCarlsberg = CARLSBERG_KEYWORDS.some(k => nhomHang.includes(k) || tenHang.includes(k));
-        if (!isCarlsberg) continue;
+        if (!CARLSBERG_KEYWORDS.some(k => nhomHang.includes(k) || tenHang.includes(k))) continue;
 
         const dt = parseExcelDate(r['Thời gian']);
         if (!dt) continue;
@@ -1273,8 +1178,6 @@
         lineCounter.set(dupKey, idx);
 
         const noteParts = [r['Ghi chú hàng hóa'], r['Ghi chú']].filter(Boolean).map(s => String(s).trim());
-        const combinedNote = [...new Set(noteParts)].join(' | ') || null;
-
         salesLines.push({
           invoice_code: invoiceCode,
           line_index: idx,
@@ -1292,39 +1195,33 @@
           discount_amount: Number(r['Giảm giá'] || 0),
           selling_price: sellingPrice,
           total_amount: Number(r['Thành tiền'] || 0),
-          combined_note: combinedNote
+          combined_note: [...new Set(noteParts)].join(' | ') || null
         });
       }
 
-      logUpload(`Lọc được ${salesLines.length} dòng Carlsberg, ${customersMap.size} khách hàng.`);
-
-      // Upsert Customers & New SKUs
+      logUpload(`Tìm thấy ${salesLines.length} dòng Carlsberg.`);
       if (customersMap.size > 0) {
-        const { error: e1 } = await supabaseClient.from('kv_customers').upsert(Array.from(customersMap.values()), { onConflict: 'kv_customer_code' });
-        if (e1) throw e1;
+        const { error } = await supabaseClient.from('kv_customers').upsert(Array.from(customersMap.values()), { onConflict: 'kv_customer_code' });
+        if (error) throw error;
       }
       if (newSkusMap.size > 0) {
         await supabaseClient.from('sku_mappings').upsert(Array.from(newSkusMap.values()), { onConflict: 'source_system,raw_code' });
       }
-
-      // Upsert Sales Lines theo từng batch 500 dòng
       for (let i = 0; i < salesLines.length; i += 500) {
-        const chunk = salesLines.slice(i, i + 500);
-        const { error } = await supabaseClient.from('kv_sales_lines').upsert(chunk, {
+        const { error } = await supabaseClient.from('kv_sales_lines').upsert(salesLines.slice(i, i + 500), {
           onConflict: 'invoice_code,raw_product_code,selling_price,line_index'
         });
         if (error) throw error;
       }
-      logUpload(`Đã lưu xong ${salesLines.length} dòng KiotViet lên Supabase.`);
+      logUpload(`Đã lưu xong KiotViet!`);
     }
 
     async function importDmsExcel(file) {
-      logUpload(`Đang đọc file DMS: ${file.name}...`);
+      logUpload(`Đọc DMS: ${file.name}...`);
       const buf = await file.arrayBuffer();
       const wb = XLSX.read(buf, { type: 'array', cellDates: true });
       const sheetName = wb.SheetNames.includes('Detail') ? 'Detail' : wb.SheetNames[0];
       const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { defval: null });
-      logUpload(`Tổng số dòng sheet ${sheetName}: ${rows.length}`);
 
       const outletsMap = new Map();
       const newSkusMap = new Map();
@@ -1332,9 +1229,7 @@
       const dmsLines = [];
 
       for (const r of rows) {
-        // Chỉ bóc tách NPP Viet Bill (CD1084)
         if (String(r['DisCode'] || '').trim() !== 'CD1084') continue;
-
         const ordDt = parseExcelDate(r['OrderedDate']);
         if (!ordDt) continue;
         const delDt = parseExcelDate(r['DeliveriedDate']);
@@ -1359,11 +1254,7 @@
 
         if (rawBrand !== 'POSM' && !state.skuMappings.some(m => m.source_system === 'DMS' && m.raw_code === rawCode)) {
           newSkusMap.set(rawCode, {
-            source_system: 'DMS',
-            raw_code: rawCode,
-            raw_group_code: r['GroupCode'] || null,
-            raw_name: rawProdName,
-            is_verified: false
+            source_system: 'DMS', raw_code: rawCode, raw_group_code: r['GroupCode'] || null, raw_name: rawProdName, is_verified: false
           });
         }
 
@@ -1394,36 +1285,27 @@
         });
       }
 
-      logUpload(`Lọc được ${dmsLines.length} dòng NPP Viet Bill, ${outletsMap.size} Outlet.`);
-
+      logUpload(`Tìm thấy ${dmsLines.length} dòng NPP Viet Bill.`);
       if (outletsMap.size > 0) {
-        const { error: e1 } = await supabaseClient.from('dms_outlets').upsert(Array.from(outletsMap.values()), { onConflict: 'dms_outlet_code' });
-        if (e1) throw e1;
+        const { error } = await supabaseClient.from('dms_outlets').upsert(Array.from(outletsMap.values()), { onConflict: 'dms_outlet_code' });
+        if (error) throw error;
       }
       if (newSkusMap.size > 0) {
         await supabaseClient.from('sku_mappings').upsert(Array.from(newSkusMap.values()), { onConflict: 'source_system,raw_code' });
       }
-
       for (let i = 0; i < dmsLines.length; i += 500) {
-        const chunk = dmsLines.slice(i, i + 500);
-        const { error } = await supabaseClient.from('dms_order_lines').upsert(chunk, {
+        const { error } = await supabaseClient.from('dms_order_lines').upsert(dmsLines.slice(i, i + 500), {
           onConflict: 'order_code,raw_product_code,order_type,line_index'
         });
         if (error) throw error;
       }
-      logUpload(`Đã lưu xong ${dmsLines.length} dòng DMS lên Supabase.`);
+      logUpload(`Đã lưu xong DMS!`);
     }
 
-    // =========================================================================
-    // 10. HÀM TIỆN ÍCH FORMAT SỐ & UI
-    // =========================================================================
-    function fmtNum(n) {
-      return Number(n || 0).toLocaleString('vi-VN');
-    }
+    function fmtNum(n) { return Number(n || 0).toLocaleString('vi-VN'); }
     function fmtDiff(n) {
       const val = Number(n || 0);
-      if (val > 0) return `+${val.toLocaleString('vi-VN')}`;
-      return val.toLocaleString('vi-VN');
+      return val > 0 ? `+${val.toLocaleString('vi-VN')}` : val.toLocaleString('vi-VN');
     }
     function diffColor(n) {
       const val = Number(n || 0);
@@ -1431,9 +1313,7 @@
       if (val > 0) return 'text-blue-600';
       return 'text-emerald-700';
     }
-    function toggleAccordion(id) {
-      document.getElementById(id).classList.toggle('hidden');
-    }
+    function toggleAccordion(id) { document.getElementById(id).classList.toggle('hidden'); }
   </script>
 </body>
 </html>
