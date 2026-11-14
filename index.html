@@ -25,380 +25,425 @@
 </head>
 <body class="text-slate-800 antialiased select-none sm:select-auto">
 
-  <!-- ==================== TOP APP BAR ==================== -->
-  <header class="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-900 text-white shadow-md sticky top-0 z-30">
-    <div class="max-w-7xl mx-auto px-3.5 sm:px-6 h-14 flex items-center justify-between gap-2">
-      <div class="flex items-center gap-2.5 min-w-0">
-        <div class="bg-emerald-700/80 border border-emerald-500/30 p-1.5 rounded-xl shrink-0">
-          <i data-lucide="scale" class="w-5 h-5 text-emerald-200"></i>
+  <!-- ==================== MÀN HÌNH ĐĂNG NHẬP (ADMIN / SALE) ==================== -->
+  <div id="loginScreen" class="fixed inset-0 bg-gradient-to-br from-emerald-950 via-emerald-900 to-teal-950 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl space-y-5">
+      <div class="text-center space-y-1.5">
+        <div class="w-12 h-12 bg-emerald-100 text-emerald-800 rounded-2xl flex items-center justify-center mx-auto">
+          <i data-lucide="scale" class="w-6 h-6"></i>
         </div>
-        <div class="truncate">
-          <h1 class="font-extrabold text-sm sm:text-base tracking-tight truncate">ĐỐI CHIẾU SALE • TEAM BC</h1>
-          <div class="flex items-center gap-1.5 text-[11px] text-emerald-300">
-            <span id="dbStatusDot" class="w-2 h-2 rounded-full bg-emerald-400 shrink-0"></span>
-            <span id="dbStatusText" class="truncate">Đã kết nối Supabase</span>
-          </div>
-        </div>
+        <h1 class="font-extrabold text-lg text-slate-900">ĐỐI CHIẾU SALE • TEAM BC</h1>
+        <p class="text-xs text-slate-500">Đăng nhập bằng tài khoản được cấp</p>
       </div>
 
-      <div class="flex items-center gap-1.5 shrink-0">
-        <button onclick="openUploadModal()" class="inline-flex items-center gap-1 bg-amber-400 hover:bg-amber-500 active:scale-95 text-slate-950 font-bold text-xs px-3 py-2 rounded-xl shadow transition">
-          <i data-lucide="upload-cloud" class="w-4 h-4"></i>
-          <span>Nạp Excel</span>
-        </button>
-        <button onclick="openConfigModal()" class="p-2 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-emerald-100 transition" title="Cài đặt Supabase">
-          <i data-lucide="settings" class="w-4 h-4"></i>
-        </button>
-      </div>
-    </div>
-  </header>
-
-  <!-- ==================== COMPACT FILTER BAR ==================== -->
-  <section class="bg-white border-b border-slate-200 sticky top-14 z-20 shadow-xs">
-    <div class="max-w-7xl mx-auto px-3.5 sm:px-6 py-2.5 space-y-2">
-      <div class="grid grid-cols-2 gap-2">
-        <div class="relative">
-          <span class="text-[10px] font-bold uppercase text-slate-400 absolute left-2.5 top-1">Tháng</span>
-          <select id="filterMonth" onchange="onFilterChange()" class="w-full bg-slate-50 border border-slate-200 text-slate-900 text-xs sm:text-sm rounded-xl pt-4 pb-1.5 px-2.5 font-bold focus:ring-emerald-600 focus:border-emerald-600">
-            <option value="">Đang tải...</option>
-          </select>
-        </div>
-
-        <div class="relative">
-          <span class="text-[10px] font-bold uppercase text-slate-400 absolute left-2.5 top-1">Nhân viên Sale</span>
-          <select id="filterSalesRep" onchange="onFilterChange()" class="w-full bg-slate-50 border border-slate-200 text-slate-900 text-xs sm:text-sm rounded-xl pt-4 pb-1.5 px-2.5 font-bold focus:ring-emerald-600 focus:border-emerald-600">
-            <option value="ALL">Tất cả 5 Sale</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5" id="brandChipsContainer">
-        <button onclick="selectBrandChip('ALL')" data-brand="ALL" class="brand-chip px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap bg-emerald-700 text-white">Tất cả Brand</button>
-        <button onclick="selectBrandChip('1664 Blanc')" data-brand="1664 Blanc" class="brand-chip px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-slate-100 text-slate-600">1664 Blanc</button>
-        <button onclick="selectBrandChip('Tuborg Ice')" data-brand="Tuborg Ice" class="brand-chip px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-slate-100 text-slate-600">Tuborg Ice</button>
-        <button onclick="selectBrandChip('Tuborg Green')" data-brand="Tuborg Green" class="brand-chip px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-slate-100 text-slate-600">Tuborg Green</button>
-        <button onclick="selectBrandChip('Huda')" data-brand="Huda" class="brand-chip px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-slate-100 text-slate-600">Huda</button>
-        <button onclick="selectBrandChip('Carlsberg')" data-brand="Carlsberg" class="brand-chip px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-slate-100 text-slate-600">Carlsberg</button>
-        <button onclick="selectBrandChip('Somersby')" data-brand="Somersby" class="brand-chip px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-slate-100 text-slate-600">Somersby</button>
-      </div>
-    </div>
-
-    <!-- DESKTOP TAB BAR -->
-    <div class="hidden md:flex max-w-7xl mx-auto px-6 space-x-6 border-t border-slate-100">
-      <button onclick="switchTab('reconcile')" id="dTab-reconcile" class="py-3 text-sm font-semibold border-b-2 border-emerald-700 text-emerald-700 flex items-center gap-2">
-        <i data-lucide="bar-chart-3" class="w-4 h-4"></i> 1. Đối Chiếu & Lũy Kế
-      </button>
-      <button onclick="switchTab('kv')" id="dTab-kv" class="py-3 text-sm font-medium text-slate-500 hover:text-slate-800 flex items-center gap-2">
-        <i data-lucide="store" class="w-4 h-4"></i> 2. Khách Hàng KiotViet
-      </button>
-      <button onclick="switchTab('dms')" id="dTab-dms" class="py-3 text-sm font-medium text-slate-500 hover:text-slate-800 flex items-center gap-2">
-        <i data-lucide="smartphone" class="w-4 h-4"></i> 3. Khách Hàng DMS
-      </button>
-      <button onclick="switchTab('custMatch')" id="dTab-custMatch" class="py-3 text-sm font-medium text-slate-500 hover:text-slate-800 flex items-center gap-2">
-        <i data-lucide="git-merge" class="w-4 h-4"></i> 4. Ghép & Đối Chiếu KH
-      </button>
-      <button onclick="switchTab('promo')" id="dTab-promo" class="py-3 text-sm font-medium text-slate-500 hover:text-slate-800 flex items-center gap-2">
-        <i data-lucide="gift" class="w-4 h-4"></i> 5. Hàng 0đ & Voucher
-      </button>
-    </div>
-  </section>
-
-  <!-- ==================== MAIN CONTENT ==================== -->
-  <main class="max-w-7xl mx-auto px-3 sm:px-6 py-3.5 space-y-3.5">
-
-    <!-- CẢNH BÁO MÃ SKU MỚI -->
-    <div id="unmappedAlert" class="hidden bg-amber-50 border border-amber-300 rounded-2xl p-3 flex items-center justify-between gap-3">
-      <div class="flex items-start gap-2">
-        <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-600 shrink-0 mt-0.5"></i>
+      <form onsubmit="handleLogin(event)" class="space-y-3.5">
         <div>
-          <h3 class="text-xs font-bold text-amber-900">Có mã SKU mới chưa phân nhóm!</h3>
-          <p id="unmappedText" class="text-[11px] text-amber-800 mt-0.5"></p>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Tên đăng nhập</label>
+          <input type="text" id="loginUsername" required autocomplete="username" placeholder="VD: admin hoặc nam.lh" class="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded-xl focus:ring-emerald-600 focus:border-emerald-600" />
         </div>
-      </div>
-      <button onclick="openSkuModal()" class="shrink-0 bg-amber-600 text-white text-xs font-bold px-3 py-1.5 rounded-xl">Gán nhóm</button>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Mật khẩu</label>
+          <input type="password" id="loginPassword" required autocomplete="current-password" placeholder="Nhập mật khẩu..." class="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded-xl focus:ring-emerald-600 focus:border-emerald-600" />
+        </div>
+        <p id="loginErrorMsg" class="hidden text-xs text-rose-600 font-semibold text-center"></p>
+        <button type="submit" id="btnLoginSubmit" class="w-full bg-emerald-700 hover:bg-emerald-800 active:scale-98 text-white font-bold text-sm py-3 rounded-xl shadow transition">
+          Đăng Nhập Hệ Thống
+        </button>
+      </form>
     </div>
+  </div>
 
-    <!-- ==================== TAB 1: ĐỐI CHIẾU SẢN LƯỢNG & LŨY KẾ ==================== -->
-    <div id="view-reconcile" class="space-y-3">
-      <div class="bg-gradient-to-br from-emerald-950 via-emerald-900 to-teal-950 text-white rounded-2xl p-4 shadow-md">
-        <div class="flex items-start justify-between gap-2">
-          <div>
-            <p class="text-[11px] font-semibold text-emerald-300 uppercase tracking-wider">Tổng Chênh Lệch Lũy Kế</p>
-            <div class="flex items-baseline gap-2 mt-0.5">
-              <span id="kpi-totalDiff" class="text-3xl sm:text-4xl font-extrabold tracking-tight text-emerald-300">0</span>
-              <span class="text-xs text-emerald-200">thùng / két</span>
+  <!-- ==================== APP SHELL ==================== -->
+  <div id="appShell" class="hidden">
+    <!-- TOP APP BAR -->
+    <header class="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-900 text-white shadow-md sticky top-0 z-30">
+      <div class="max-w-7xl mx-auto px-3.5 sm:px-6 h-14 flex items-center justify-between gap-2">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <div class="bg-emerald-700/80 border border-emerald-500/30 p-1.5 rounded-xl shrink-0">
+            <i data-lucide="scale" class="w-5 h-5 text-emerald-200"></i>
+          </div>
+          <div class="truncate">
+            <h1 class="font-extrabold text-sm sm:text-base tracking-tight truncate">ĐỐI CHIẾU SALE • TEAM BC</h1>
+            <div class="flex items-center gap-1.5 text-[11px] text-emerald-300">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 shrink-0"></span>
+              <span id="currentUserBadge" class="truncate">Đang tải...</span>
             </div>
-            <p id="kpi-totalLabel" class="text-xs text-emerald-100/90 mt-1">Chưa có dữ liệu</p>
-          </div>
-          <div class="flex flex-col items-end gap-1.5 shrink-0">
-            <button onclick="openSkuModal()" class="bg-white/10 hover:bg-white/20 text-emerald-100 text-[11px] font-semibold px-2.5 py-1.5 rounded-xl flex items-center gap-1">
-              <i data-lucide="layers" class="w-3.5 h-3.5"></i> Mã SKU
-            </button>
-            <button onclick="togglePromoInline()" id="btnTogglePromoInline" class="bg-amber-400/20 border border-amber-300/30 text-amber-200 text-[10px] font-semibold px-2.5 py-1 rounded-lg flex items-center gap-1">
-              <i data-lucide="eye" class="w-3 h-3"></i> <span id="lblTogglePromo">Hiện 0đ / KM</span>
-            </button>
           </div>
         </div>
 
-        <div class="grid grid-cols-4 gap-1.5 mt-3.5 pt-3 border-t border-white/15 text-center">
-          <div class="bg-white/10 rounded-xl py-2 px-1">
-            <span class="text-[10px] text-emerald-200 block">Bán KV</span>
-            <span id="kpi-kvPaid" class="text-sm sm:text-base font-extrabold text-white">0</span>
-          </div>
-          <div class="bg-white/10 rounded-xl py-2 px-1">
-            <span class="text-[10px] text-emerald-200 block">Key DMS</span>
-            <span id="kpi-dmsOrder" class="text-sm sm:text-base font-extrabold text-amber-300">0</span>
-          </div>
-          <div class="bg-white/10 rounded-xl py-2 px-1">
-            <span class="text-[10px] text-emerald-200 block">Tồn trước</span>
-            <span id="kpi-prevDiff" class="text-sm sm:text-base font-extrabold text-white">0</span>
-          </div>
-          <div class="bg-white/10 rounded-xl py-2 px-1">
-            <span class="text-[10px] text-emerald-200 block">Lệch tháng</span>
-            <span id="kpi-monthDiff" class="text-sm sm:text-base font-extrabold text-white">0</span>
-          </div>
-        </div>
-
-        <div onclick="switchTab('promo')" class="mt-2.5 bg-white/10 hover:bg-white/15 active:scale-99 cursor-pointer rounded-xl px-3 py-2 flex items-center justify-between text-[11px]">
-          <span class="text-amber-200 font-medium flex items-center gap-1.5">
-            <i data-lucide="gift" class="w-3.5 h-3.5 text-amber-300"></i>
-            <span>Tặng 0đ KV: <b id="kpi-freeBanner" class="text-white">0</b> két/thùng</span>
-          </span>
-          <span class="text-emerald-200 font-medium flex items-center gap-1">
-            <span>Voucher DMS: <b id="kpi-voucherBanner" class="text-white">0</b> suất</span>
-            <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
-          </span>
-        </div>
-      </div>
-
-      <!-- BẢNG ĐỐI CHIẾU SKU -->
-      <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-        <div class="px-3 py-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between text-[10px] text-slate-500">
-          <span class="font-bold text-slate-700 uppercase">Bảng Đối Chiếu SKU</span>
-          <div class="flex items-center gap-2.5">
-            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-600"></span><b>+</b> Chưa key DMS</span>
-            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-rose-600"></span><b>(-)</b> Key dư DMS</span>
-          </div>
-        </div>
-
-        <div class="overflow-x-auto">
-          <table class="w-full text-[11px] sm:text-xs border-collapse">
-            <thead>
-              <tr class="bg-slate-800 text-white font-bold text-[10px] sm:text-xs uppercase tracking-tight">
-                <th class="py-2.5 px-2.5 text-left">Sản phẩm</th>
-                <th class="py-2.5 px-1.5 text-right w-12 sm:w-16">Bán<br>KV</th>
-                <th class="py-2.5 px-1.5 text-right w-12 sm:w-16">Key<br>DMS</th>
-                <th class="py-2.5 px-1.5 text-right w-12 sm:w-16 bg-slate-700/80">Tồn<br>trước</th>
-                <th class="py-2.5 px-2 text-right w-14 sm:w-20 bg-emerald-900">Chênh<br>lệch</th>
-              </tr>
-            </thead>
-            <tbody id="reconcileCompactBody" class="divide-y divide-slate-200">
-              <tr><td colspan="5" class="py-8 text-center text-slate-400">Đang tải dữ liệu...</td></tr>
-            </tbody>
-            <tfoot id="reconcileCompactFoot" class="bg-slate-900 text-white font-extrabold text-xs">
-            </tfoot>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <!-- ==================== TAB 2: KHÁCH HÀNG KIOTVIET (DẠNG BẢNG GỌN + BẤM XỔ 3 THÁNG) ==================== -->
-    <div id="view-kv" class="hidden space-y-2.5">
-      <div class="relative">
-        <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-3"></i>
-        <input type="text" id="searchKvCust" onkeyup="renderKvCustomersTab()" placeholder="Tìm tên quán, mã KH hoặc SĐT KiotViet..." class="w-full bg-white pl-10 pr-4 py-2.5 text-sm border border-slate-200 rounded-2xl shadow-xs focus:ring-emerald-600 focus:border-emerald-600" />
-      </div>
-
-      <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-        <div class="px-3 py-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between text-[10px] text-slate-500">
-          <span class="font-bold text-slate-700 uppercase">Danh Sách Khách Hàng KiotViet</span>
-          <span>Bấm vào tên quán để xem SKU 3 tháng</span>
-        </div>
-        <table class="w-full text-[11px] sm:text-xs border-collapse">
-          <thead>
-            <tr class="bg-slate-800 text-white font-bold text-[10px] sm:text-xs uppercase">
-              <th class="py-2.5 px-2.5 text-left">Khách hàng / Sale</th>
-              <th class="py-2.5 px-1.5 text-right w-14 sm:w-20">Mua<br>KV</th>
-              <th class="py-2.5 px-2 text-right w-14 sm:w-20 bg-amber-900/70">Tặng<br>0đ</th>
-            </tr>
-          </thead>
-          <tbody id="kvCustomersTableBody" class="divide-y divide-slate-200"></tbody>
-          <tfoot id="kvCustomersTableFoot" class="bg-slate-900 text-white font-extrabold text-xs"></tfoot>
-        </table>
-      </div>
-    </div>
-
-    <!-- ==================== TAB 3: KHÁCH HÀNG DMS (DẠNG BẢNG GỌN + BẤM XỔ 3 THÁNG) ==================== -->
-    <div id="view-dms" class="hidden space-y-2.5">
-      <div class="relative">
-        <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-3"></i>
-        <input type="text" id="searchDmsCust" onkeyup="renderDmsCustomersTab()" placeholder="Tìm tên Outlet hoặc mã DMS (Viet Bill)..." class="w-full bg-white pl-10 pr-4 py-2.5 text-sm border border-slate-200 rounded-2xl shadow-xs focus:ring-emerald-600 focus:border-emerald-600" />
-      </div>
-
-      <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-        <div class="px-3 py-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between text-[10px] text-slate-500">
-          <span class="font-bold text-slate-700 uppercase">Outlet DMS • NPP Viet Bill</span>
-          <span>Bấm vào tên quán để xem SKU 3 tháng</span>
-        </div>
-        <table class="w-full text-[11px] sm:text-xs border-collapse">
-          <thead>
-            <tr class="bg-slate-800 text-white font-bold text-[10px] sm:text-xs uppercase">
-              <th class="py-2.5 px-2.5 text-left">Outlet DMS / Sale</th>
-              <th class="py-2.5 px-1.5 text-right w-14 sm:w-20">Đã Key<br>(Tháng)</th>
-              <th class="py-2.5 px-2 text-right w-16 sm:w-24 bg-emerald-900">Lũy kế<br>(3 Tháng)</th>
-            </tr>
-          </thead>
-          <tbody id="dmsCustomersTableBody" class="divide-y divide-slate-200"></tbody>
-          <tfoot id="dmsCustomersTableFoot" class="bg-slate-900 text-white font-extrabold text-xs"></tfoot>
-        </table>
-      </div>
-    </div>
-
-    <!-- ==================== TAB 4: GHÉP & ĐỐI CHIẾU KHÁCH HÀNG ==================== -->
-    <div id="view-custMatch" class="hidden space-y-3.5">
-      <!-- Khu vực 1: Gợi ý ghép (Có đầy đủ nút Xác nhận & Từ chối) -->
-      <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-        <div class="px-3.5 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between gap-2">
-          <div>
-            <h2 class="font-bold text-slate-800 text-xs sm:text-sm flex items-center gap-1.5">
-              <i data-lucide="sparkles" class="w-4 h-4 text-amber-500"></i> Gợi Ý Ghép Quán (<span id="sugCountBadge">0</span>)
-            </h2>
-            <p class="text-[10px] text-slate-500">Xác nhận để gộp vĩnh viễn, hoặc Từ chối để ẩn hẳn</p>
-          </div>
-          <button onclick="openManualLinkModal()" class="bg-emerald-700 active:scale-95 text-white text-xs font-bold px-3 py-1.5 rounded-xl flex items-center gap-1 shrink-0">
-            <i data-lucide="link" class="w-3.5 h-3.5"></i> Ghép tay
+        <div class="flex items-center gap-1.5 shrink-0">
+          <button id="btnAdminUpload" onclick="openUploadModal()" class="hidden inline-flex items-center gap-1 bg-amber-400 hover:bg-amber-500 active:scale-95 text-slate-950 font-bold text-xs px-3 py-2 rounded-xl shadow transition">
+            <i data-lucide="upload-cloud" class="w-4 h-4"></i>
+            <span>Nạp Excel</span>
+          </button>
+          <button id="btnAdminUsers" onclick="openUsersModal()" class="hidden p-2 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-emerald-100 transition" title="Quản lý tài khoản Sale">
+            <i data-lucide="users" class="w-4 h-4"></i>
+          </button>
+          <button onclick="handleLogout()" class="p-2 rounded-xl bg-white/10 hover:bg-rose-600/80 active:scale-95 text-emerald-100 transition" title="Đăng xuất">
+            <i data-lucide="log-out" class="w-4 h-4"></i>
           </button>
         </div>
-        <div id="suggestionsContainer" class="p-3 space-y-2.5"></div>
+      </div>
+    </header>
+
+    <!-- COMPACT FILTER BAR (CHỌN KHOẢNG THÁNG + SALE) -->
+    <section class="bg-white border-b border-slate-200 sticky top-14 z-20 shadow-xs">
+      <div class="max-w-7xl mx-auto px-3.5 sm:px-6 py-2.5 space-y-2">
+        <div class="grid grid-cols-12 gap-2">
+          <div class="col-span-4 sm:col-span-3 relative">
+            <span class="text-[9px] font-bold uppercase text-slate-400 absolute left-2 top-1">Từ tháng</span>
+            <select id="filterFromMonth" onchange="onDateRangeChange('from')" class="w-full bg-slate-50 border border-slate-200 text-slate-900 text-xs rounded-xl pt-3.5 pb-1.5 px-2 font-bold focus:ring-emerald-600 focus:border-emerald-600">
+              <option value="">--</option>
+            </select>
+          </div>
+
+          <div class="col-span-4 sm:col-span-3 relative">
+            <span class="text-[9px] font-bold uppercase text-slate-400 absolute left-2 top-1">Đến tháng</span>
+            <select id="filterToMonth" onchange="onDateRangeChange('to')" class="w-full bg-slate-50 border border-slate-200 text-slate-900 text-xs rounded-xl pt-3.5 pb-1.5 px-2 font-bold focus:ring-emerald-600 focus:border-emerald-600">
+              <option value="">--</option>
+            </select>
+          </div>
+
+          <div class="col-span-4 sm:col-span-6 relative">
+            <span class="text-[9px] font-bold uppercase text-slate-400 absolute left-2 top-1">Nhân viên Sale</span>
+            <select id="filterSalesRep" onchange="onFilterChange()" class="w-full bg-slate-50 border border-slate-200 text-slate-900 text-xs rounded-xl pt-3.5 pb-1.5 px-2 font-bold focus:ring-emerald-600 focus:border-emerald-600 disabled:opacity-80 disabled:bg-emerald-50/70 disabled:text-emerald-900">
+              <option value="ALL">Tất cả 5 Sale</option>
+            </select>
+          </div>
+        </div>
       </div>
 
-      <!-- Khu vực 2: Bảng Đối Chiếu Trực Quan Các Quán Đã Ghép -->
-      <div class="space-y-2">
+      <!-- DESKTOP TAB BAR -->
+      <div class="hidden md:flex max-w-7xl mx-auto px-6 space-x-6 border-t border-slate-100">
+        <button onclick="switchTab('reconcile')" id="dTab-reconcile" class="py-3 text-sm font-semibold border-b-2 border-emerald-700 text-emerald-700 flex items-center gap-2">
+          <i data-lucide="bar-chart-3" class="w-4 h-4"></i> 1. Đối chiếu
+        </button>
+        <button onclick="switchTab('kv')" id="dTab-kv" class="py-3 text-sm font-medium text-slate-500 hover:text-slate-800 flex items-center gap-2">
+          <i data-lucide="store" class="w-4 h-4"></i> 2. Kiot
+        </button>
+        <button onclick="switchTab('dms')" id="dTab-dms" class="py-3 text-sm font-medium text-slate-500 hover:text-slate-800 flex items-center gap-2">
+          <i data-lucide="smartphone" class="w-4 h-4"></i> 3. DMS
+        </button>
+        <button onclick="switchTab('custMatch')" id="dTab-custMatch" class="py-3 text-sm font-medium text-slate-500 hover:text-slate-800 flex items-center gap-2">
+          <i data-lucide="git-merge" class="w-4 h-4"></i> 4. Ghép KH
+        </button>
+        <button onclick="switchTab('promo')" id="dTab-promo" class="py-3 text-sm font-medium text-slate-500 hover:text-slate-800 flex items-center gap-2">
+          <i data-lucide="gift" class="w-4 h-4"></i> 5. 0đ & KM
+        </button>
+      </div>
+    </section>
+
+    <!-- MAIN CONTENT -->
+    <main class="max-w-7xl mx-auto px-3 sm:px-6 py-3.5 space-y-3.5">
+
+      <!-- CẢNH BÁO MÃ SKU MỚI (Chỉ hiện cho Admin) -->
+      <div id="unmappedAlert" class="hidden bg-amber-50 border border-amber-300 rounded-2xl p-3 flex items-center justify-between gap-3">
+        <div class="flex items-start gap-2">
+          <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-600 shrink-0 mt-0.5"></i>
+          <div>
+            <h3 class="text-xs font-bold text-amber-900">Có mã SKU mới chưa phân nhóm!</h3>
+            <p id="unmappedText" class="text-[11px] text-amber-800 mt-0.5"></p>
+          </div>
+        </div>
+        <button onclick="openSkuModal()" class="shrink-0 bg-amber-600 text-white text-xs font-bold px-3 py-1.5 rounded-xl">Gán nhóm</button>
+      </div>
+
+      <!-- ==================== TAB 1: ĐỐI CHIẾU SẢN LƯỢNG & LŨY KẾ ==================== -->
+      <div id="view-reconcile" class="space-y-3">
+        <div class="bg-gradient-to-br from-emerald-950 via-emerald-900 to-teal-950 text-white rounded-2xl p-4 shadow-md">
+          <div class="flex items-start justify-between gap-2">
+            <div>
+              <p class="text-[11px] font-semibold text-emerald-300 uppercase tracking-wider">Tổng Chênh Lệch Lũy Kế</p>
+              <div class="flex items-baseline gap-2 mt-0.5">
+                <span id="kpi-totalDiff" class="text-3xl sm:text-4xl font-extrabold tracking-tight text-emerald-300">0</span>
+                <span class="text-xs text-emerald-200">thùng / két</span>
+              </div>
+              <p id="kpi-totalLabel" class="text-xs text-emerald-100/90 mt-1">Chưa có dữ liệu</p>
+            </div>
+            <div class="flex flex-col items-end gap-1.5 shrink-0">
+              <button id="btnAdminSku" onclick="openSkuModal()" class="hidden bg-white/10 hover:bg-white/20 text-emerald-100 text-[11px] font-semibold px-2.5 py-1.5 rounded-xl flex items-center gap-1">
+                <i data-lucide="layers" class="w-3.5 h-3.5"></i> Mã SKU
+              </button>
+              <button onclick="togglePromoInline()" id="btnTogglePromoInline" class="bg-amber-400/20 border border-amber-300/30 text-amber-200 text-[10px] font-semibold px-2.5 py-1 rounded-lg flex items-center gap-1">
+                <i data-lucide="eye" class="w-3 h-3"></i> <span id="lblTogglePromo">Hiện 0đ / KM</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-4 gap-1.5 mt-3.5 pt-3 border-t border-white/15 text-center">
+            <div class="bg-white/10 rounded-xl py-2 px-1">
+              <span class="text-[10px] text-emerald-200 block">Bán KV</span>
+              <span id="kpi-kvPaid" class="text-sm sm:text-base font-extrabold text-white">0</span>
+            </div>
+            <div class="bg-white/10 rounded-xl py-2 px-1">
+              <span class="text-[10px] text-emerald-200 block">Key DMS</span>
+              <span id="kpi-dmsOrder" class="text-sm sm:text-base font-extrabold text-amber-300">0</span>
+            </div>
+            <div class="bg-white/10 rounded-xl py-2 px-1">
+              <span class="text-[10px] text-emerald-200 block">Tồn trước</span>
+              <span id="kpi-prevDiff" class="text-sm sm:text-base font-extrabold text-white">0</span>
+            </div>
+            <div class="bg-white/10 rounded-xl py-2 px-1">
+              <span class="text-[10px] text-emerald-200 block">Lệch kỳ chọn</span>
+              <span id="kpi-monthDiff" class="text-sm sm:text-base font-extrabold text-white">0</span>
+            </div>
+          </div>
+
+          <div onclick="switchTab('promo')" class="mt-2.5 bg-white/10 hover:bg-white/15 active:scale-99 cursor-pointer rounded-xl px-3 py-2 flex items-center justify-between text-[11px]">
+            <span class="text-amber-200 font-medium flex items-center gap-1.5">
+              <i data-lucide="gift" class="w-3.5 h-3.5 text-amber-300"></i>
+              <span>Tặng 0đ KV: <b id="kpi-freeBanner" class="text-white">0</b> két/thùng</span>
+            </span>
+            <span class="text-emerald-200 font-medium flex items-center gap-1">
+              <span>Voucher DMS: <b id="kpi-voucherBanner" class="text-white">0</b> suất</span>
+              <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+            </span>
+          </div>
+        </div>
+
+        <!-- BẢNG ĐỐI CHIẾU SKU (CHIA 2 NHÓM PREMIUM & MAINSTREAM) -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+          <div class="px-3 py-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between text-[10px] text-slate-500">
+            <span class="font-bold text-slate-700 uppercase">Bảng Đối Chiếu SKU</span>
+            <div class="flex items-center gap-2.5">
+              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-600"></span><b>+</b> Chưa key DMS</span>
+              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-rose-600"></span><b>(-)</b> Key dư DMS</span>
+            </div>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-[11px] sm:text-xs border-collapse">
+              <thead>
+                <tr class="bg-slate-800 text-white font-bold text-[10px] sm:text-xs uppercase tracking-tight">
+                  <th class="py-2.5 px-2.5 text-left">Sản phẩm</th>
+                  <th class="py-2.5 px-1.5 text-right w-12 sm:w-16">Bán<br>KV</th>
+                  <th class="py-2.5 px-1.5 text-right w-12 sm:w-16">Key<br>DMS</th>
+                  <th class="py-2.5 px-1.5 text-right w-12 sm:w-16 bg-slate-700/80">Tồn<br>trước</th>
+                  <th class="py-2.5 px-2 text-right w-14 sm:w-20 bg-emerald-900">Chênh<br>lệch</th>
+                </tr>
+              </thead>
+              <tbody id="reconcileCompactBody" class="divide-y divide-slate-200">
+                <tr><td colspan="5" class="py-8 text-center text-slate-400">Đang tải dữ liệu...</td></tr>
+              </tbody>
+              <tfoot id="reconcileCompactFoot" class="bg-slate-900 text-white font-extrabold text-xs">
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================== TAB 2: KIOT ==================== -->
+      <div id="view-kv" class="hidden space-y-2.5">
         <div class="relative">
           <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-3"></i>
-          <input type="text" id="searchLinkedCust" onkeyup="renderLinkedCustomersComparison()" placeholder="Tìm khách hàng đã ghép để đối chiếu..." class="w-full bg-white pl-10 pr-4 py-2.5 text-sm border border-slate-200 rounded-2xl shadow-xs" />
+          <input type="text" id="searchKvCust" onkeyup="renderKvCustomersTab()" placeholder="Tìm tên quán, mã hoặc SĐT trên KiotViet..." class="w-full bg-white pl-10 pr-4 py-2.5 text-sm border border-slate-200 rounded-2xl shadow-xs focus:ring-emerald-600 focus:border-emerald-600" />
         </div>
 
         <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
           <div class="px-3 py-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between text-[10px] text-slate-500">
-            <span class="font-bold text-slate-700 uppercase">Bảng Đối Chiếu Theo Khách Hàng (3 Tháng)</span>
-            <span>Bấm vào tên quán để xem chi tiết SKU</span>
+            <span class="font-bold text-slate-700 uppercase">Danh Sách Điểm Bán KiotViet</span>
+            <span>Bấm vào tên quán để xem chi tiết</span>
           </div>
           <table class="w-full text-[11px] sm:text-xs border-collapse">
             <thead>
               <tr class="bg-slate-800 text-white font-bold text-[10px] sm:text-xs uppercase">
-                <th class="py-2.5 px-2.5 text-left">Khách hàng (KV &harr; DMS)</th>
-                <th class="py-2.5 px-1.5 text-right w-12 sm:w-16">Bán<br>KV</th>
-                <th class="py-2.5 px-1.5 text-right w-12 sm:w-16">Key<br>DMS</th>
-                <th class="py-2.5 px-2 text-right w-14 sm:w-20 bg-emerald-900">Chênh<br>lệch</th>
+                <th class="py-2.5 px-2.5 text-left">Điểm bán / Sale</th>
+                <th class="py-2.5 px-1.5 text-right w-14 sm:w-20">Mua<br>KV</th>
+                <th class="py-2.5 px-2 text-right w-14 sm:w-20 bg-amber-900/70">Tặng<br>0đ</th>
               </tr>
             </thead>
-            <tbody id="linkedComparisonTableBody" class="divide-y divide-slate-200"></tbody>
-            <tfoot id="linkedComparisonTableFoot" class="bg-slate-900 text-white font-extrabold text-xs"></tfoot>
+            <tbody id="kvCustomersTableBody" class="divide-y divide-slate-200"></tbody>
+            <tfoot id="kvCustomersTableFoot" class="bg-slate-900 text-white font-extrabold text-xs"></tfoot>
           </table>
         </div>
       </div>
-    </div>
 
-    <!-- ==================== TAB 5: HÀNG 0Đ KV & VOUCHER DMS (DẠNG BẢNG GỌN) ==================== -->
-    <div id="view-promo" class="hidden space-y-3">
-      <div class="grid grid-cols-2 bg-slate-200/80 p-1 rounded-xl">
-        <button id="subPromoBtn-kv" onclick="switchPromoSub('kv')" class="py-2 text-xs font-bold rounded-lg bg-white text-amber-800 shadow-xs">
-          Hàng 0đ KiotViet (<span id="badge-kvFreeTotal">0</span>)
-        </button>
-        <button id="subPromoBtn-dms" onclick="switchPromoSub('dms')" class="py-2 text-xs font-semibold rounded-lg text-slate-600">
-          Voucher DMS (<span id="badge-dmsVoucherTotal">0</span>)
-        </button>
-      </div>
+      <!-- ==================== TAB 3: DMS ==================== -->
+      <div id="view-dms" class="hidden space-y-2.5">
+        <div class="relative">
+          <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-3"></i>
+          <input type="text" id="searchDmsCust" onkeyup="renderDmsCustomersTab()" placeholder="Tìm tên Outlet hoặc mã DMS (Viet Bill)..." class="w-full bg-white pl-10 pr-4 py-2.5 text-sm border border-slate-200 rounded-2xl shadow-xs focus:ring-emerald-600 focus:border-emerald-600" />
+        </div>
 
-      <!-- Bảng Hàng 0đ KV -->
-      <div id="promoSub-kv" class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-        <table class="w-full text-[11px] sm:text-xs border-collapse">
-          <thead>
-            <tr class="bg-amber-900 text-white font-bold text-[10px] sm:text-xs uppercase">
-              <th class="py-2.5 px-2.5 text-left">Khách hàng / Sản phẩm</th>
-              <th class="py-2.5 px-2 text-left w-24 sm:w-36">Ghi chú CTKM</th>
-              <th class="py-2.5 px-2 text-right w-12 sm:w-16">SL</th>
-            </tr>
-          </thead>
-          <tbody id="kvFreeTableBody" class="divide-y divide-slate-200"></tbody>
-          <tfoot id="kvFreeTableFoot" class="bg-slate-900 text-white font-extrabold text-xs"></tfoot>
-        </table>
-      </div>
-
-      <!-- Bảng Voucher DMS -->
-      <div id="promoSub-dms" class="hidden space-y-2.5">
-        <div id="dmsVoucherSummaryCards" class="flex flex-wrap gap-2"></div>
         <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+          <div class="px-3 py-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between text-[10px] text-slate-500">
+            <span class="font-bold text-slate-700 uppercase">Outlet DMS • NPP Viet Bill</span>
+            <span>Bấm vào tên quán để xem chi tiết</span>
+          </div>
           <table class="w-full text-[11px] sm:text-xs border-collapse">
             <thead>
-              <tr class="bg-emerald-900 text-white font-bold text-[10px] sm:text-xs uppercase">
-                <th class="py-2.5 px-2.5 text-left">Outlet / Loại Voucher</th>
-                <th class="py-2.5 px-2 text-right w-14 sm:w-20">Suất</th>
+              <tr class="bg-slate-800 text-white font-bold text-[10px] sm:text-xs uppercase">
+                <th class="py-2.5 px-2.5 text-left">Outlet DMS / Sale</th>
+                <th class="py-2.5 px-2 text-right w-20 sm:w-28 bg-emerald-900">Đã Key<br>(Kỳ chọn)</th>
               </tr>
             </thead>
-            <tbody id="dmsVoucherTableBody" class="divide-y divide-slate-200"></tbody>
-            <tfoot id="dmsVoucherTableFoot" class="bg-slate-900 text-white font-extrabold text-xs"></tfoot>
+            <tbody id="dmsCustomersTableBody" class="divide-y divide-slate-200"></tbody>
+            <tfoot id="dmsCustomersTableFoot" class="bg-slate-900 text-white font-extrabold text-xs"></tfoot>
           </table>
         </div>
       </div>
-    </div>
 
-  </main>
+      <!-- ==================== TAB 4: GHÉP KH ==================== -->
+      <div id="view-custMatch" class="hidden space-y-3.5">
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+          <div class="px-3.5 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between gap-2">
+            <div>
+              <h2 class="font-bold text-slate-800 text-xs sm:text-sm flex items-center gap-1.5">
+                <i data-lucide="sparkles" class="w-4 h-4 text-amber-500"></i> Gợi Ý Ghép Quán (<span id="sugCountBadge">0</span>)
+              </h2>
+              <p class="text-[10px] text-slate-500">Lọc đúng theo Sale đang chọn • Xác nhận hoặc Từ chối</p>
+            </div>
+            <button onclick="openManualLinkModal()" class="bg-emerald-700 active:scale-95 text-white text-xs font-bold px-3 py-1.5 rounded-xl flex items-center gap-1 shrink-0">
+              <i data-lucide="link" class="w-3.5 h-3.5"></i> Ghép tay
+            </button>
+          </div>
+          <div id="suggestionsContainer" class="p-3 space-y-2.5"></div>
+        </div>
 
-  <!-- ==================== MOBILE BOTTOM NAVIGATION BAR ==================== -->
-  <nav class="md:hidden fixed bottom-0 inset-x-0 bg-white border-t border-slate-200 z-40 px-1 py-1.5 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
-    <div class="grid grid-cols-5 gap-1">
-      <button onclick="switchTab('reconcile')" id="mTab-reconcile" class="flex flex-col items-center justify-center py-1 rounded-xl text-emerald-700 font-bold">
-        <i data-lucide="bar-chart-3" class="w-5 h-5"></i>
-        <span class="text-[10px] mt-0.5">Đối chiếu</span>
-      </button>
-      <button onclick="switchTab('kv')" id="mTab-kv" class="flex flex-col items-center justify-center py-1 rounded-xl text-slate-400">
-        <i data-lucide="store" class="w-5 h-5"></i>
-        <span class="text-[10px] mt-0.5">KH Kiot</span>
-      </button>
-      <button onclick="switchTab('dms')" id="mTab-dms" class="flex flex-col items-center justify-center py-1 rounded-xl text-slate-400">
-        <i data-lucide="smartphone" class="w-5 h-5"></i>
-        <span class="text-[10px] mt-0.5">KH DMS</span>
-      </button>
-      <button onclick="switchTab('custMatch')" id="mTab-custMatch" class="flex flex-col items-center justify-center py-1 rounded-xl text-slate-400">
-        <i data-lucide="git-merge" class="w-5 h-5"></i>
-        <span class="text-[10px] mt-0.5">Ghép KH</span>
-      </button>
-      <button onclick="switchTab('promo')" id="mTab-promo" class="flex flex-col items-center justify-center py-1 rounded-xl text-slate-400">
-        <i data-lucide="gift" class="w-5 h-5"></i>
-        <span class="text-[10px] mt-0.5">0đ & KM</span>
-      </button>
-    </div>
-  </nav>
+        <div class="space-y-2">
+          <!-- Bộ lọc hạng sản phẩm: Tất cả / Chỉ Premium / Mainstream (Huda) -->
+          <div class="grid grid-cols-3 bg-slate-200/80 p-1 rounded-xl text-[11px] sm:text-xs">
+            <button onclick="setMatchTierFilter('ALL')" id="tierBtn-ALL" class="py-1.5 font-bold rounded-lg bg-white text-slate-900 shadow-xs">
+              Tất cả SP
+            </button>
+            <button onclick="setMatchTierFilter('Premium')" id="tierBtn-Premium" class="py-1.5 font-semibold rounded-lg text-slate-600">
+              Chỉ Premium
+            </button>
+            <button onclick="setMatchTierFilter('Mainstream')" id="tierBtn-Mainstream" class="py-1.5 font-semibold rounded-lg text-slate-600">
+              Mainstream (Huda)
+            </button>
+          </div>
 
-  <!-- ==================== MODAL 1: CẤU HÌNH SUPABASE ==================== -->
-  <div id="configModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
-    <div class="bg-white rounded-t-3xl sm:rounded-2xl max-w-md w-full p-5 sm:p-6 shadow-xl space-y-4">
+          <div class="relative">
+            <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-3"></i>
+            <input type="text" id="searchLinkedCust" onkeyup="renderLinkedCustomersComparison()" placeholder="Tìm quán đã ghép..." class="w-full bg-white pl-10 pr-4 py-2.5 text-sm border border-slate-200 rounded-2xl shadow-xs" />
+          </div>
+
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+            <div class="px-3 py-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between text-[10px] text-slate-500">
+              <span class="font-bold text-slate-700 uppercase">Đối Chiếu Điểm Bán Đã Ghép</span>
+              <span>Bấm vào tên quán để xem SKU / Đổi quán</span>
+            </div>
+            <table class="w-full text-[11px] sm:text-xs border-collapse">
+              <thead>
+                <tr class="bg-slate-800 text-white font-bold text-[10px] sm:text-xs uppercase">
+                  <th class="py-2.5 px-2.5 text-left">Điểm bán (KV &harr; DMS)</th>
+                  <th class="py-2.5 px-1.5 text-right w-12 sm:w-16">Bán<br>KV</th>
+                  <th class="py-2.5 px-1.5 text-right w-12 sm:w-16">Key<br>DMS</th>
+                  <th class="py-2.5 px-2 text-right w-14 sm:w-20 bg-emerald-900">Chênh<br>lệch</th>
+                </tr>
+              </thead>
+              <tbody id="linkedComparisonTableBody" class="divide-y divide-slate-200"></tbody>
+              <tfoot id="linkedComparisonTableFoot" class="bg-slate-900 text-white font-extrabold text-xs"></tfoot>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================== TAB 5: 0Đ & KM ==================== -->
+      <div id="view-promo" class="hidden space-y-3">
+        <div class="grid grid-cols-2 bg-slate-200/80 p-1 rounded-xl">
+          <button id="subPromoBtn-kv" onclick="switchPromoSub('kv')" class="py-2 text-xs font-bold rounded-lg bg-white text-amber-800 shadow-xs">
+            Hàng 0đ KiotViet (<span id="badge-kvFreeTotal">0</span>)
+          </button>
+          <button id="subPromoBtn-dms" onclick="switchPromoSub('dms')" class="py-2 text-xs font-semibold rounded-lg text-slate-600">
+            Voucher DMS (<span id="badge-dmsVoucherTotal">0</span>)
+          </button>
+        </div>
+
+        <div id="promoSub-kv" class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+          <table class="w-full text-[11px] sm:text-xs border-collapse">
+            <thead>
+              <tr class="bg-amber-900 text-white font-bold text-[10px] sm:text-xs uppercase">
+                <th class="py-2.5 px-2.5 text-left">Điểm bán / Sản phẩm 0đ</th>
+                <th class="py-2.5 px-2 text-left w-24 sm:w-36">Ghi chú CTKM</th>
+                <th class="py-2.5 px-2 text-right w-12 sm:w-16">SL</th>
+              </tr>
+            </thead>
+            <tbody id="kvFreeTableBody" class="divide-y divide-slate-200"></tbody>
+            <tfoot id="kvFreeTableFoot" class="bg-slate-900 text-white font-extrabold text-xs"></tfoot>
+          </table>
+        </div>
+
+        <div id="promoSub-dms" class="hidden space-y-2.5">
+          <div id="dmsVoucherSummaryCards" class="flex flex-wrap gap-2"></div>
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+            <table class="w-full text-[11px] sm:text-xs border-collapse">
+              <thead>
+                <tr class="bg-emerald-900 text-white font-bold text-[10px] sm:text-xs uppercase">
+                  <th class="py-2.5 px-2.5 text-left">Outlet / Loại Voucher</th>
+                  <th class="py-2.5 px-2 text-right w-14 sm:w-20">Suất</th>
+                </tr>
+              </thead>
+              <tbody id="dmsVoucherTableBody" class="divide-y divide-slate-200"></tbody>
+              <tfoot id="dmsVoucherTableFoot" class="bg-slate-900 text-white font-extrabold text-xs"></tfoot>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </main>
+
+    <!-- MOBILE BOTTOM NAVIGATION BAR -->
+    <nav class="md:hidden fixed bottom-0 inset-x-0 bg-white border-t border-slate-200 z-40 px-1 py-1.5 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
+      <div class="grid grid-cols-5 gap-1">
+        <button onclick="switchTab('reconcile')" id="mTab-reconcile" class="flex flex-col items-center justify-center py-1 rounded-xl text-emerald-700 font-bold">
+          <i data-lucide="bar-chart-3" class="w-5 h-5"></i>
+          <span class="text-[10px] mt-0.5">Đối chiếu</span>
+        </button>
+        <button onclick="switchTab('kv')" id="mTab-kv" class="flex flex-col items-center justify-center py-1 rounded-xl text-slate-400">
+          <i data-lucide="store" class="w-5 h-5"></i>
+          <span class="text-[10px] mt-0.5">Kiot</span>
+        </button>
+        <button onclick="switchTab('dms')" id="mTab-dms" class="flex flex-col items-center justify-center py-1 rounded-xl text-slate-400">
+          <i data-lucide="smartphone" class="w-5 h-5"></i>
+          <span class="text-[10px] mt-0.5">DMS</span>
+        </button>
+        <button onclick="switchTab('custMatch')" id="mTab-custMatch" class="flex flex-col items-center justify-center py-1 rounded-xl text-slate-400">
+          <i data-lucide="git-merge" class="w-5 h-5"></i>
+          <span class="text-[10px] mt-0.5">Ghép KH</span>
+        </button>
+        <button onclick="switchTab('promo')" id="mTab-promo" class="flex flex-col items-center justify-center py-1 rounded-xl text-slate-400">
+          <i data-lucide="gift" class="w-5 h-5"></i>
+          <span class="text-[10px] mt-0.5">0đ & KM</span>
+        </button>
+      </div>
+    </nav>
+  </div>
+
+  <!-- ==================== MODAL QUẢN LÝ TÀI KHOẢN SALE (CHỈ ADMIN) ==================== -->
+  <div id="usersModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white rounded-t-3xl sm:rounded-2xl max-w-lg w-full p-5 shadow-xl space-y-4 max-h-[90vh] flex flex-col">
       <div class="flex items-center justify-between border-b pb-3">
         <h3 class="font-bold text-slate-800 text-base flex items-center gap-2">
-          <i data-lucide="database" class="w-5 h-5 text-emerald-700"></i> Kết Nối Supabase Cloud
+          <i data-lucide="users" class="w-5 h-5 text-emerald-700"></i> Quản Lý Tài Khoản Team BC
         </h3>
-        <button onclick="closeModal('configModal')" class="text-slate-400 p-1"><i data-lucide="x" class="w-5 h-5"></i></button>
+        <button onclick="closeModal('usersModal')" class="text-slate-400 p-1"><i data-lucide="x" class="w-5 h-5"></i></button>
       </div>
-      <div class="space-y-3">
-        <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1">1. Project URL</label>
-          <input type="text" id="cfgSupabaseUrl" class="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-xl" />
+
+      <form onsubmit="createAppUser(event)" class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-2.5 text-xs">
+        <p class="font-bold text-slate-700 uppercase">Tạo tài khoản mới cho Sale / Admin:</p>
+        <div class="grid grid-cols-2 gap-2">
+          <input type="text" id="newUsername" required placeholder="Tên đăng nhập (vd: nam.lh)" class="px-3 py-2 border border-slate-300 rounded-xl bg-white" />
+          <input type="text" id="newPassword" required placeholder="Mật khẩu" class="px-3 py-2 border border-slate-300 rounded-xl bg-white" />
         </div>
-        <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1">2. Publishable / Anon Key</label>
-          <input type="text" id="cfgSupabaseKey" class="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-xl" />
+        <div class="grid grid-cols-2 gap-2">
+          <select id="newUserRole" onchange="toggleNewUserSaleSelect()" class="px-3 py-2 border border-slate-300 rounded-xl bg-white font-semibold">
+            <option value="SALE">Quyền: Nhân viên Sale</option>
+            <option value="ADMIN">Quyền: Admin (Xem hết)</option>
+          </select>
+          <select id="newUserSalesRep" class="px-3 py-2 border border-slate-300 rounded-xl bg-white font-semibold">
+            <option value="">-- Chọn tên Sale --</option>
+          </select>
         </div>
-      </div>
-      <div class="flex justify-end gap-2 pt-2">
-        <button onclick="closeModal('configModal')" class="px-4 py-2.5 text-sm text-slate-600 rounded-xl">Đóng</button>
-        <button onclick="saveSupabaseConfig()" class="px-5 py-2.5 text-sm font-bold bg-emerald-700 text-white rounded-xl">Lưu & Kết Nối</button>
-      </div>
+        <button type="submit" class="w-full bg-emerald-700 text-white font-bold py-2 rounded-xl">+ Cấp Tài Khoản</button>
+      </form>
+
+      <div class="overflow-y-auto flex-1 space-y-2" id="usersListContainer"></div>
     </div>
   </div>
 
-  <!-- ==================== MODAL 2: TẢI FILE EXCEL ==================== -->
+  <!-- ==================== MODAL NẠP EXCEL (CHỈ ADMIN) ==================== -->
   <div id="uploadModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
     <div class="bg-white rounded-t-3xl sm:rounded-2xl max-w-xl w-full p-5 sm:p-6 shadow-xl space-y-4">
       <div class="flex items-center justify-between border-b pb-3">
@@ -433,7 +478,7 @@
     </div>
   </div>
 
-  <!-- ==================== MODAL 3: QUẢN LÝ MÃ SKU ==================== -->
+  <!-- ==================== MODAL QUẢN LÝ MÃ SKU ==================== -->
   <div id="skuModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
     <div class="bg-white rounded-t-3xl sm:rounded-2xl max-w-3xl w-full p-5 shadow-xl space-y-3 max-h-[85vh] flex flex-col">
       <div class="flex items-center justify-between border-b pb-3">
@@ -444,108 +489,335 @@
     </div>
   </div>
 
-  <!-- ==================== MODAL 4: GHÉP THỦ CÔNG KHÁCH HÀNG ==================== -->
+  <!-- ==================== MODAL GHÉP TAY / ĐỔI QUÁN GHÉP ==================== -->
   <div id="manualLinkModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
     <div class="bg-white rounded-t-3xl sm:rounded-2xl max-w-lg w-full p-5 shadow-xl space-y-4">
       <div class="flex items-center justify-between border-b pb-3">
-        <h3 class="font-bold text-slate-800 text-base">Ghép Thủ Công Khách Hàng 2 Bên</h3>
+        <h3 id="manualLinkModalTitle" class="font-bold text-slate-800 text-base">Ghép Quán KiotViet &harr; DMS</h3>
         <button onclick="closeModal('manualLinkModal')" class="text-slate-400 p-1"><i data-lucide="x" class="w-5 h-5"></i></button>
       </div>
+      <input type="hidden" id="editingLinkId" value="" />
       <div class="space-y-3">
         <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1">1. Khách Hàng KiotViet (Chưa ghép)</label>
-          <select id="manualKvSelect" class="w-full px-3 py-2.5 text-xs border border-slate-300 rounded-xl"></select>
+          <label class="block text-xs font-bold text-slate-700 mb-1">1. Điểm bán KiotViet</label>
+          <select id="manualKvSelect" class="w-full px-3 py-2.5 text-xs border border-slate-300 rounded-xl disabled:bg-slate-100"></select>
         </div>
         <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1">2. Outlet DMS (Chưa ghép)</label>
+          <label class="block text-xs font-bold text-slate-700 mb-1">2. Chọn Outlet DMS tương ứng</label>
           <select id="manualDmsSelect" class="w-full px-3 py-2.5 text-xs border border-slate-300 rounded-xl"></select>
         </div>
       </div>
       <div class="flex justify-end gap-2 pt-2">
         <button onclick="closeModal('manualLinkModal')" class="px-4 py-2 text-sm text-slate-600 rounded-xl">Hủy</button>
-        <button onclick="saveManualLink()" class="px-5 py-2 text-sm font-bold bg-emerald-700 text-white rounded-xl">Xác Nhận Ghép</button>
+        <button onclick="saveManualLink()" class="px-5 py-2 text-sm font-bold bg-emerald-700 text-white rounded-xl">Lưu Ghép Quán</button>
       </div>
     </div>
   </div>
 
   <!-- ==================== JAVASCRIPT LOGIC ==================== -->
   <script>
-    const DEFAULT_SUPABASE_URL = "https://incbokfnoabjhvbwxkli.supabase.co";
-    const DEFAULT_SUPABASE_ANON_KEY = "sb_publishable_VQwy6zq_YDNeGPYf5cOJng_Flt2WUk-";
+    const SUPABASE_URL = "https://incbokfnoabjhvbwxkli.supabase.co";
+    const SUPABASE_ANON_KEY = "sb_publishable_VQwy6zq_YDNeGPYf5cOJng_Flt2WUk-";
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    let supabaseClient = null;
+    let currentUser = null;
     let activeTab = 'reconcile';
-    let selectedBrand = 'ALL';
     let showPromoInline = false;
+    let matchTierFilter = 'ALL';
 
     let state = {
       salesReps: [],
       productGroups: [],
       skuMappings: [],
       availableMonths: [],
-      reconcileRows: [],
+      reconcileRowsRange: [],
       kvCustomers: [],
       dmsOutlets: [],
       customerLinks: [],
       suggestions: [],
-      kvLinesMonth: [],
-      dmsLinesMonth: [],
-      kvLines3M: [],
-      dmsLines3M: []
+      kvLinesRange: [],
+      dmsLinesRange: []
     };
 
     document.addEventListener('DOMContentLoaded', () => {
       lucide.createIcons();
-      initSupabase();
+      checkSavedSession();
     });
 
-    function initSupabase() {
-      const url = localStorage.getItem('sb_url') || DEFAULT_SUPABASE_URL;
-      const key = localStorage.getItem('sb_key') || DEFAULT_SUPABASE_ANON_KEY;
+    function checkSavedSession() {
+      const saved = localStorage.getItem('cb_bc_user');
+      if (saved) {
+        try {
+          currentUser = JSON.parse(saved);
+          applyUserPermissions();
+          return;
+        } catch (e) {
+          localStorage.removeItem('cb_bc_user');
+        }
+      }
+      document.getElementById('loginScreen').classList.remove('hidden');
+      document.getElementById('appShell').classList.add('hidden');
+    }
 
-      if (url && key) {
-        document.getElementById('cfgSupabaseUrl').value = url;
-        document.getElementById('cfgSupabaseKey').value = key;
-        supabaseClient = window.supabase.createClient(url, key);
-        document.getElementById('dbStatusDot').className = 'w-2 h-2 rounded-full bg-emerald-400 shrink-0';
-        document.getElementById('dbStatusText').innerText = 'Đã kết nối Supabase';
-        refreshAllData();
-      } else {
-        document.getElementById('dbStatusDot').className = 'w-2 h-2 rounded-full bg-amber-400 shrink-0';
-        document.getElementById('dbStatusText').innerText = 'Chưa kết nối Supabase';
-        openConfigModal();
+    async function handleLogin(e) {
+      e.preventDefault();
+      const username = document.getElementById('loginUsername').value.trim().toLowerCase();
+      const password = document.getElementById('loginPassword').value.trim();
+      const errEl = document.getElementById('loginErrorMsg');
+      const btn = document.getElementById('btnLoginSubmit');
+
+      errEl.classList.add('hidden');
+      btn.disabled = true;
+      btn.innerText = 'Đang kiểm tra...';
+
+      try {
+        const { data, error } = await supabaseClient
+          .from('app_users')
+          .select('*')
+          .eq('username', username)
+          .eq('password', password)
+          .eq('is_active', true)
+          .maybeSingle();
+
+        if (error) throw error;
+        if (!data) {
+          errEl.innerText = 'Sai tên đăng nhập hoặc mật khẩu!';
+          errEl.classList.remove('hidden');
+          return;
+        }
+
+        currentUser = {
+          id: data.id,
+          username: data.username,
+          display_name: data.display_name,
+          role: data.role,
+          sales_rep_id: data.sales_rep_id
+        };
+        localStorage.setItem('cb_bc_user', JSON.stringify(currentUser));
+        applyUserPermissions();
+      } catch (err) {
+        errEl.innerText = 'Lỗi kết nối: ' + err.message;
+        errEl.classList.remove('hidden');
+      } finally {
+        btn.disabled = false;
+        btn.innerText = 'Đăng Nhập Hệ Thống';
       }
     }
 
-    function saveSupabaseConfig() {
-      const url = document.getElementById('cfgSupabaseUrl').value.trim();
-      const key = document.getElementById('cfgSupabaseKey').value.trim();
-      if (!url || !key) return alert('Vui lòng nhập đầy đủ Project URL và Key!');
-      localStorage.setItem('sb_url', url);
-      localStorage.setItem('sb_key', key);
-      closeModal('configModal');
-      initSupabase();
+    function handleLogout() {
+      localStorage.removeItem('cb_bc_user');
+      currentUser = null;
+      document.getElementById('appShell').classList.add('hidden');
+      document.getElementById('loginScreen').classList.remove('hidden');
     }
 
-    function openConfigModal() { document.getElementById('configModal').classList.remove('hidden'); }
-    function openUploadModal() { document.getElementById('uploadModal').classList.remove('hidden'); }
-    function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+    function applyUserPermissions() {
+      document.getElementById('loginScreen').classList.add('hidden');
+      document.getElementById('appShell').classList.remove('hidden');
 
-    function togglePromoInline() {
-      showPromoInline = !showPromoInline;
-      document.getElementById('lblTogglePromo').innerText = showPromoInline ? 'Ẩn 0đ / KM' : 'Hiện 0đ / KM';
-      renderReconcileTab();
+      const isAdmin = currentUser.role === 'ADMIN';
+      document.getElementById('currentUserBadge').innerText =
+        `${currentUser.display_name} (${isAdmin ? 'Admin' : 'Sale'})`;
+
+      document.getElementById('btnAdminUpload').classList.toggle('hidden', !isAdmin);
+      document.getElementById('btnAdminUsers').classList.toggle('hidden', !isAdmin);
+      document.getElementById('btnAdminSku').classList.toggle('hidden', !isAdmin);
+
+      refreshAllData();
+    }
+
+    async function openUsersModal() {
+      if (currentUser?.role !== 'ADMIN') return;
+      document.getElementById('newUserSalesRep').innerHTML =
+        `<option value="">-- Chọn tên Sale --</option>` +
+        state.salesReps.map(r => `<option value="${r.id}">${r.full_name}</option>`).join('');
+      toggleNewUserSaleSelect();
+      await loadUsersList();
+      document.getElementById('usersModal').classList.remove('hidden');
+    }
+
+    function toggleNewUserSaleSelect() {
+      const role = document.getElementById('newUserRole').value;
+      const sel = document.getElementById('newUserSalesRep');
+      sel.disabled = role === 'ADMIN';
+      if (role === 'ADMIN') sel.value = '';
+    }
+
+    async function loadUsersList() {
+      const { data } = await supabaseClient.from('app_users').select('*').order('created_at');
+      const container = document.getElementById('usersListContainer');
+      container.innerHTML = (data || []).map(u => `
+        <div class="p-3 rounded-xl border border-slate-200 bg-white flex items-center justify-between gap-2 text-xs">
+          <div>
+            <div class="font-bold text-slate-900">${u.display_name} <span class="text-[10px] px-1.5 py-0.5 rounded ${u.role === 'ADMIN' ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}">${u.role}</span></div>
+            <div class="text-slate-500 mt-0.5">TK: <b>${u.username}</b> • MK: <b>${u.password}</b></div>
+          </div>
+          ${u.username !== 'admin' ? `
+            <button onclick="deleteAppUser('${u.id}')" class="text-rose-600 hover:bg-rose-50 p-1.5 rounded-lg" title="Xóa tài khoản">
+              <i data-lucide="trash-2" class="w-4 h-4"></i>
+            </button>
+          ` : ''}
+        </div>
+      `).join('');
       lucide.createIcons();
     }
 
-    function selectBrandChip(brand) {
-      selectedBrand = brand;
-      document.querySelectorAll('.brand-chip').forEach(btn => {
-        const isSelected = btn.getAttribute('data-brand') === brand;
-        btn.className = isSelected
-          ? 'brand-chip px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap bg-emerald-700 text-white shadow-xs'
-          : 'brand-chip px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-slate-100 text-slate-600';
+    async function createAppUser(e) {
+      e.preventDefault();
+      const username = document.getElementById('newUsername').value.trim().toLowerCase();
+      const password = document.getElementById('newPassword').value.trim();
+      const role = document.getElementById('newUserRole').value;
+      const salesRepId = document.getElementById('newUserSalesRep').value || null;
+
+      if (role === 'SALE' && !salesRepId) return alert('Vui lòng chọn nhân viên Sale tương ứng!');
+      const rep = state.salesReps.find(r => r.id === salesRepId);
+      const displayName = role === 'ADMIN' ? `Admin (${username})` : rep.full_name;
+
+      const { error } = await supabaseClient.from('app_users').insert({
+        username, password, display_name: displayName, role, sales_rep_id: salesRepId
       });
+      if (error) return alert('Lỗi tạo tài khoản: ' + error.message);
+
+      document.getElementById('newUsername').value = '';
+      document.getElementById('newPassword').value = '';
+      await loadUsersList();
+    }
+
+    async function deleteAppUser(id) {
+      if (!confirm('Xóa tài khoản này?')) return;
+      await supabaseClient.from('app_users').delete().eq('id', id);
+      await loadUsersList();
+    }
+
+    async function fetchAllRows(buildQueryFn) {
+      let all = [];
+      let from = 0;
+      const pageSize = 1000;
+      while (true) {
+        const { data, error } = await buildQueryFn().range(from, from + pageSize - 1);
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+        all = all.concat(data);
+        if (data.length < pageSize) break;
+        from += pageSize;
+      }
+      return all;
+    }
+
+    async function refreshAllData() {
+      const [resReps, resGroups, resMaps] = await Promise.all([
+        supabaseClient.from('sales_reps').select('*').order('full_name'),
+        supabaseClient.from('product_groups').select('*').order('display_order'),
+        supabaseClient.from('sku_mappings').select('*')
+      ]);
+
+      state.salesReps = resReps.data || [];
+      state.productGroups = resGroups.data || [];
+      state.skuMappings = resMaps.data || [];
+
+      const unmapped = state.skuMappings.filter(m => !m.product_group_id && !String(m.raw_code).startsWith('DMS_POSM') && m.raw_code !== '8001555');
+      const alertBox = document.getElementById('unmappedAlert');
+      if (currentUser?.role === 'ADMIN' && unmapped.length > 0) {
+        alertBox.classList.remove('hidden');
+        document.getElementById('unmappedText').innerText = `${unmapped.length} mã mới (${unmapped.map(u => u.raw_code).join(', ')}) chưa phân nhóm.`;
+      } else {
+        alertBox.classList.add('hidden');
+      }
+
+      const repSelect = document.getElementById('filterSalesRep');
+      if (currentUser?.role === 'SALE' && currentUser.sales_rep_id) {
+        const myRep = state.salesReps.find(r => r.id === currentUser.sales_rep_id);
+        repSelect.innerHTML = `<option value="${currentUser.sales_rep_id}">${myRep ? myRep.full_name : currentUser.display_name}</option>`;
+        repSelect.value = currentUser.sales_rep_id;
+        repSelect.disabled = true;
+      } else {
+        const prevRep = repSelect.value;
+        repSelect.disabled = false;
+        repSelect.innerHTML = `<option value="ALL">Tất cả 5 Sale</option>` +
+          state.salesReps.map(r => `<option value="${r.id}">${r.full_name}</option>`).join('');
+        if ([...repSelect.options].some(o => o.value === prevRep)) repSelect.value = prevRep;
+      }
+
+      const { data: viewMonths, error: vmErr } = await supabaseClient.from('v_available_months').select('month_date');
+      if (!vmErr && viewMonths && viewMonths.length > 0) {
+        state.availableMonths = viewMonths.map(x => x.month_date).sort().reverse();
+      } else {
+        const [mKv, mDms] = await Promise.all([
+          fetchAllRows(() => supabaseClient.from('kv_sales_lines').select('sale_month')),
+          fetchAllRows(() => supabaseClient.from('dms_order_lines').select('order_month'))
+        ]);
+        state.availableMonths = Array.from(new Set([...mKv.map(x => x.sale_month), ...mDms.map(x => x.order_month)])).sort().reverse();
+      }
+
+      const fromSel = document.getElementById('filterFromMonth');
+      const toSel = document.getElementById('filterToMonth');
+      const prevFrom = fromSel.value;
+      const prevTo = toSel.value;
+
+      if (state.availableMonths.length === 0) {
+        fromSel.innerHTML = `<option value="">--</option>`;
+        toSel.innerHTML = `<option value="">--</option>`;
+      } else {
+        const opts = state.availableMonths.map(m => {
+          const [y, mm] = m.split('-');
+          return `<option value="${m}">T${mm}/${y}</option>`;
+        }).join('');
+        fromSel.innerHTML = opts;
+        toSel.innerHTML = opts;
+
+        const now = new Date();
+        const currentSysMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+        const defaultMonth = state.availableMonths.includes(currentSysMonth) ? currentSysMonth : state.availableMonths[0];
+
+        fromSel.value = state.availableMonths.includes(prevFrom) ? prevFrom : defaultMonth;
+        toSel.value = state.availableMonths.includes(prevTo) ? prevTo : defaultMonth;
+      }
+
+      await onFilterChange();
+    }
+
+    function onDateRangeChange(changedSide) {
+      const fromSel = document.getElementById('filterFromMonth');
+      const toSel = document.getElementById('filterToMonth');
+      if (fromSel.value && toSel.value && fromSel.value > toSel.value) {
+        if (changedSide === 'from') toSel.value = fromSel.value;
+        else fromSel.value = toSel.value;
+      }
+      onFilterChange();
+    }
+
+    async function onFilterChange() {
+      const fromMonth = document.getElementById('filterFromMonth').value;
+      const toMonth = document.getElementById('filterToMonth').value;
+      const selectedRep = currentUser?.role === 'SALE' ? currentUser.sales_rep_id : document.getElementById('filterSalesRep').value;
+      if (!fromMonth || !toMonth) return;
+
+      const buildRepFilter = (q) => (selectedRep && selectedRep !== 'ALL') ? q.eq('sales_rep_id', selectedRep) : q;
+
+      const [recData, kvData, dmsData, kvCData, dmsOData, linksData, resSug] = await Promise.all([
+        fetchAllRows(() => buildRepFilter(
+          supabaseClient.from('v_monthly_reconciliation').select('*').gte('month_date', fromMonth).lte('month_date', toMonth)
+        )),
+        fetchAllRows(() => buildRepFilter(
+          supabaseClient.from('kv_sales_lines').select('*').gte('sale_month', fromMonth).lte('sale_month', toMonth)
+        )),
+        fetchAllRows(() => buildRepFilter(
+          supabaseClient.from('dms_order_lines').select('*').gte('order_month', fromMonth).lte('order_month', toMonth).eq('dis_code', 'CD1084')
+        )),
+        fetchAllRows(() => supabaseClient.from('kv_customers').select('*')),
+        fetchAllRows(() => supabaseClient.from('dms_outlets').select('*')),
+        fetchAllRows(() => supabaseClient.from('customer_links').select('*')),
+        supabaseClient.from('v_customer_match_suggestions').select('*').order('similarity_score', { ascending: false }).limit(80)
+      ]);
+
+      state.reconcileRowsRange = recData;
+      state.kvLinesRange = kvData;
+      state.dmsLinesRange = dmsData;
+      state.kvCustomers = kvCData;
+      state.dmsOutlets = dmsOData;
+      state.customerLinks = linksData;
+      state.suggestions = resSug.data || [];
+
       renderActiveTab();
     }
 
@@ -572,113 +844,22 @@
         : 'py-2 text-xs font-semibold rounded-lg text-slate-600';
     }
 
-    async function fetchAllRows(buildQueryFn) {
-      let all = [];
-      let from = 0;
-      const pageSize = 1000;
-      while (true) {
-        const { data, error } = await buildQueryFn().range(from, from + pageSize - 1);
-        if (error) throw error;
-        if (!data || data.length === 0) break;
-        all = all.concat(data);
-        if (data.length < pageSize) break;
-        from += pageSize;
-      }
-      return all;
+    function togglePromoInline() {
+      showPromoInline = !showPromoInline;
+      document.getElementById('lblTogglePromo').innerText = showPromoInline ? 'Ẩn 0đ / KM' : 'Hiện 0đ / KM';
+      renderReconcileTab();
+      lucide.createIcons();
     }
 
-    async function refreshAllData() {
-      if (!supabaseClient) return;
-      const [resReps, resGroups, resMaps] = await Promise.all([
-        supabaseClient.from('sales_reps').select('*').order('full_name'),
-        supabaseClient.from('product_groups').select('*').order('display_order'),
-        supabaseClient.from('sku_mappings').select('*')
-      ]);
-
-      state.salesReps = resReps.data || [];
-      state.productGroups = resGroups.data || [];
-      state.skuMappings = resMaps.data || [];
-
-      const unmapped = state.skuMappings.filter(m => !m.product_group_id && !String(m.raw_code).startsWith('DMS_POSM') && m.raw_code !== '8001555');
-      const alertBox = document.getElementById('unmappedAlert');
-      if (unmapped.length > 0) {
-        alertBox.classList.remove('hidden');
-        document.getElementById('unmappedText').innerText = `${unmapped.length} mã mới (${unmapped.map(u => u.raw_code).join(', ')}) chưa phân nhóm.`;
-      } else {
-        alertBox.classList.add('hidden');
-      }
-
-      const repSelect = document.getElementById('filterSalesRep');
-      const currentRep = repSelect.value;
-      repSelect.innerHTML = `<option value="ALL">Tất cả 5 Sale</option>` +
-        state.salesReps.map(r => `<option value="${r.id}">${r.full_name}</option>`).join('');
-      if ([...repSelect.options].some(o => o.value === currentRep)) repSelect.value = currentRep;
-
-      const { data: viewMonths, error: vmErr } = await supabaseClient.from('v_available_months').select('month_date');
-      if (!vmErr && viewMonths && viewMonths.length > 0) {
-        state.availableMonths = viewMonths.map(x => x.month_date).sort().reverse();
-      } else {
-        const [mKv, mDms] = await Promise.all([
-          fetchAllRows(() => supabaseClient.from('kv_sales_lines').select('sale_month')),
-          fetchAllRows(() => supabaseClient.from('dms_order_lines').select('order_month'))
-        ]);
-        const monthSet = new Set([
-          ...mKv.map(x => x.sale_month),
-          ...mDms.map(x => x.order_month)
-        ]);
-        state.availableMonths = Array.from(monthSet).sort().reverse();
-      }
-
-      const monthSelect = document.getElementById('filterMonth');
-      const currentMonth = monthSelect.value;
-      if (state.availableMonths.length === 0) {
-        monthSelect.innerHTML = `<option value="">Chưa có dữ liệu</option>`;
-      } else {
-        monthSelect.innerHTML = state.availableMonths.map(m => {
-          const [y, mm] = m.split('-');
-          return `<option value="${m}">Tháng ${mm}/${y}</option>`;
-        }).join('');
-        if (state.availableMonths.includes(currentMonth)) monthSelect.value = currentMonth;
-      }
-
-      await onFilterChange();
-    }
-
-    async function onFilterChange() {
-      if (!supabaseClient) return;
-      const selectedMonth = document.getElementById('filterMonth').value;
-      const selectedRep = document.getElementById('filterSalesRep').value;
-      if (!selectedMonth) return;
-
-      const dt = new Date(selectedMonth + 'T00:00:00');
-      dt.setMonth(dt.getMonth() - 2);
-      const threeMonthsAgo = dt.toISOString().slice(0, 10);
-
-      const buildRepFilter = (q) => selectedRep !== 'ALL' ? q.eq('sales_rep_id', selectedRep) : q;
-
-      const [recData, kvMData, dmsMData, kv3MData, dms3MData, kvCData, dmsOData, linksData, resSug] = await Promise.all([
-        fetchAllRows(() => buildRepFilter(supabaseClient.from('v_monthly_reconciliation').select('*').eq('month_date', selectedMonth))),
-        fetchAllRows(() => buildRepFilter(supabaseClient.from('kv_sales_lines').select('*').eq('sale_month', selectedMonth))),
-        fetchAllRows(() => buildRepFilter(supabaseClient.from('dms_order_lines').select('*').eq('order_month', selectedMonth).eq('dis_code', 'CD1084'))),
-        fetchAllRows(() => buildRepFilter(supabaseClient.from('kv_sales_lines').select('*').gte('sale_month', threeMonthsAgo).lte('sale_month', selectedMonth))),
-        fetchAllRows(() => buildRepFilter(supabaseClient.from('dms_order_lines').select('*').gte('order_month', threeMonthsAgo).lte('order_month', selectedMonth).eq('dis_code', 'CD1084'))),
-        fetchAllRows(() => supabaseClient.from('kv_customers').select('*')),
-        fetchAllRows(() => supabaseClient.from('dms_outlets').select('*')),
-        fetchAllRows(() => supabaseClient.from('customer_links').select('*')),
-        supabaseClient.from('v_customer_match_suggestions').select('*').order('similarity_score', { ascending: false }).limit(50)
-      ]);
-
-      state.reconcileRows = recData;
-      state.kvLinesMonth = kvMData;
-      state.dmsLinesMonth = dmsMData;
-      state.kvLines3M = kv3MData;
-      state.dmsLines3M = dms3MData;
-      state.kvCustomers = kvCData;
-      state.dmsOutlets = dmsOData;
-      state.customerLinks = linksData;
-      state.suggestions = resSug.data || [];
-
-      renderActiveTab();
+    function setMatchTierFilter(tier) {
+      matchTierFilter = tier;
+      ['ALL', 'Premium', 'Mainstream'].forEach(t => {
+        document.getElementById(`tierBtn-${t}`).className = t === tier
+          ? 'py-1.5 font-bold rounded-lg bg-white text-emerald-800 shadow-xs'
+          : 'py-1.5 font-semibold rounded-lg text-slate-600';
+      });
+      renderLinkedCustomersComparison();
+      lucide.createIcons();
     }
 
     function renderActiveTab() {
@@ -696,14 +877,12 @@
       if (n < 0) return `(${Math.abs(n).toLocaleString('vi-VN')})`;
       return '0';
     }
-
     function balanceTextColor(val) {
       const n = Number(val || 0);
       if (n > 0) return 'text-emerald-600';
       if (n < 0) return 'text-rose-600';
       return 'text-slate-500';
     }
-
     function balanceCellBg(val) {
       const n = Number(val || 0);
       if (n > 0) return 'bg-emerald-50/90 text-emerald-700';
@@ -712,83 +891,122 @@
     }
 
     // =========================================================================
-    // TAB 1: BẢNG ĐỐI CHIẾU SKU
+    // TAB 1: ĐỐI CHIẾU SẢN LƯỢNG & LŨY KẾ
     // =========================================================================
     function renderReconcileTab() {
+      const fromMonth = document.getElementById('filterFromMonth').value;
+      const toMonth = document.getElementById('filterToMonth').value;
       const groupedMap = new Map();
 
-      state.reconcileRows.forEach(r => {
-        if (selectedBrand !== 'ALL' && r.brand !== selectedBrand) return;
-        if (!groupedMap.has(r.product_group_id)) {
-          groupedMap.set(r.product_group_id, {
-            product_group_id: r.product_group_id,
-            brand: r.brand,
-            group_name: r.group_name,
-            display_order: r.display_order,
-            kv_paid_qty: 0,
-            kv_free_qty: 0,
-            dms_order_qty: 0,
-            prev_balance: 0,
-            month_balance: 0,
-            total_balance: 0
-          });
-        }
+      state.productGroups.forEach(pg => {
+        const tier = pg.tier || (pg.brand.toLowerCase().includes('huda') ? 'Mainstream' : 'Premium');
+        groupedMap.set(pg.id, {
+          product_group_id: pg.id,
+          brand: pg.brand,
+          tier: tier,
+          group_name: pg.group_name,
+          display_order: pg.display_order,
+          kv_paid_qty: 0,
+          kv_free_qty: 0,
+          dms_order_qty: 0,
+          prev_balance: 0,
+          period_balance: 0,
+          total_balance: 0
+        });
+      });
+
+      state.reconcileRowsRange.forEach(r => {
+        if (!groupedMap.has(r.product_group_id)) return;
         const item = groupedMap.get(r.product_group_id);
         item.kv_paid_qty += Number(r.kv_paid_qty || 0);
         item.kv_free_qty += Number(r.kv_free_qty || 0);
         item.dms_order_qty += Number(r.dms_order_qty || 0);
-        item.prev_balance += -Number(r.prev_cumulative_diff || 0);
-        item.month_balance += -Number(r.monthly_diff || 0);
-        item.total_balance += -Number(r.total_cumulative_diff || 0);
+        item.period_balance += -Number(r.monthly_diff || 0);
+
+        if (r.month_date === fromMonth) {
+          item.prev_balance += -Number(r.prev_cumulative_diff || 0);
+        }
+        if (r.month_date === toMonth) {
+          item.total_balance += -Number(r.total_cumulative_diff || 0);
+        }
       });
 
-      const rows = Array.from(groupedMap.values()).sort((a, b) => a.display_order - b.display_order);
+      const activeRows = Array.from(groupedMap.values())
+        .filter(r => r.kv_paid_qty > 0 || r.kv_free_qty > 0 || r.dms_order_qty > 0 || r.prev_balance !== 0 || r.total_balance !== 0)
+        .sort((a, b) => a.display_order - b.display_order);
 
-      let totKvPaid = 0, totKvFree = 0, totDms = 0, totPrev = 0, totMonth = 0, totTotal = 0;
+      const premiumRows = activeRows.filter(r => r.tier === 'Premium');
+      const mainstreamRows = activeRows.filter(r => r.tier === 'Mainstream');
+
+      let totKvPaid = 0, totKvFree = 0, totDms = 0, totPrev = 0, totPeriod = 0, totTotal = 0;
+      activeRows.forEach(r => {
+        totKvPaid += r.kv_paid_qty;
+        totKvFree += r.kv_free_qty;
+        totDms += r.dms_order_qty;
+        totPrev += r.prev_balance;
+        totPeriod += r.period_balance;
+        totTotal += r.total_balance;
+      });
+
       const tbody = document.getElementById('reconcileCompactBody');
       const tfoot = document.getElementById('reconcileCompactFoot');
 
-      if (rows.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-xs text-slate-400">Không có phát sinh sản lượng cho bộ lọc này.</td></tr>`;
+      if (activeRows.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-xs text-slate-400">Không có phát sinh sản lượng trong khoảng tháng đã chọn.</td></tr>`;
         tfoot.innerHTML = '';
       } else {
-        tbody.innerHTML = rows.map(r => {
-          totKvPaid += r.kv_paid_qty;
-          totKvFree += r.kv_free_qty;
-          totDms += r.dms_order_qty;
-          totPrev += r.prev_balance;
-          totMonth += r.month_balance;
-          totTotal += r.total_balance;
+        const renderSection = (title, badgeColor, list) => {
+          if (list.length === 0) return '';
+          let sKv = 0, sDms = 0, sPrev = 0, sTot = 0;
+          list.forEach(x => { sKv += x.kv_paid_qty; sDms += x.dms_order_qty; sPrev += x.prev_balance; sTot += x.total_balance; });
 
-          const rowId = `sku-row-${r.product_group_id}`;
-          return `
-            <tr onclick="toggleAccordion('${rowId}')" class="hover:bg-slate-50 active:bg-slate-100 cursor-pointer transition">
-              <td class="py-2.5 px-2.5">
-                <div class="font-bold text-slate-900 leading-snug">${r.group_name}</div>
-                ${showPromoInline && r.kv_free_qty > 0
-                  ? `<span class="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded mt-0.5">🎁 Tặng 0đ: ${fmtNum(r.kv_free_qty)}</span>`
-                  : `<span class="text-[10px] text-slate-400">${r.brand}${r.kv_free_qty > 0 ? ' • có 0đ' : ''}</span>`
-                }
-              </td>
-              <td class="py-2.5 px-1.5 text-right font-bold text-slate-900 tabular-nums">${fmtNum(r.kv_paid_qty)}</td>
-              <td class="py-2.5 px-1.5 text-right font-bold text-slate-700 tabular-nums">${fmtNum(r.dms_order_qty)}</td>
-              <td class="py-2.5 px-1.5 text-right font-semibold tabular-nums bg-slate-50/90 ${balanceTextColor(r.prev_balance)}">${formatBalance(r.prev_balance)}</td>
-              <td class="py-2.5 px-2 text-right font-extrabold tabular-nums ${balanceCellBg(r.total_balance)}">${formatBalance(r.total_balance)}</td>
-            </tr>
-            <tr id="${rowId}" class="hidden bg-slate-50/90">
-              <td colspan="5" class="px-3 py-2 text-[11px] text-slate-600 border-t border-dashed border-slate-200">
-                <div class="flex flex-wrap items-center justify-between gap-2">
-                  <span>Phát sinh riêng tháng này: <b class="${balanceTextColor(r.month_balance)}">${formatBalance(r.month_balance)}</b></span>
-                  <span>Xuất tặng 0đ KV: <b class="text-amber-700">${fmtNum(r.kv_free_qty)}</b> két/thùng</span>
-                </div>
-              </td>
+          const headerRow = `
+            <tr class="${badgeColor}">
+              <td class="py-1.5 px-2.5 font-extrabold text-[10px] uppercase tracking-wider">${title}</td>
+              <td class="py-1.5 px-1.5 text-right font-bold text-[10px] tabular-nums">${fmtNum(sKv)}</td>
+              <td class="py-1.5 px-1.5 text-right font-bold text-[10px] tabular-nums">${fmtNum(sDms)}</td>
+              <td class="py-1.5 px-1.5 text-right font-bold text-[10px] tabular-nums">${formatBalance(sPrev)}</td>
+              <td class="py-1.5 px-2 text-right font-extrabold text-[10px] tabular-nums">${formatBalance(sTot)}</td>
             </tr>
           `;
-        }).join('');
+
+          const itemRows = list.map(r => {
+            const rowId = `sku-row-${r.product_group_id}`;
+            return `
+              <tr onclick="toggleAccordion('${rowId}')" class="hover:bg-slate-50 active:bg-slate-100 cursor-pointer transition">
+                <td class="py-2.5 px-2.5">
+                  <div class="font-bold text-slate-900 leading-snug">${r.group_name}</div>
+                  ${showPromoInline && r.kv_free_qty > 0
+                    ? `<span class="inline-flex items-center gap-1 text-[10px] font-bold text-amber-800 bg-amber-100 px-1.5 py-0.5 rounded mt-0.5">🎁 Tặng 0đ: ${fmtNum(r.kv_free_qty)}</span>`
+                    : `<span class="text-[10px] text-slate-400">${r.brand}${r.kv_free_qty > 0 ? ' • có 0đ' : ''}</span>`
+                  }
+                </td>
+                <td class="py-2.5 px-1.5 text-right font-bold text-slate-900 tabular-nums">${fmtNum(r.kv_paid_qty)}</td>
+                <td class="py-2.5 px-1.5 text-right font-bold text-slate-700 tabular-nums">${fmtNum(r.dms_order_qty)}</td>
+                <td class="py-2.5 px-1.5 text-right font-semibold tabular-nums bg-slate-50/90 ${balanceTextColor(r.prev_balance)}">${formatBalance(r.prev_balance)}</td>
+                <td class="py-2.5 px-2 text-right font-extrabold tabular-nums ${balanceCellBg(r.total_balance)}">${formatBalance(r.total_balance)}</td>
+              </tr>
+              <tr id="${rowId}" class="hidden bg-slate-50/90">
+                <td colspan="5" class="px-3 py-2 text-[11px] text-slate-600 border-t border-dashed border-slate-200">
+                  <div class="flex flex-wrap items-center justify-between gap-2">
+                    <span>Chênh lệch riêng kỳ chọn: <b class="${balanceTextColor(r.period_balance)}">${formatBalance(r.period_balance)}</b></span>
+                    <span class="bg-amber-100 text-amber-900 px-2 py-0.5 rounded font-semibold">Xuất tặng 0đ KV: <b>${fmtNum(r.kv_free_qty)}</b></span>
+                  </div>
+                </td>
+              </tr>
+            `;
+          }).join('');
+
+          return headerRow + itemRows;
+        };
+
+        tbody.innerHTML =
+          renderSection('★ Nhóm Premium (Blanc • Tuborg • Carlsberg • Somersby)', 'bg-emerald-100/80 text-emerald-950', premiumRows) +
+          renderSection('● Nhóm Mainstream (Huda)', 'bg-slate-200/80 text-slate-800', mainstreamRows);
 
         tfoot.innerHTML = `
           <tr>
-            <td class="py-3 px-2.5 uppercase text-[11px]">Tổng cộng</td>
+            <td class="py-3 px-2.5 uppercase text-[11px]">Tổng cộng tất cả</td>
             <td class="py-3 px-1.5 text-right tabular-nums">${fmtNum(totKvPaid)}</td>
             <td class="py-3 px-1.5 text-right tabular-nums text-amber-300">${fmtNum(totDms)}</td>
             <td class="py-3 px-1.5 text-right tabular-nums ${totPrev > 0 ? 'text-emerald-300' : totPrev < 0 ? 'text-rose-300' : 'text-slate-300'}">${formatBalance(totPrev)}</td>
@@ -797,13 +1015,13 @@
         `;
       }
 
-      const freeTotal = state.kvLinesMonth.filter(l => l.is_free_gift).reduce((s, l) => s + Number(l.quantity), 0);
-      const voucherTotal = state.dmsLinesMonth.filter(l => l.is_posm_voucher && l.order_type === 'Order').reduce((s, l) => s + Number(l.quantity), 0);
+      const freeTotal = state.kvLinesRange.filter(l => l.is_free_gift).reduce((s, l) => s + Number(l.quantity), 0);
+      const voucherTotal = state.dmsLinesRange.filter(l => l.is_posm_voucher && l.order_type === 'Order').reduce((s, l) => s + Number(l.quantity), 0);
 
       document.getElementById('kpi-kvPaid').innerText = fmtNum(totKvPaid);
       document.getElementById('kpi-dmsOrder').innerText = fmtNum(totDms);
       document.getElementById('kpi-prevDiff').innerText = formatBalance(totPrev);
-      document.getElementById('kpi-monthDiff').innerText = formatBalance(totMonth);
+      document.getElementById('kpi-monthDiff').innerText = formatBalance(totPeriod);
       document.getElementById('kpi-freeBanner').innerText = fmtNum(freeTotal);
       document.getElementById('kpi-voucherBanner').innerText = fmtNum(voucherTotal);
 
@@ -818,7 +1036,7 @@
     }
 
     // =========================================================================
-    // TAB 2: KHÁCH HÀNG KIOTVIET
+    // TAB 2: KIOT
     // =========================================================================
     function renderKvCustomersTab() {
       const kw = document.getElementById('searchKvCust').value.toLowerCase().trim();
@@ -826,11 +1044,12 @@
       const repMap = new Map(state.salesReps.map(r => [r.id, r.full_name]));
 
       const agg = new Map();
-      state.kvLinesMonth.forEach(line => {
-        if (!agg.has(line.kv_customer_code)) agg.set(line.kv_customer_code, { paid: 0, free: 0 });
+      state.kvLinesRange.forEach(line => {
+        if (!agg.has(line.kv_customer_code)) agg.set(line.kv_customer_code, { paid: 0, free: 0, lines: [] });
         const entry = agg.get(line.kv_customer_code);
         if (line.is_free_gift) entry.free += Number(line.quantity);
         else entry.paid += Number(line.quantity);
+        entry.lines.push(line);
       });
 
       const list = Array.from(agg.entries()).filter(([code]) => {
@@ -842,7 +1061,7 @@
       const tfoot = document.getElementById('kvCustomersTableFoot');
 
       if (list.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="3" class="py-8 text-center text-xs text-slate-400">Không tìm thấy khách hàng KiotViet trong tháng này.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="3" class="py-8 text-center text-xs text-slate-400">Không có điểm bán phát sinh trong kỳ chọn.</td></tr>`;
         tfoot.innerHTML = '';
         return;
       }
@@ -854,13 +1073,13 @@
         const c = custMap.get(code) || { kv_customer_name: code };
         const repName = repMap.get(c.sales_rep_id) || 'Chưa gán sale';
 
-        const hist3M = state.kvLines3M.filter(l => l.kv_customer_code === code);
-        const histByMonth = {};
-        hist3M.forEach(h => {
+        const byMonth = {};
+        data.lines.forEach(h => {
           const m = h.sale_month.slice(0, 7);
-          if (!histByMonth[m]) histByMonth[m] = {};
-          const key = `${h.raw_product_name}${h.is_free_gift ? ' [0đ]' : ''}`;
-          histByMonth[m][key] = (histByMonth[m][key] || 0) + Number(h.quantity);
+          if (!byMonth[m]) byMonth[m] = [];
+          const existing = byMonth[m].find(x => x.name === h.raw_product_name && x.isFree === h.is_free_gift);
+          if (existing) existing.qty += Number(h.quantity);
+          else byMonth[m].push({ name: h.raw_product_name, isFree: h.is_free_gift, qty: Number(h.quantity), note: h.combined_note });
         });
 
         const detId = `kv-row-${code}`;
@@ -871,18 +1090,22 @@
               <div class="text-[10px] text-slate-400 mt-0.5">${code} • <span class="text-emerald-700 font-medium">${repName}</span></div>
             </td>
             <td class="py-2.5 px-1.5 text-right font-extrabold text-slate-900 tabular-nums">${fmtNum(data.paid)}</td>
-            <td class="py-2.5 px-2 text-right font-bold tabular-nums bg-amber-50/70 text-amber-700">${data.free > 0 ? `+${fmtNum(data.free)}` : '-'}</td>
+            <td class="py-2.5 px-2 text-right font-extrabold tabular-nums bg-amber-50 text-amber-700">${data.free > 0 ? `+${fmtNum(data.free)}` : '-'}</td>
           </tr>
           <tr id="${detId}" class="hidden bg-slate-50">
             <td colspan="3" class="p-3 border-t border-dashed border-slate-200 space-y-2">
-              <p class="text-[10px] font-bold text-slate-500 uppercase">Lịch sử mua 3 tháng gần nhất:</p>
-              ${Object.entries(histByMonth).sort().reverse().map(([m, prods]) => `
-                <div class="bg-white p-2 rounded-xl border border-slate-200 text-[11px]">
-                  <div class="font-bold text-emerald-800 border-b pb-1 mb-1">Tháng ${m}</div>
-                  ${Object.entries(prods).map(([pName, q]) => `
-                    <div class="flex justify-between gap-2 py-0.5">
-                      <span class="text-slate-600">${pName}</span>
-                      <span class="font-bold text-slate-900 shrink-0 tabular-nums">${fmtNum(q)}</span>
+              ${Object.entries(byMonth).sort().reverse().map(([m, items]) => `
+                <div class="bg-white p-2 rounded-xl border border-slate-200 text-[11px] space-y-1">
+                  <div class="font-bold text-emerald-800 border-b pb-1">Tháng ${m}</div>
+                  ${items.map(it => it.isFree ? `
+                    <div class="flex justify-between items-center gap-2 py-1 px-2 rounded-lg bg-amber-50 border border-amber-200/80 text-amber-900">
+                      <span class="font-semibold">🎁 ${it.name} <span class="text-[10px] bg-amber-200/80 px-1.5 py-0.2 rounded font-bold">TẶNG 0Đ</span></span>
+                      <span class="font-extrabold text-amber-800 shrink-0 tabular-nums">+${fmtNum(it.qty)}</span>
+                    </div>
+                  ` : `
+                    <div class="flex justify-between gap-2 py-0.5 px-1">
+                      <span class="text-slate-700">${it.name}</span>
+                      <span class="font-bold text-slate-900 shrink-0 tabular-nums">${fmtNum(it.qty)}</span>
                     </div>
                   `).join('')}
                 </div>
@@ -894,7 +1117,7 @@
 
       tfoot.innerHTML = `
         <tr>
-          <td class="py-3 px-2.5 uppercase text-[11px]">Tổng cộng (${list.length} quán)</td>
+          <td class="py-3 px-2.5 uppercase text-[11px]">Tổng cộng (${list.length} điểm bán)</td>
           <td class="py-3 px-1.5 text-right tabular-nums">${fmtNum(sumPaid)}</td>
           <td class="py-3 px-2 text-right tabular-nums text-amber-300">${sumFree > 0 ? `+${fmtNum(sumFree)}` : '0'}</td>
         </tr>
@@ -902,51 +1125,48 @@
     }
 
     // =========================================================================
-    // TAB 3: KHÁCH HÀNG DMS
+    // TAB 3: DMS
     // =========================================================================
     function renderDmsCustomersTab() {
       const kw = document.getElementById('searchDmsCust').value.toLowerCase().trim();
       const outMap = new Map(state.dmsOutlets.map(o => [o.dms_outlet_code, o]));
       const repMap = new Map(state.salesReps.map(r => [r.id, r.full_name]));
 
-      const aggMonth = new Map();
-      state.dmsLinesMonth.filter(l => l.order_type === 'Order' && !l.is_posm_voucher).forEach(line => {
-        aggMonth.set(line.dms_outlet_code, (aggMonth.get(line.dms_outlet_code) || 0) + Number(line.quantity));
+      const agg = new Map();
+      state.dmsLinesRange.filter(l => l.order_type === 'Order').forEach(line => {
+        if (!agg.has(line.dms_outlet_code)) agg.set(line.dms_outlet_code, { beerQty: 0, lines: [] });
+        const entry = agg.get(line.dms_outlet_code);
+        if (!line.is_posm_voucher) entry.beerQty += Number(line.quantity);
+        entry.lines.push(line);
       });
 
-      const agg3M = new Map();
-      state.dmsLines3M.filter(l => l.order_type === 'Order' && !l.is_posm_voucher).forEach(line => {
-        agg3M.set(line.dms_outlet_code, (agg3M.get(line.dms_outlet_code) || 0) + Number(line.quantity));
-      });
-
-      const list = Array.from(aggMonth.entries()).filter(([code]) => {
+      const list = Array.from(agg.entries()).filter(([code]) => {
         const o = outMap.get(code) || {};
         return !kw || code.toLowerCase().includes(kw) || (o.dms_outlet_name || '').toLowerCase().includes(kw);
-      }).sort((a, b) => b[1] - a[1]);
+      }).sort((a, b) => b[1].beerQty - a[1].beerQty);
 
       const tbody = document.getElementById('dmsCustomersTableBody');
       const tfoot = document.getElementById('dmsCustomersTableFoot');
 
       if (list.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="3" class="py-8 text-center text-xs text-slate-400">Không tìm thấy Outlet DMS trong tháng này.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="2" class="py-8 text-center text-xs text-slate-400">Không tìm thấy Outlet DMS trong kỳ chọn.</td></tr>`;
         tfoot.innerHTML = '';
         return;
       }
 
-      let sumMonth = 0, sum3M = 0;
-      tbody.innerHTML = list.map(([code, qtyMonth]) => {
-        const qty3M = agg3M.get(code) || 0;
-        sumMonth += qtyMonth;
-        sum3M += qty3M;
-
+      let sumBeer = 0;
+      tbody.innerHTML = list.map(([code, data]) => {
+        sumBeer += data.beerQty;
         const o = outMap.get(code) || { dms_outlet_name: code };
         const repName = repMap.get(o.sales_rep_id) || 'Chưa gán sale';
-        const hist3M = state.dmsLines3M.filter(l => l.dms_outlet_code === code && l.order_type === 'Order' && !l.is_posm_voucher);
-        const histByMonth = {};
-        hist3M.forEach(h => {
+
+        const byMonth = {};
+        data.lines.forEach(h => {
           const m = h.order_month.slice(0, 7);
-          if (!histByMonth[m]) histByMonth[m] = {};
-          histByMonth[m][h.raw_product_name] = (histByMonth[m][h.raw_product_name] || 0) + Number(h.quantity);
+          if (!byMonth[m]) byMonth[m] = [];
+          const existing = byMonth[m].find(x => x.name === h.raw_product_name && x.isVoucher === h.is_posm_voucher);
+          if (existing) existing.qty += Number(h.quantity);
+          else byMonth[m].push({ name: h.raw_product_name, isVoucher: h.is_posm_voucher, qty: Number(h.quantity) });
         });
 
         const detId = `dms-row-${code}`;
@@ -956,19 +1176,22 @@
               <div class="font-bold text-slate-900 leading-snug line-clamp-2">${o.dms_outlet_name}</div>
               <div class="text-[10px] text-slate-400 mt-0.5">${code} • <span class="text-slate-600 font-medium">${repName}</span></div>
             </td>
-            <td class="py-2.5 px-1.5 text-right font-extrabold text-emerald-700 tabular-nums">${fmtNum(qtyMonth)}</td>
-            <td class="py-2.5 px-2 text-right font-bold tabular-nums bg-emerald-50/60 text-emerald-900">${fmtNum(qty3M)}</td>
+            <td class="py-2.5 px-2 text-right font-extrabold text-emerald-700 tabular-nums bg-emerald-50/50">${fmtNum(data.beerQty)}</td>
           </tr>
           <tr id="${detId}" class="hidden bg-slate-50">
-            <td colspan="3" class="p-3 border-t border-dashed border-slate-200 space-y-2">
-              <p class="text-[10px] font-bold text-slate-500 uppercase">Lịch sử key 3 tháng gần nhất trên DMS:</p>
-              ${Object.entries(histByMonth).sort().reverse().map(([m, prods]) => `
-                <div class="bg-white p-2 rounded-xl border border-slate-200 text-[11px]">
-                  <div class="font-bold text-emerald-800 border-b pb-1 mb-1">Tháng ${m}</div>
-                  ${Object.entries(prods).map(([pName, q]) => `
-                    <div class="flex justify-between gap-2 py-0.5">
-                      <span class="text-slate-600">${pName}</span>
-                      <span class="font-bold text-slate-900 shrink-0 tabular-nums">${fmtNum(q)}</span>
+            <td colspan="2" class="p-3 border-t border-dashed border-slate-200 space-y-2">
+              ${Object.entries(byMonth).sort().reverse().map(([m, items]) => `
+                <div class="bg-white p-2 rounded-xl border border-slate-200 text-[11px] space-y-1">
+                  <div class="font-bold text-emerald-800 border-b pb-1">Tháng ${m}</div>
+                  ${items.map(it => it.isVoucher ? `
+                    <div class="flex justify-between items-center gap-2 py-1 px-2 rounded-lg bg-purple-50 border border-purple-200 text-purple-900">
+                      <span class="font-semibold">🎟️ ${it.name} <span class="text-[10px] bg-purple-200/80 px-1.5 py-0.2 rounded font-bold">VOUCHER</span></span>
+                      <span class="font-extrabold text-purple-800 shrink-0 tabular-nums">${fmtNum(it.qty)} suất</span>
+                    </div>
+                  ` : `
+                    <div class="flex justify-between gap-2 py-0.5 px-1">
+                      <span class="text-slate-700">${it.name}</span>
+                      <span class="font-bold text-slate-900 shrink-0 tabular-nums">${fmtNum(it.qty)}</span>
                     </div>
                   `).join('')}
                 </div>
@@ -981,17 +1204,21 @@
       tfoot.innerHTML = `
         <tr>
           <td class="py-3 px-2.5 uppercase text-[11px]">Tổng cộng (${list.length} outlet)</td>
-          <td class="py-3 px-1.5 text-right tabular-nums text-amber-300">${fmtNum(sumMonth)}</td>
-          <td class="py-3 px-2 text-right tabular-nums bg-emerald-800 text-emerald-200">${fmtNum(sum3M)}</td>
+          <td class="py-3 px-2 text-right tabular-nums bg-emerald-800 text-emerald-200">${fmtNum(sumBeer)}</td>
         </tr>
       `;
     }
 
     // =========================================================================
-    // TAB 4: GHÉP & ĐỐI CHIẾU KHÁCH HÀNG
+    // TAB 4: GHÉP KH
     // =========================================================================
+    function getActiveSalesRepId() {
+      if (currentUser?.role === 'SALE') return currentUser.sales_rep_id;
+      return document.getElementById('filterSalesRep').value;
+    }
+
     function renderCustomerMatchTab() {
-      const selectedRep = document.getElementById('filterSalesRep').value;
+      const selectedRep = getActiveSalesRepId();
       const sugs = state.suggestions.filter(s => selectedRep === 'ALL' || s.sales_rep_id === selectedRep);
       document.getElementById('sugCountBadge').innerText = sugs.length;
       const sugContainer = document.getElementById('suggestionsContainer');
@@ -1034,16 +1261,14 @@
     }
 
     async function confirmCustomerLink(kvCode, dmsCode, score, method) {
-      if (!supabaseClient) return;
       const { error } = await supabaseClient.from('customer_links').upsert({
         kv_customer_code: kvCode, dms_outlet_code: dmsCode, match_score: score, match_method: method
-      });
+      }, { onConflict: 'kv_customer_code' });
       if (error) return alert('Lỗi ghép khách hàng: ' + error.message);
       await onFilterChange();
     }
 
     async function rejectCustomerSuggestion(kvCode, dmsCode) {
-      if (!supabaseClient) return;
       const { error } = await supabaseClient.from('rejected_customer_suggestions').upsert({
         kv_customer_code: kvCode, dms_outlet_code: dmsCode
       });
@@ -1062,35 +1287,67 @@
       await onFilterChange();
     }
 
-    function openManualLinkModal() {
+    function openManualLinkModal(editLink = null) {
+      const selectedRep = getActiveSalesRepId();
       const linkedKv = new Set(state.customerLinks.map(l => l.kv_customer_code));
       const linkedDms = new Set(state.customerLinks.map(l => l.dms_outlet_code));
-      const selectedRep = document.getElementById('filterSalesRep').value;
 
-      const availKv = state.kvCustomers.filter(c => !linkedKv.has(c.kv_customer_code) && (selectedRep === 'ALL' || c.sales_rep_id === selectedRep));
-      const availDms = state.dmsOutlets.filter(o => !linkedDms.has(o.dms_outlet_code) && (selectedRep === 'ALL' || o.sales_rep_id === selectedRep));
+      const kvSel = document.getElementById('manualKvSelect');
+      const dmsSel = document.getElementById('manualDmsSelect');
+      const titleEl = document.getElementById('manualLinkModalTitle');
+      document.getElementById('editingLinkId').value = editLink ? editLink.id : '';
 
-      document.getElementById('manualKvSelect').innerHTML = availKv.map(c => `<option value="${c.kv_customer_code}">[${c.kv_customer_code}] ${c.kv_customer_name}</option>`).join('');
-      document.getElementById('manualDmsSelect').innerHTML = availDms.map(o => `<option value="${o.dms_outlet_code}">[${o.dms_outlet_code}] ${o.dms_outlet_name}</option>`).join('');
+      if (editLink) {
+        titleEl.innerText = 'Đổi Outlet DMS Ghép Với Quán Này';
+        const curKv = state.kvCustomers.find(c => c.kv_customer_code === editLink.kv_customer_code);
+        kvSel.innerHTML = `<option value="${editLink.kv_customer_code}">[${editLink.kv_customer_code}] ${curKv ? curKv.kv_customer_name : editLink.kv_customer_code}</option>`;
+        kvSel.disabled = true;
+
+        const repFilter = curKv?.sales_rep_id || selectedRep;
+        const availDms = state.dmsOutlets.filter(o =>
+          (o.dms_outlet_code === editLink.dms_outlet_code || !linkedDms.has(o.dms_outlet_code)) &&
+          (repFilter === 'ALL' || o.sales_rep_id === repFilter)
+        );
+        dmsSel.innerHTML = availDms.map(o => `<option value="${o.dms_outlet_code}" ${o.dms_outlet_code === editLink.dms_outlet_code ? 'selected' : ''}>[${o.dms_outlet_code}] ${o.dms_outlet_name}</option>`).join('');
+      } else {
+        titleEl.innerText = 'Ghép Thủ Công Khách Hàng 2 Bên';
+        kvSel.disabled = false;
+        const availKv = state.kvCustomers.filter(c => !linkedKv.has(c.kv_customer_code) && (selectedRep === 'ALL' || c.sales_rep_id === selectedRep));
+        const availDms = state.dmsOutlets.filter(o => !linkedDms.has(o.dms_outlet_code) && (selectedRep === 'ALL' || o.sales_rep_id === selectedRep));
+
+        kvSel.innerHTML = availKv.map(c => `<option value="${c.kv_customer_code}">[${c.kv_customer_code}] ${c.kv_customer_name}</option>`).join('');
+        dmsSel.innerHTML = availDms.map(o => `<option value="${o.dms_outlet_code}">[${o.dms_outlet_code}] ${o.dms_outlet_name}</option>`).join('');
+      }
+
       document.getElementById('manualLinkModal').classList.remove('hidden');
     }
 
     async function saveManualLink() {
+      const editLinkId = document.getElementById('editingLinkId').value;
       const kvCode = document.getElementById('manualKvSelect').value;
       const dmsCode = document.getElementById('manualDmsSelect').value;
       if (!kvCode || !dmsCode) return;
+
+      if (editLinkId) {
+        await supabaseClient.from('customer_links').delete().eq('id', editLinkId);
+      }
       await confirmCustomerLink(kvCode, dmsCode, 100, 'MANUAL');
       closeModal('manualLinkModal');
     }
 
     function renderLinkedCustomersComparison() {
       const kw = document.getElementById('searchLinkedCust').value.toLowerCase().trim();
+      const selectedRep = getActiveSalesRepId();
       const kvMap = new Map(state.kvCustomers.map(c => [c.kv_customer_code, c]));
       const dmsMap = new Map(state.dmsOutlets.map(o => [o.dms_outlet_code, o]));
-      const skuToGroup = new Map();
+
+      const skuInfoMap = new Map();
       state.skuMappings.forEach(m => {
         const grp = state.productGroups.find(g => g.id === m.product_group_id);
-        if (grp) skuToGroup.set(`${m.source_system}_${m.raw_code}`, grp.group_name);
+        if (grp) {
+          const tier = grp.tier || (grp.brand.toLowerCase().includes('huda') ? 'Mainstream' : 'Premium');
+          skuInfoMap.set(`${m.source_system}_${m.raw_code}`, { group_name: grp.group_name, tier });
+        }
       });
 
       const tbody = document.getElementById('linkedComparisonTableBody');
@@ -1099,59 +1356,71 @@
       const filteredLinks = state.customerLinks.filter(l => {
         const kv = kvMap.get(l.kv_customer_code) || {};
         const dms = dmsMap.get(l.dms_outlet_code) || {};
+        const repId = kv.sales_rep_id || dms.sales_rep_id;
+        if (selectedRep !== 'ALL' && repId !== selectedRep) return false;
         return !kw || (kv.kv_customer_name || '').toLowerCase().includes(kw) || (dms.dms_outlet_name || '').toLowerCase().includes(kw);
       });
 
       if (filteredLinks.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="4" class="py-8 text-center text-xs text-slate-400">Chưa có cặp quán nào được ghép.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="4" class="py-8 text-center text-xs text-slate-400">Chưa có cặp quán nào được ghép cho sale này.</td></tr>`;
         tfoot.innerHTML = '';
         return;
       }
 
-      let totKv3M = 0, totDms3M = 0, totBal3M = 0;
+      let totKv = 0, totDms = 0, totBal = 0;
 
       tbody.innerHTML = filteredLinks.map(l => {
         const kv = kvMap.get(l.kv_customer_code) || { kv_customer_name: l.kv_customer_code };
         const dms = dmsMap.get(l.dms_outlet_code) || { dms_outlet_name: l.dms_outlet_code };
 
         const skuMatrix = {};
-        state.kvLines3M.filter(x => x.kv_customer_code === l.kv_customer_code && !x.is_free_gift).forEach(x => {
-          const gName = skuToGroup.get(`KIOTVIET_${x.raw_product_code}`) || x.raw_product_name;
-          if (!skuMatrix[gName]) skuMatrix[gName] = { kv: 0, dms: 0 };
-          skuMatrix[gName].kv += Number(x.quantity);
-        });
-        state.dmsLines3M.filter(x => x.dms_outlet_code === l.dms_outlet_code && x.order_type === 'Order' && !x.is_posm_voucher).forEach(x => {
-          const gName = skuToGroup.get(`DMS_${x.raw_product_code}`) || x.raw_product_name;
-          if (!skuMatrix[gName]) skuMatrix[gName] = { kv: 0, dms: 0 };
-          skuMatrix[gName].dms += Number(x.quantity);
+        state.kvLinesRange.filter(x => x.kv_customer_code === l.kv_customer_code && !x.is_free_gift).forEach(x => {
+          const info = skuInfoMap.get(`KIOTVIET_${x.raw_product_code}`) || { group_name: x.raw_product_name, tier: x.raw_product_name.toLowerCase().includes('huda') ? 'Mainstream' : 'Premium' };
+          if (matchTierFilter !== 'ALL' && info.tier !== matchTierFilter) return;
+          if (!skuMatrix[info.group_name]) skuMatrix[info.group_name] = { kv: 0, dms: 0, tier: info.tier };
+          skuMatrix[info.group_name].kv += Number(x.quantity);
         });
 
-        let sumKv3M = 0, sumDms3M = 0;
-        Object.values(skuMatrix).forEach(v => { sumKv3M += v.kv; sumDms3M += v.dms; });
-        const bal3M = sumKv3M - sumDms3M;
+        state.dmsLinesRange.filter(x => x.dms_outlet_code === l.dms_outlet_code && x.order_type === 'Order' && !x.is_posm_voucher).forEach(x => {
+          const info = skuInfoMap.get(`DMS_${x.raw_product_code}`) || { group_name: x.raw_product_name, tier: x.raw_product_name.toLowerCase().includes('huda') ? 'Mainstream' : 'Premium' };
+          if (matchTierFilter !== 'ALL' && info.tier !== matchTierFilter) return;
+          if (!skuMatrix[info.group_name]) skuMatrix[info.group_name] = { kv: 0, dms: 0, tier: info.tier };
+          skuMatrix[info.group_name].dms += Number(x.quantity);
+        });
 
-        totKv3M += sumKv3M;
-        totDms3M += sumDms3M;
-        totBal3M += bal3M;
+        let sumKv = 0, sumDms = 0;
+        Object.values(skuMatrix).forEach(v => { sumKv += v.kv; sumDms += v.dms; });
+        const bal = sumKv - sumDms;
+
+        totKv += sumKv;
+        totDms += sumDms;
+        totBal += bal;
 
         const detId = `link-row-${l.id}`;
+        const safeLinkJson = JSON.stringify({ id: l.id, kv_customer_code: l.kv_customer_code, dms_outlet_code: l.dms_outlet_code }).replace(/"/g, '&quot;');
+
         return `
           <tr onclick="toggleAccordion('${detId}')" class="hover:bg-slate-50 active:bg-slate-100 cursor-pointer transition">
             <td class="py-2.5 px-2.5">
               <div class="font-bold text-slate-900 leading-snug line-clamp-1">${kv.kv_customer_name}</div>
               <div class="text-[10px] text-emerald-700 font-medium line-clamp-1">&harr; ${dms.dms_outlet_name}</div>
             </td>
-            <td class="py-2.5 px-1.5 text-right font-bold text-slate-900 tabular-nums">${fmtNum(sumKv3M)}</td>
-            <td class="py-2.5 px-1.5 text-right font-bold text-slate-700 tabular-nums">${fmtNum(sumDms3M)}</td>
-            <td class="py-2.5 px-2 text-right font-extrabold tabular-nums ${balanceCellBg(bal3M)}">${formatBalance(bal3M)}</td>
+            <td class="py-2.5 px-1.5 text-right font-bold text-slate-900 tabular-nums">${fmtNum(sumKv)}</td>
+            <td class="py-2.5 px-1.5 text-right font-bold text-slate-700 tabular-nums">${fmtNum(sumDms)}</td>
+            <td class="py-2.5 px-2 text-right font-extrabold tabular-nums ${balanceCellBg(bal)}">${formatBalance(bal)}</td>
           </tr>
           <tr id="${detId}" class="hidden bg-slate-50">
             <td colspan="4" class="p-3 border-t border-dashed border-slate-200 space-y-2">
-              <div class="flex items-center justify-between text-[10px] text-slate-500">
-                <span class="font-bold uppercase">Chi tiết SKU 3 tháng gần nhất:</span>
-                <button onclick="event.stopPropagation(); unlinkCustomer('${l.id}')" class="text-rose-600 font-bold flex items-center gap-1">
-                  <i data-lucide="unlink" class="w-3 h-3"></i> Hủy ghép quán này
-                </button>
+              <div class="flex flex-wrap items-center justify-between gap-2 text-[10px]">
+                <span class="font-bold text-slate-500 uppercase">Chi tiết SKU kỳ chọn (${matchTierFilter === 'ALL' ? 'Tất cả' : matchTierFilter}):</span>
+                <div class="flex items-center gap-2">
+                  <button onclick="event.stopPropagation(); openManualLinkModal(${safeLinkJson})" class="bg-blue-50 text-blue-700 border border-blue-200 px-2 py-1 rounded-lg font-bold flex items-center gap-1">
+                    <i data-lucide="refresh-cw" class="w-3 h-3"></i> Đổi quán ghép
+                  </button>
+                  <button onclick="event.stopPropagation(); unlinkCustomer('${l.id}')" class="bg-rose-50 text-rose-600 border border-rose-200 px-2 py-1 rounded-lg font-bold flex items-center gap-1">
+                    <i data-lucide="unlink" class="w-3 h-3"></i> Hủy ghép
+                  </button>
+                </div>
               </div>
               <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
                 <table class="w-full text-[11px] border-collapse">
@@ -1164,17 +1433,19 @@
                     </tr>
                   </thead>
                   <tbody class="divide-y divide-slate-100">
-                    ${Object.entries(skuMatrix).map(([gName, val]) => {
-                      const diffSku = val.kv - val.dms;
-                      return `
-                        <tr>
-                          <td class="py-1.5 px-2 font-medium text-slate-800">${gName}</td>
-                          <td class="py-1.5 px-1.5 text-right tabular-nums">${fmtNum(val.kv)}</td>
-                          <td class="py-1.5 px-1.5 text-right tabular-nums">${fmtNum(val.dms)}</td>
-                          <td class="py-1.5 px-2 text-right font-bold tabular-nums ${balanceTextColor(diffSku)}">${formatBalance(diffSku)}</td>
-                        </tr>
-                      `;
-                    }).join('')}
+                    ${Object.keys(skuMatrix).length === 0
+                      ? `<tr><td colspan="4" class="py-3 text-center text-slate-400">Không phát sinh nhóm ${matchTierFilter} trong kỳ này.</td></tr>`
+                      : Object.entries(skuMatrix).map(([gName, val]) => {
+                        const diffSku = val.kv - val.dms;
+                        return `
+                          <tr>
+                            <td class="py-1.5 px-2 font-medium text-slate-800">${gName}</td>
+                            <td class="py-1.5 px-1.5 text-right tabular-nums">${fmtNum(val.kv)}</td>
+                            <td class="py-1.5 px-1.5 text-right tabular-nums">${fmtNum(val.dms)}</td>
+                            <td class="py-1.5 px-2 text-right font-bold tabular-nums ${balanceTextColor(diffSku)}">${formatBalance(diffSku)}</td>
+                          </tr>
+                        `;
+                      }).join('')}
                   </tbody>
                 </table>
               </div>
@@ -1186,22 +1457,22 @@
       tfoot.innerHTML = `
         <tr>
           <td class="py-3 px-2.5 uppercase text-[11px]">Tổng cộng (${filteredLinks.length} quán)</td>
-          <td class="py-3 px-1.5 text-right tabular-nums">${fmtNum(totKv3M)}</td>
-          <td class="py-3 px-1.5 text-right tabular-nums text-amber-300">${fmtNum(totDms3M)}</td>
-          <td class="py-3 px-2 text-right tabular-nums ${totBal3M > 0 ? 'bg-emerald-800 text-emerald-200' : totBal3M < 0 ? 'bg-rose-900 text-rose-200' : ''}">${formatBalance(totBal3M)}</td>
+          <td class="py-3 px-1.5 text-right tabular-nums">${fmtNum(totKv)}</td>
+          <td class="py-3 px-1.5 text-right tabular-nums text-amber-300">${fmtNum(totDms)}</td>
+          <td class="py-3 px-2 text-right tabular-nums ${totBal > 0 ? 'bg-emerald-800 text-emerald-200' : totBal < 0 ? 'bg-rose-900 text-rose-200' : ''}">${formatBalance(totBal)}</td>
         </tr>
       `;
     }
 
     // =========================================================================
-    // TAB 5: HÀNG 0Đ KV & VOUCHER DMS
+    // TAB 5: 0Đ & KM
     // =========================================================================
     function renderPromoTab() {
       const custMap = new Map(state.kvCustomers.map(c => [c.kv_customer_code, c.kv_customer_name]));
       const outMap = new Map(state.dmsOutlets.map(o => [o.dms_outlet_code, o.dms_outlet_name]));
       const repMap = new Map(state.salesReps.map(r => [r.id, r.full_name]));
 
-      const freeLines = state.kvLinesMonth.filter(l => l.is_free_gift);
+      const freeLines = state.kvLinesRange.filter(l => l.is_free_gift);
       const totalFree = freeLines.reduce((s, l) => s + Number(l.quantity), 0);
       document.getElementById('badge-kvFreeTotal').innerText = fmtNum(totalFree);
 
@@ -1209,18 +1480,18 @@
       const kvFreeFoot = document.getElementById('kvFreeTableFoot');
 
       if (freeLines.length === 0) {
-        kvFreeBody.innerHTML = `<tr><td colspan="3" class="py-8 text-center text-xs text-slate-400">Không có hàng xuất 0đ trong tháng này.</td></tr>`;
+        kvFreeBody.innerHTML = `<tr><td colspan="3" class="py-8 text-center text-xs text-slate-400">Không có hàng xuất 0đ trong kỳ chọn.</td></tr>`;
         kvFreeFoot.innerHTML = '';
       } else {
         kvFreeBody.innerHTML = freeLines.map(l => `
           <tr class="hover:bg-amber-50/40">
             <td class="py-2.5 px-2.5">
               <div class="font-bold text-slate-900 line-clamp-1">${custMap.get(l.kv_customer_code) || l.kv_customer_code}</div>
-              <div class="text-[10px] text-slate-600 mt-0.5">${l.raw_product_name}</div>
+              <div class="text-[10px] text-amber-800 font-semibold mt-0.5">🎁 ${l.raw_product_name}</div>
               <div class="text-[10px] text-slate-400">${l.sale_date.slice(0, 10)} • ${repMap.get(l.sales_rep_id) || ''}</div>
             </td>
             <td class="py-2.5 px-2 text-[10px] text-amber-800 font-medium italic">${l.combined_note || '-'}</td>
-            <td class="py-2.5 px-2 text-right font-extrabold text-amber-700 tabular-nums bg-amber-50/60">+${fmtNum(l.quantity)}</td>
+            <td class="py-2.5 px-2 text-right font-extrabold text-amber-700 tabular-nums bg-amber-50/80">+${fmtNum(l.quantity)}</td>
           </tr>
         `).join('');
 
@@ -1232,15 +1503,15 @@
         `;
       }
 
-      const voucherLines = state.dmsLinesMonth.filter(l => l.is_posm_voucher && l.order_type === 'Order');
+      const voucherLines = state.dmsLinesRange.filter(l => l.is_posm_voucher && l.order_type === 'Order');
       const totalVouchers = voucherLines.reduce((s, l) => s + Number(l.quantity), 0);
       document.getElementById('badge-dmsVoucherTotal').innerText = fmtNum(totalVouchers);
 
       const vGroup = {};
       voucherLines.forEach(v => { vGroup[v.raw_product_name] = (vGroup[v.raw_product_name] || 0) + Number(v.quantity); });
       document.getElementById('dmsVoucherSummaryCards').innerHTML = Object.entries(vGroup).map(([name, cnt]) => `
-        <div class="bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl text-xs">
-          <span class="text-emerald-900">${name}:</span> <b class="text-emerald-700">${fmtNum(cnt)} suất</b>
+        <div class="bg-purple-50 border border-purple-200 px-3 py-1.5 rounded-xl text-xs">
+          <span class="text-purple-950">${name}:</span> <b class="text-purple-700">${fmtNum(cnt)} suất</b>
         </div>
       `).join('');
 
@@ -1248,31 +1519,31 @@
       const vFoot = document.getElementById('dmsVoucherTableFoot');
 
       if (voucherLines.length === 0) {
-        vBody.innerHTML = `<tr><td colspan="2" class="py-8 text-center text-xs text-slate-400">Không có voucher DMS trong tháng này.</td></tr>`;
+        vBody.innerHTML = `<tr><td colspan="2" class="py-8 text-center text-xs text-slate-400">Không có voucher DMS trong kỳ chọn.</td></tr>`;
         vFoot.innerHTML = '';
       } else {
         vBody.innerHTML = voucherLines.map(v => `
-          <tr class="hover:bg-emerald-50/40">
+          <tr class="hover:bg-purple-50/40">
             <td class="py-2.5 px-2.5">
               <div class="font-bold text-slate-900 line-clamp-1">${outMap.get(v.dms_outlet_code) || v.dms_outlet_code}</div>
-              <div class="text-[10px] text-emerald-700 font-medium mt-0.5">${v.raw_product_name}</div>
+              <div class="text-[10px] text-purple-700 font-semibold mt-0.5">🎟️ ${v.raw_product_name}</div>
               <div class="text-[10px] text-slate-400">${v.ordered_date.slice(0, 10)} • ${repMap.get(v.sales_rep_id) || ''}</div>
             </td>
-            <td class="py-2.5 px-2 text-right font-extrabold text-emerald-700 tabular-nums bg-emerald-50/60">${fmtNum(v.quantity)}</td>
+            <td class="py-2.5 px-2 text-right font-extrabold text-purple-700 tabular-nums bg-purple-50/80">${fmtNum(v.quantity)}</td>
           </tr>
         `).join('');
 
         vFoot.innerHTML = `
           <tr>
             <td class="py-3 px-2.5 uppercase text-[11px]">Tổng suất voucher trả NPP</td>
-            <td class="py-3 px-2 text-right tabular-nums text-emerald-300">${fmtNum(totalVouchers)}</td>
+            <td class="py-3 px-2 text-right tabular-nums text-purple-300">${fmtNum(totalVouchers)}</td>
           </tr>
         `;
       }
     }
 
     // =========================================================================
-    // QUẢN LÝ MÃ SKU MỚI & PHÂN NHÓM
+    // QUẢN LÝ MÃ SKU MỚI & NẠP EXCEL (ADMIN)
     // =========================================================================
     function openSkuModal() {
       const container = document.getElementById('skuMappingList');
@@ -1284,7 +1555,7 @@
           <p class="text-xs text-slate-700 font-medium">${m.raw_name}</p>
           <select onchange="updateSkuGroup('${m.id}', this.value)" class="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs font-semibold">
             <option value="">-- Chọn nhóm chuẩn --</option>
-            ${state.productGroups.map(g => `<option value="${g.id}" ${g.id === m.product_group_id ? 'selected' : ''}>${g.group_name}</option>`).join('')}
+            ${state.productGroups.map(g => `<option value="${g.id}" ${g.id === m.product_group_id ? 'selected' : ''}>[${g.tier || 'Premium'}] ${g.group_name}</option>`).join('')}
           </select>
         </div>
       `).join('');
@@ -1298,9 +1569,9 @@
       await refreshAllData();
     }
 
-    // =========================================================================
-    // ĐỌC EXCEL & ĐẨY LÊN SUPABASE
-    // =========================================================================
+    function openUploadModal() { document.getElementById('uploadModal').classList.remove('hidden'); }
+    function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
     function logUpload(msg) {
       const box = document.getElementById('uploadLogBox');
       box.classList.remove('hidden');
@@ -1309,7 +1580,6 @@
     }
 
     async function processExcelUploads() {
-      if (!supabaseClient) return alert('Chưa kết nối Supabase!');
       const fileKv = document.getElementById('fileInputKv').files[0];
       const fileDms = document.getElementById('fileInputDms').files[0];
       if (!fileKv && !fileDms) return alert('Vui lòng chọn ít nhất 1 file Excel!');
@@ -1372,7 +1642,6 @@
         const nhomHang = String(r['Nhóm hàng'] || '').toLowerCase();
         const tenHang = String(r['Tên hàng'] || '').toLowerCase();
         const dvt = String(r['ĐVT'] || '').toLowerCase();
-        // Bỏ qua hàng POSM (dù, ly, vật phẩm quảng cáo...)
         if (nhomHang.includes('posm') || tenHang.includes('posm') || tenHang.includes('huda dù') || dvt === 'cái') continue;
         if (!CARLSBERG_KEYWORDS.some(k => nhomHang.includes(k) || tenHang.includes(k))) continue;
 
