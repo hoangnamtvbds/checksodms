@@ -17,7 +17,7 @@
     body {
       font-family: 'Inter', sans-serif;
       background-color: #f1f5f9;
-      padding-bottom: 84px; /* Chừa chỗ cho Bottom Navigation Bar trên mobile */
+      padding-bottom: 84px;
       -webkit-tap-highlight-color: transparent;
     }
     @media (min-width: 768px) {
@@ -29,7 +29,7 @@
 </head>
 <body class="text-slate-800 antialiased select-none sm:select-auto">
 
-  <!-- ==================== TOP APP BAR (GỌN NHẸ CHO MOBILE) ==================== -->
+  <!-- ==================== TOP APP BAR ==================== -->
   <header class="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-900 text-white shadow-md sticky top-0 z-30">
     <div class="max-w-7xl mx-auto px-3.5 sm:px-6 h-14 flex items-center justify-between gap-2">
       <div class="flex items-center gap-2.5 min-w-0">
@@ -39,8 +39,8 @@
         <div class="truncate">
           <h1 class="font-extrabold text-sm sm:text-base tracking-tight truncate">ĐỐI CHIẾU SALE • TEAM BC</h1>
           <div class="flex items-center gap-1.5 text-[11px] text-emerald-300">
-            <span id="dbStatusDot" class="w-2 h-2 rounded-full bg-amber-400 shrink-0"></span>
-            <span id="dbStatusText" class="truncate">Chưa kết nối Supabase</span>
+            <span id="dbStatusDot" class="w-2 h-2 rounded-full bg-emerald-400 shrink-0"></span>
+            <span id="dbStatusText" class="truncate">Đã kết nối Supabase</span>
           </div>
         </div>
       </div>
@@ -57,7 +57,7 @@
     </div>
   </header>
 
-  <!-- ==================== COMPACT FILTER BAR (1 HÀNG TRÊN MOBILE) ==================== -->
+  <!-- ==================== COMPACT FILTER BAR ==================== -->
   <section class="bg-white border-b border-slate-200 sticky top-14 z-20 shadow-xs">
     <div class="max-w-7xl mx-auto px-3.5 sm:px-6 py-2.5 space-y-2">
       <!-- Hàng 1: Chọn Tháng + Chọn Sale -->
@@ -77,9 +77,9 @@
         </div>
       </div>
 
-      <!-- Hàng 2: Thanh lọc nhanh Brand dạng Chips vuốt ngang -->
+      <!-- Hàng 2: Thanh lọc nhanh Brand -->
       <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5" id="brandChipsContainer">
-        <button onclick="selectBrandChip('ALL')" data-brand="ALL" class="brand-chip px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap bg-emerald-700 text-white">Tất cả Brand</button>
+        <button onclick="selectBrandChip('ALL')" data-brand="ALL" class="brand-chip px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap bg-emerald-700 text-white">Tất cả Brand</button>
         <button onclick="selectBrandChip('1664 Blanc')" data-brand="1664 Blanc" class="brand-chip px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-slate-100 text-slate-600">1664 Blanc</button>
         <button onclick="selectBrandChip('Tuborg Ice')" data-brand="Tuborg Ice" class="brand-chip px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-slate-100 text-slate-600">Tuborg Ice</button>
         <button onclick="selectBrandChip('Tuborg Green')" data-brand="Tuborg Green" class="brand-chip px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-slate-100 text-slate-600">Tuborg Green</button>
@@ -89,7 +89,7 @@
       </div>
     </div>
 
-    <!-- DESKTOP TAB BAR (Ẩn trên Mobile vì Mobile dùng Bottom Nav) -->
+    <!-- DESKTOP TAB BAR -->
     <div class="hidden md:flex max-w-7xl mx-auto px-6 space-x-6 border-t border-slate-100">
       <button onclick="switchTab('reconcile')" id="dTab-reconcile" class="py-3 text-sm font-semibold border-b-2 border-emerald-700 text-emerald-700 flex items-center gap-2">
         <i data-lucide="bar-chart-3" class="w-4 h-4"></i> 1. Đối Chiếu & Lũy Kế
@@ -110,12 +110,12 @@
   </section>
 
   <!-- ==================== MAIN CONTENT ==================== -->
-  <main class="max-w-7xl mx-auto px-3.5 sm:px-6 py-4 space-y-4">
+  <main class="max-w-7xl mx-auto px-3 sm:px-6 py-3.5 space-y-3.5">
 
     <!-- CẢNH BÁO MÃ SKU MỚI -->
-    <div id="unmappedAlert" class="hidden bg-amber-50 border border-amber-300 rounded-2xl p-3.5 flex items-center justify-between gap-3">
-      <div class="flex items-start gap-2.5">
-        <i data-lucide="alert-triangle" class="w-5 h-5 text-amber-600 shrink-0 mt-0.5"></i>
+    <div id="unmappedAlert" class="hidden bg-amber-50 border border-amber-300 rounded-2xl p-3 flex items-center justify-between gap-3">
+      <div class="flex items-start gap-2">
+        <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-600 shrink-0 mt-0.5"></i>
         <div>
           <h3 class="text-xs font-bold text-amber-900">Có mã SKU mới chưa phân nhóm!</h3>
           <p id="unmappedText" class="text-[11px] text-amber-800 mt-0.5"></p>
@@ -125,54 +125,91 @@
     </div>
 
     <!-- ==================== TAB 1: ĐỐI CHIẾU SẢN LƯỢNG & LŨY KẾ ==================== -->
-    <div id="view-reconcile" class="space-y-4">
+    <div id="view-reconcile" class="space-y-3">
 
-      <!-- HERO CARD: TỔNG LŨY KẾ CUỐI KỲ (NỔI BẬT NHẤT TRÊN MOBILE) -->
-      <div class="bg-gradient-to-br from-emerald-950 via-emerald-900 to-teal-950 text-white rounded-2xl p-4 sm:p-5 shadow-md">
+      <!-- HERO CARD: TỔNG LŨY KẾ CUỐI KỲ -->
+      <div class="bg-gradient-to-br from-emerald-950 via-emerald-900 to-teal-950 text-white rounded-2xl p-4 shadow-md">
         <div class="flex items-start justify-between gap-2">
           <div>
-            <p class="text-xs font-medium text-emerald-300 uppercase tracking-wider">Tổng Lũy Kế Cuối Kỳ</p>
-            <div class="flex items-baseline gap-2.5 mt-1">
-              <span id="kpi-totalDiff" class="text-3xl sm:text-4xl font-extrabold tracking-tight">0</span>
+            <p class="text-[11px] font-semibold text-emerald-300 uppercase tracking-wider">Tổng Chênh Lệch Lũy Kế</p>
+            <div class="flex items-baseline gap-2 mt-0.5">
+              <span id="kpi-totalDiff" class="text-3xl sm:text-4xl font-extrabold tracking-tight text-emerald-300">0</span>
               <span class="text-xs text-emerald-200">thùng / két</span>
             </div>
-            <p id="kpi-totalLabel" class="text-xs text-emerald-200 mt-1">Chưa có dữ liệu</p>
+            <p id="kpi-totalLabel" class="text-xs text-emerald-100/90 mt-1">Chưa có dữ liệu</p>
           </div>
-          <button onclick="openSkuModal()" class="bg-white/10 hover:bg-white/20 text-emerald-100 text-[11px] font-semibold px-2.5 py-1.5 rounded-xl flex items-center gap-1 shrink-0">
-            <i data-lucide="layers" class="w-3.5 h-3.5"></i> Mã SKU
-          </button>
+          <div class="flex flex-col items-end gap-1.5 shrink-0">
+            <button onclick="openSkuModal()" class="bg-white/10 hover:bg-white/20 text-emerald-100 text-[11px] font-semibold px-2.5 py-1.5 rounded-xl flex items-center gap-1">
+              <i data-lucide="layers" class="w-3.5 h-3.5"></i> Mã SKU
+            </button>
+            <!-- Nút bật/tắt nhanh dòng Hàng 0đ & Voucher ngay trong bảng -->
+            <button onclick="togglePromoInline()" id="btnTogglePromoInline" class="bg-amber-400/20 border border-amber-300/30 text-amber-200 text-[10px] font-semibold px-2.5 py-1 rounded-lg flex items-center gap-1">
+              <i data-lucide="eye" class="w-3 h-3"></i> <span id="lblTogglePromo">Hiện 0đ / KM</span>
+            </button>
+          </div>
         </div>
 
-        <!-- 4 Chỉ số thành phần bên trong Hero Card -->
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mt-4 pt-3.5 border-t border-white/15">
-          <div class="bg-white/10 rounded-xl p-2.5">
-            <span class="text-[10px] text-emerald-200 block">Bán KV (Tính tiền)</span>
-            <span id="kpi-kvPaid" class="text-base sm:text-lg font-extrabold text-white">0</span>
+        <!-- 4 Chỉ số thành phần -->
+        <div class="grid grid-cols-4 gap-1.5 mt-3.5 pt-3 border-t border-white/15 text-center">
+          <div class="bg-white/10 rounded-xl py-2 px-1">
+            <span class="text-[10px] text-emerald-200 block">Bán KV</span>
+            <span id="kpi-kvPaid" class="text-sm sm:text-base font-extrabold text-white">0</span>
           </div>
-          <div class="bg-white/10 rounded-xl p-2.5">
-            <span class="text-[10px] text-emerald-200 block">Key DMS (Order)</span>
-            <span id="kpi-dmsOrder" class="text-base sm:text-lg font-extrabold text-amber-300">0</span>
+          <div class="bg-white/10 rounded-xl py-2 px-1">
+            <span class="text-[10px] text-emerald-200 block">Key DMS</span>
+            <span id="kpi-dmsOrder" class="text-sm sm:text-base font-extrabold text-amber-300">0</span>
           </div>
-          <div class="bg-white/10 rounded-xl p-2.5">
-            <span class="text-[10px] text-emerald-200 block">Lệch Tháng Trước</span>
-            <span id="kpi-prevDiff" class="text-base sm:text-lg font-extrabold text-white">0</span>
+          <div class="bg-white/10 rounded-xl py-2 px-1">
+            <span class="text-[10px] text-emerald-200 block">Tồn trước</span>
+            <span id="kpi-prevDiff" class="text-sm sm:text-base font-extrabold text-white">0</span>
           </div>
-          <div class="bg-white/10 rounded-xl p-2.5">
-            <span class="text-[10px] text-emerald-200 block">Lệch Tháng Này</span>
-            <span id="kpi-monthDiff" class="text-base sm:text-lg font-extrabold text-white">0</span>
+          <div class="bg-white/10 rounded-xl py-2 px-1">
+            <span class="text-[10px] text-emerald-200 block">Lệch tháng</span>
+            <span id="kpi-monthDiff" class="text-sm sm:text-base font-extrabold text-white">0</span>
           </div>
+        </div>
+
+        <!-- Thanh tóm tắt nhanh Hàng 0đ KV & Voucher DMS (bấm để nhảy qua Tab 5) -->
+        <div onclick="switchTab('promo')" class="mt-2.5 bg-white/10 hover:bg-white/15 active:scale-99 cursor-pointer rounded-xl px-3 py-2 flex items-center justify-between text-[11px]">
+          <span class="text-amber-200 font-medium flex items-center gap-1.5">
+            <i data-lucide="gift" class="w-3.5 h-3.5 text-amber-300"></i>
+            <span>Tặng 0đ KV: <b id="kpi-freeBanner" class="text-white">0</b> két/thùng</span>
+          </span>
+          <span class="text-emerald-200 font-medium flex items-center gap-1">
+            <span>Voucher DMS: <b id="kpi-voucherBanner" class="text-white">0</b> suất</span>
+            <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+          </span>
         </div>
       </div>
 
-      <!-- DANH SÁCH THẺ SẢN PHẨM CHUẨN (MOBILE CARD VIEW - KHÔNG CẦN KÉO NGANG) -->
-      <div class="flex items-center justify-between px-1">
-        <h2 class="font-bold text-slate-800 text-sm">Chi Tiết Theo Nhóm Sản Phẩm</h2>
-        <span class="text-[11px] text-slate-500">(-) Thiếu key DMS • (+) Dư key</span>
-      </div>
+      <!-- BẢNG ĐỐI CHIẾU GỌN NHƯ ẢNH THAM CHIẾU (VỪA KHÍT 1 MÀN HÌNH ĐIỆN THOẠI) -->
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+        <!-- Chú thích màu sắc chuẩn nghiệp vụ -->
+        <div class="px-3 py-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between text-[10px] text-slate-500">
+          <span class="font-bold text-slate-700 uppercase">Bảng Đối Chiếu SKU</span>
+          <div class="flex items-center gap-2.5">
+            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-600"></span><b>+</b> Chưa key DMS</span>
+            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-rose-600"></span><b>(-)</b> Key dư DMS</span>
+          </div>
+        </div>
 
-      <div id="reconcileMobileCards" class="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <div class="bg-white p-6 rounded-2xl border border-slate-200 text-center text-xs text-slate-400">
-          Chưa có dữ liệu đối chiếu. Bấm <b>Nạp Excel</b> ở góc trên để tải file lên.
+        <div class="overflow-x-auto">
+          <table class="w-full text-[11px] sm:text-xs border-collapse">
+            <thead>
+              <tr class="bg-slate-800 text-white font-bold text-[10px] sm:text-xs uppercase tracking-tight">
+                <th class="py-2.5 px-2.5 text-left">Sản phẩm</th>
+                <th class="py-2.5 px-1.5 text-right w-12 sm:w-16">Bán<br>KV</th>
+                <th class="py-2.5 px-1.5 text-right w-12 sm:w-16">Key<br>DMS</th>
+                <th class="py-2.5 px-1.5 text-right w-12 sm:w-16 bg-slate-700/80">Tồn<br>trước</th>
+                <th class="py-2.5 px-2 text-right w-14 sm:w-20 bg-emerald-900">Chênh<br>lệch</th>
+              </tr>
+            </thead>
+            <tbody id="reconcileCompactBody" class="divide-y divide-slate-200">
+              <tr><td colspan="5" class="py-8 text-center text-slate-400">Đang tải dữ liệu...</td></tr>
+            </tbody>
+            <tfoot id="reconcileCompactFoot" class="bg-slate-900 text-white font-extrabold text-xs">
+            </tfoot>
+          </table>
         </div>
       </div>
     </div>
@@ -197,7 +234,6 @@
 
     <!-- ==================== TAB 4: GHÉP & ĐỐI CHIẾU KHÁCH HÀNG ==================== -->
     <div id="view-custMatch" class="hidden space-y-4">
-      <!-- Gợi ý ghép thông minh -->
       <div class="bg-white rounded-2xl border border-slate-200 shadow-xs p-4">
         <div class="flex items-center justify-between gap-2 pb-3 border-b border-slate-100">
           <div>
@@ -213,11 +249,8 @@
         <div id="suggestionsContainer" class="mt-3 space-y-2.5"></div>
       </div>
 
-      <!-- Danh sách đã ghép & đối chiếu 3 tháng -->
       <div class="space-y-2.5">
-        <div class="flex items-center justify-between gap-2">
-          <h2 class="font-bold text-slate-800 text-sm">Quán Đã Ghép (Xem Lệch 3 Tháng)</h2>
-        </div>
+        <h2 class="font-bold text-slate-800 text-sm">Quán Đã Ghép (Xem Lệch 3 Tháng)</h2>
         <div class="relative">
           <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-3"></i>
           <input type="text" id="searchLinkedCust" onkeyup="renderLinkedCustomersComparison()" placeholder="Tìm khách hàng đã ghép..." class="w-full bg-white pl-10 pr-4 py-2.5 text-sm border border-slate-200 rounded-2xl shadow-xs" />
@@ -228,7 +261,6 @@
 
     <!-- ==================== TAB 5: HÀNG 0Đ KV & VOUCHER DMS ==================== -->
     <div id="view-promo" class="hidden space-y-4">
-      <!-- Switcher con trên mobile giữa Hàng 0đ KV và Voucher DMS -->
       <div class="grid grid-cols-2 bg-slate-200/80 p-1 rounded-xl">
         <button id="subPromoBtn-kv" onclick="switchPromoSub('kv')" class="py-2 text-xs font-bold rounded-lg bg-white text-amber-800 shadow-xs">
           Hàng 0đ KiotViet (<span id="badge-kvFreeTotal">0</span>)
@@ -238,10 +270,8 @@
         </button>
       </div>
 
-      <!-- List Hàng 0đ KV -->
       <div id="promoSub-kv" class="space-y-2.5"></div>
 
-      <!-- List Voucher DMS -->
       <div id="promoSub-dms" class="hidden space-y-3">
         <div id="dmsVoucherSummaryCards" class="flex flex-wrap gap-2"></div>
         <div id="dmsVoucherList" class="space-y-2"></div>
@@ -285,15 +315,14 @@
         </h3>
         <button onclick="closeModal('configModal')" class="text-slate-400 p-1"><i data-lucide="x" class="w-5 h-5"></i></button>
       </div>
-      <p class="text-xs text-slate-500">Vào <b>Supabase &rarr; Project Settings &rarr; API</b> để copy 2 mã bên dưới:</p>
       <div class="space-y-3">
         <div>
           <label class="block text-xs font-bold text-slate-700 mb-1">1. Project URL</label>
-          <input type="text" id="cfgSupabaseUrl" placeholder="https://xxxxxxxxxxxx.supabase.co" class="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-xl" />
+          <input type="text" id="cfgSupabaseUrl" class="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-xl" />
         </div>
         <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1">2. Anon Public Key</label>
-          <input type="text" id="cfgSupabaseKey" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." class="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-xl" />
+          <label class="block text-xs font-bold text-slate-700 mb-1">2. Publishable / Anon Key</label>
+          <input type="text" id="cfgSupabaseKey" class="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-xl" />
         </div>
       </div>
       <div class="flex justify-end gap-2 pt-2">
@@ -375,13 +404,13 @@
 
   <!-- ==================== JAVASCRIPT LOGIC ==================== -->
   <script>
-    // ĐIỀN SẴN URL VÀ ANON KEY Ở ĐÂY ĐỂ ANH EM SALE MỞ LINK LÀ VÀO THẲNG KHÔNG CẦN NHẬP TAY:
     const DEFAULT_SUPABASE_URL = "https://incbokfnoabjhvbwxkli.supabase.co";
     const DEFAULT_SUPABASE_ANON_KEY = "sb_publishable_VQwy6zq_YDNeGPYf5cOJng_Flt2WUk-";
 
     let supabaseClient = null;
     let activeTab = 'reconcile';
     let selectedBrand = 'ALL';
+    let showPromoInline = false; // Mặc định ẩn thông tin 0đ/KM trong bảng chính, bấm để hiện
 
     let state = {
       salesReps: [],
@@ -425,7 +454,7 @@
     function saveSupabaseConfig() {
       const url = document.getElementById('cfgSupabaseUrl').value.trim();
       const key = document.getElementById('cfgSupabaseKey').value.trim();
-      if (!url || !key) return alert('Vui lòng nhập đầy đủ Project URL và Anon Public Key!');
+      if (!url || !key) return alert('Vui lòng nhập đầy đủ Project URL và Key!');
       localStorage.setItem('sb_url', url);
       localStorage.setItem('sb_key', key);
       closeModal('configModal');
@@ -435,6 +464,13 @@
     function openConfigModal() { document.getElementById('configModal').classList.remove('hidden'); }
     function openUploadModal() { document.getElementById('uploadModal').classList.remove('hidden'); }
     function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+    function togglePromoInline() {
+      showPromoInline = !showPromoInline;
+      document.getElementById('lblTogglePromo').innerText = showPromoInline ? 'Ẩn 0đ / KM' : 'Hiện 0đ / KM';
+      renderReconcileTab();
+      lucide.createIcons();
+    }
 
     function selectBrandChip(brand) {
       selectedBrand = brand;
@@ -577,7 +613,34 @@
     }
 
     // =========================================================================
-    // TAB 1: MOBILE-FIRST CARD VIEW ĐỐI CHIẾU SẢN LƯỢNG & LŨY KẾ
+    // QUY ƯỚC DẤU & MÀU SẮC THEO ĐÚNG YÊU CẦU MỚI CỦA ANH:
+    // Chênh lệch hiển thị = (Bán KV - Key DMS) + Tồn trước (đã quy đổi cùng chiều)
+    // - Số dương (+ X) Màu Xanh Lá: Sale bán KV chưa key về DMS (còn phải key thêm)
+    // - Số âm (X) Màu Đỏ: Key DMS dư hơn so với số bán thực tế trên KV
+    // =========================================================================
+    function formatBalance(val) {
+      const n = Number(val || 0);
+      if (n > 0) return `+${n.toLocaleString('vi-VN')}`;
+      if (n < 0) return `(${Math.abs(n).toLocaleString('vi-VN')})`;
+      return '0';
+    }
+
+    function balanceTextColor(val) {
+      const n = Number(val || 0);
+      if (n > 0) return 'text-emerald-600'; // Xanh lá: chưa key bên DMS
+      if (n < 0) return 'text-rose-600';    // Đỏ: key dư DMS
+      return 'text-slate-500';
+    }
+
+    function balanceCellBg(val) {
+      const n = Number(val || 0);
+      if (n > 0) return 'bg-emerald-50/90 text-emerald-700';
+      if (n < 0) return 'bg-rose-50/90 text-rose-700';
+      return 'bg-slate-50 text-slate-600';
+    }
+
+    // =========================================================================
+    // TAB 1: BẢNG ĐỐI CHIẾU GỌN NHƯ ẢNH THAM CHIẾU + CLICK ĐỂ XỔ CHI TIẾT
     // =========================================================================
     function renderReconcileTab() {
       const groupedMap = new Map();
@@ -593,98 +656,96 @@
             kv_paid_qty: 0,
             kv_free_qty: 0,
             dms_order_qty: 0,
-            prev_cumulative_diff: 0,
-            monthly_diff: 0,
-            total_cumulative_diff: 0
+            // Đảo chiều từ SQL view (trước đây DMS - KV) sang chiều chuẩn mới: (KV - DMS)
+            prev_balance: 0,
+            month_balance: 0,
+            total_balance: 0
           });
         }
         const item = groupedMap.get(r.product_group_id);
         item.kv_paid_qty += Number(r.kv_paid_qty || 0);
         item.kv_free_qty += Number(r.kv_free_qty || 0);
         item.dms_order_qty += Number(r.dms_order_qty || 0);
-        item.prev_cumulative_diff += Number(r.prev_cumulative_diff || 0);
-        item.monthly_diff += Number(r.monthly_diff || 0);
-        item.total_cumulative_diff += Number(r.total_cumulative_diff || 0);
+        item.prev_balance += -Number(r.prev_cumulative_diff || 0);
+        item.month_balance += -Number(r.monthly_diff || 0);
+        item.total_balance += -Number(r.total_cumulative_diff || 0);
       });
 
       const rows = Array.from(groupedMap.values()).sort((a, b) => a.display_order - b.display_order);
 
-      let totKvPaid = 0, totKvFree = 0, totDms = 0, totPrev = 0, totMonth = 0, totCum = 0;
-      const cardsContainer = document.getElementById('reconcileMobileCards');
+      let totKvPaid = 0, totKvFree = 0, totDms = 0, totPrev = 0, totMonth = 0, totTotal = 0;
+      const tbody = document.getElementById('reconcileCompactBody');
+      const tfoot = document.getElementById('reconcileCompactFoot');
 
       if (rows.length === 0) {
-        cardsContainer.innerHTML = `<div class="col-span-full bg-white p-8 rounded-2xl border border-slate-200 text-center text-xs text-slate-400">Không có phát sinh sản lượng cho bộ lọc này.</div>`;
+        tbody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-xs text-slate-400">Không có phát sinh sản lượng cho bộ lọc này.</td></tr>`;
+        tfoot.innerHTML = '';
       } else {
-        cardsContainer.innerHTML = rows.map(r => {
+        tbody.innerHTML = rows.map(r => {
           totKvPaid += r.kv_paid_qty;
           totKvFree += r.kv_free_qty;
           totDms += r.dms_order_qty;
-          totPrev += r.prev_cumulative_diff;
-          totMonth += r.monthly_diff;
-          totCum += r.total_cumulative_diff;
+          totPrev += r.prev_balance;
+          totMonth += r.month_balance;
+          totTotal += r.total_balance;
 
-          const badgeClass = r.total_cumulative_diff < 0
-            ? 'bg-rose-100 text-rose-700 border-rose-200'
-            : r.total_cumulative_diff > 0
-            ? 'bg-blue-100 text-blue-700 border-blue-200'
-            : 'bg-emerald-100 text-emerald-700 border-emerald-200';
-
+          const rowId = `sku-row-${r.product_group_id}`;
           return `
-            <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs space-y-3">
-              <!-- Header thẻ SKU -->
-              <div class="flex items-start justify-between gap-2">
-                <div>
-                  <span class="text-[10px] font-extrabold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">${r.brand}</span>
-                  <h3 class="font-bold text-slate-900 text-sm sm:text-base mt-1">${r.group_name}</h3>
+            <tr onclick="toggleAccordion('${rowId}')" class="hover:bg-slate-50 active:bg-slate-100 cursor-pointer transition">
+              <td class="py-2.5 px-2.5">
+                <div class="font-bold text-slate-900 leading-snug">${r.group_name}</div>
+                ${showPromoInline && r.kv_free_qty > 0
+                  ? `<span class="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded mt-0.5">🎁 Tặng 0đ: ${fmtNum(r.kv_free_qty)}</span>`
+                  : `<span class="text-[10px] text-slate-400">${r.brand}${r.kv_free_qty > 0 ? ' • có 0đ' : ''}</span>`
+                }
+              </td>
+              <td class="py-2.5 px-1.5 text-right font-bold text-slate-900 tabular-nums">${fmtNum(r.kv_paid_qty)}</td>
+              <td class="py-2.5 px-1.5 text-right font-bold text-slate-700 tabular-nums">${fmtNum(r.dms_order_qty)}</td>
+              <td class="py-2.5 px-1.5 text-right font-semibold tabular-nums bg-slate-50/90 ${balanceTextColor(r.prev_balance)}">${formatBalance(r.prev_balance)}</td>
+              <td class="py-2.5 px-2 text-right font-extrabold tabular-nums ${balanceCellBg(r.total_balance)}">${formatBalance(r.total_balance)}</td>
+            </tr>
+            <!-- Dòng chi tiết ẩn mặc định, bấm vào sản phẩm sẽ xổ ra -->
+            <tr id="${rowId}" class="hidden bg-slate-50/90">
+              <td colspan="5" class="px-3 py-2 text-[11px] text-slate-600 border-t border-dashed border-slate-200">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <span>Phát sinh riêng tháng này: <b class="${balanceTextColor(r.month_balance)}">${formatBalance(r.month_balance)}</b></span>
+                  <span>Xuất tặng 0đ KV: <b class="text-amber-700">${fmtNum(r.kv_free_qty)}</b> két/thùng</span>
                 </div>
-                <div class="text-right shrink-0">
-                  <span class="text-[10px] text-slate-400 block">Tổng lũy kế</span>
-                  <span class="inline-block mt-0.5 px-2.5 py-1 rounded-xl border text-xs font-extrabold ${badgeClass}">
-                    ${fmtDiff(r.total_cumulative_diff)}
-                  </span>
-                </div>
-              </div>
-
-              <!-- 4 ô số liệu trực quan -->
-              <div class="grid grid-cols-4 gap-1.5 bg-slate-50 p-2.5 rounded-xl text-center">
-                <div>
-                  <span class="text-[10px] text-slate-500 block">Bán KV</span>
-                  <span class="text-xs sm:text-sm font-extrabold text-slate-900">${fmtNum(r.kv_paid_qty)}</span>
-                </div>
-                <div>
-                  <span class="text-[10px] text-slate-500 block">Key DMS</span>
-                  <span class="text-xs sm:text-sm font-extrabold text-emerald-700">${fmtNum(r.dms_order_qty)}</span>
-                </div>
-                <div>
-                  <span class="text-[10px] text-slate-500 block">Tồn trước</span>
-                  <span class="text-xs sm:text-sm font-bold ${diffColor(r.prev_cumulative_diff)}">${fmtDiff(r.prev_cumulative_diff)}</span>
-                </div>
-                <div>
-                  <span class="text-[10px] text-slate-500 block">Tháng này</span>
-                  <span class="text-xs sm:text-sm font-extrabold ${diffColor(r.monthly_diff)}">${fmtDiff(r.monthly_diff)}</span>
-                </div>
-              </div>
-
-              ${r.kv_free_qty > 0 ? `
-                <div class="flex items-center justify-between text-[11px] bg-amber-50 text-amber-800 px-3 py-1.5 rounded-xl border border-amber-200/70">
-                  <span class="flex items-center gap-1 font-medium"><i data-lucide="gift" class="w-3.5 h-3.5 text-amber-600"></i> Xuất tặng 0đ trên KiotViet:</span>
-                  <span class="font-extrabold">${fmtNum(r.kv_free_qty)} thùng/két</span>
-                </div>
-              ` : ''}
-            </div>
+              </td>
+            </tr>
           `;
         }).join('');
+
+        tfoot.innerHTML = `
+          <tr>
+            <td class="py-3 px-2.5 uppercase text-[11px]">Tổng cộng</td>
+            <td class="py-3 px-1.5 text-right tabular-nums">${fmtNum(totKvPaid)}</td>
+            <td class="py-3 px-1.5 text-right tabular-nums text-amber-300">${fmtNum(totDms)}</td>
+            <td class="py-3 px-1.5 text-right tabular-nums ${totPrev > 0 ? 'text-emerald-300' : totPrev < 0 ? 'text-rose-300' : 'text-slate-300'}">${formatBalance(totPrev)}</td>
+            <td class="py-3 px-2 text-right tabular-nums text-sm ${totTotal > 0 ? 'bg-emerald-800 text-emerald-200' : totTotal < 0 ? 'bg-rose-900 text-rose-200' : ''}">${formatBalance(totTotal)}</td>
+          </tr>
+        `;
       }
+
+      // Cập nhật Hero Card & Banner 0đ / Voucher
+      const freeTotal = state.kvLinesMonth.filter(l => l.is_free_gift).reduce((s, l) => s + Number(l.quantity), 0);
+      const voucherTotal = state.dmsLinesMonth.filter(l => l.is_posm_voucher && l.order_type === 'Order').reduce((s, l) => s + Number(l.quantity), 0);
 
       document.getElementById('kpi-kvPaid').innerText = fmtNum(totKvPaid);
       document.getElementById('kpi-dmsOrder').innerText = fmtNum(totDms);
-      document.getElementById('kpi-prevDiff').innerText = fmtDiff(totPrev);
-      document.getElementById('kpi-monthDiff').innerText = fmtDiff(totMonth);
-      document.getElementById('kpi-totalDiff').innerText = fmtDiff(totCum);
+      document.getElementById('kpi-prevDiff').innerText = formatBalance(totPrev);
+      document.getElementById('kpi-monthDiff').innerText = formatBalance(totMonth);
+      document.getElementById('kpi-freeBanner').innerText = fmtNum(freeTotal);
+      document.getElementById('kpi-voucherBanner').innerText = fmtNum(voucherTotal);
+
+      const totEl = document.getElementById('kpi-totalDiff');
+      totEl.innerText = formatBalance(totTotal);
+      totEl.className = `text-3xl sm:text-4xl font-extrabold tracking-tight ${totTotal > 0 ? 'text-emerald-300' : totTotal < 0 ? 'text-rose-300' : 'text-white'}`;
+
       document.getElementById('kpi-totalLabel').innerText =
-        totCum < 0 ? `Đang thiếu ${fmtNum(Math.abs(totCum))} thùng/két chưa key về DMS`
-        : totCum > 0 ? `Đang dư ${fmtNum(totCum)} thùng/két trên DMS`
-        : 'Đã khớp 100% số liệu bán và key';
+        totTotal > 0 ? `Còn ${fmtNum(totTotal)} thùng/két đã bán KV chưa key về DMS`
+        : totTotal < 0 ? `Đang key dư ${fmtNum(Math.abs(totTotal))} thùng/két trên DMS`
+        : 'Đã khớp 100% số bán KV và số key DMS';
     }
 
     // =========================================================================
@@ -951,7 +1012,7 @@
 
         let sumKv3M = 0, sumDms3M = 0;
         Object.values(skuMatrix).forEach(v => { sumKv3M += v.kv; sumDms3M += v.dms; });
-        const diff3M = sumDms3M - sumKv3M;
+        const bal3M = sumKv3M - sumDms3M; // Dương xanh lá = KV bán chưa key DMS
 
         return `
           <div class="bg-white rounded-2xl border border-slate-200 p-3.5 shadow-xs">
@@ -961,8 +1022,8 @@
                 <p class="text-xs text-emerald-700 font-medium line-clamp-1">&harr; ${dms.dms_outlet_name}</p>
               </div>
               <div class="flex items-center gap-2 shrink-0">
-                <span class="px-2 py-1 rounded-xl text-xs font-extrabold ${diff3M === 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-700'}">
-                  ${fmtDiff(diff3M)}
+                <span class="px-2 py-1 rounded-xl text-xs font-extrabold ${balanceCellBg(bal3M)}">
+                  ${formatBalance(bal3M)}
                 </span>
                 <button onclick="event.stopPropagation(); unlinkCustomer('${l.id}')" class="text-slate-400 p-1"><i data-lucide="unlink" class="w-3.5 h-3.5"></i></button>
               </div>
@@ -970,21 +1031,24 @@
 
             <div class="grid grid-cols-3 gap-2 mt-2.5 pt-2 border-t border-slate-100 text-center text-xs">
               <div><span class="text-[10px] text-slate-400 block">KV (3 Tháng)</span><b>${fmtNum(sumKv3M)}</b></div>
-              <div><span class="text-[10px] text-slate-400 block">DMS (3 Tháng)</span><b class="text-emerald-700">${fmtNum(sumDms3M)}</b></div>
-              <div><span class="text-[10px] text-slate-400 block">Chênh lệch</span><b class="${diffColor(diff3M)}">${fmtDiff(diff3M)}</b></div>
+              <div><span class="text-[10px] text-slate-400 block">DMS (3 Tháng)</span><b>${fmtNum(sumDms3M)}</b></div>
+              <div><span class="text-[10px] text-slate-400 block">Chênh lệch</span><b class="${balanceTextColor(bal3M)}">${formatBalance(bal3M)}</b></div>
             </div>
 
             <div id="link-det-${l.id}" class="hidden mt-3 pt-2.5 border-t border-slate-200 space-y-1.5">
-              ${Object.entries(skuMatrix).map(([gName, val]) => `
-                <div class="flex items-center justify-between text-xs bg-slate-50 px-2.5 py-1.5 rounded-lg">
-                  <span class="font-medium text-slate-700 truncate pr-2">${gName}</span>
-                  <div class="flex items-center gap-2 shrink-0 font-mono">
-                    <span>KV:${fmtNum(val.kv)}</span>
-                    <span class="text-emerald-700">DMS:${fmtNum(val.dms)}</span>
-                    <span class="font-bold ${diffColor(val.dms - val.kv)}">(${fmtDiff(val.dms - val.kv)})</span>
+              ${Object.entries(skuMatrix).map(([gName, val]) => {
+                const diffSku = val.kv - val.dms;
+                return `
+                  <div class="flex items-center justify-between text-xs bg-slate-50 px-2.5 py-1.5 rounded-lg">
+                    <span class="font-medium text-slate-700 truncate pr-2">${gName}</span>
+                    <div class="flex items-center gap-2 shrink-0 font-mono">
+                      <span>KV:${fmtNum(val.kv)}</span>
+                      <span>DMS:${fmtNum(val.dms)}</span>
+                      <span class="font-bold ${balanceTextColor(diffSku)}">${formatBalance(diffSku)}</span>
+                    </div>
                   </div>
-                </div>
-              `).join('')}
+                `;
+              }).join('')}
             </div>
           </div>
         `;
@@ -999,7 +1063,6 @@
       const outMap = new Map(state.dmsOutlets.map(o => [o.dms_outlet_code, o.dms_outlet_name]));
       const repMap = new Map(state.salesReps.map(r => [r.id, r.full_name]));
 
-      // 1. Hàng 0đ KV
       const freeLines = state.kvLinesMonth.filter(l => l.is_free_gift);
       const totalFree = freeLines.reduce((s, l) => s + Number(l.quantity), 0);
       document.getElementById('badge-kvFreeTotal').innerText = fmtNum(totalFree);
@@ -1020,7 +1083,6 @@
           </div>
         `).join('');
 
-      // 2. Voucher DMS
       const voucherLines = state.dmsLinesMonth.filter(l => l.is_posm_voucher && l.order_type === 'Order');
       const totalVouchers = voucherLines.reduce((s, l) => s + Number(l.quantity), 0);
       document.getElementById('badge-dmsVoucherTotal').innerText = fmtNum(totalVouchers);
@@ -1306,12 +1368,6 @@
     function fmtDiff(n) {
       const val = Number(n || 0);
       return val > 0 ? `+${val.toLocaleString('vi-VN')}` : val.toLocaleString('vi-VN');
-    }
-    function diffColor(n) {
-      const val = Number(n || 0);
-      if (val < 0) return 'text-rose-600';
-      if (val > 0) return 'text-blue-600';
-      return 'text-emerald-700';
     }
     function toggleAccordion(id) { document.getElementById(id).classList.toggle('hidden'); }
   </script>
