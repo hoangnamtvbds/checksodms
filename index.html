@@ -4,13 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Đối Chiếu Sale KiotViet & DMS | Carlsberg Team BC</title>
-  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
-  <!-- SheetJS (XLSX) -->
   <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
-  <!-- Supabase JS v2 -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
@@ -60,7 +56,6 @@
   <!-- ==================== COMPACT FILTER BAR ==================== -->
   <section class="bg-white border-b border-slate-200 sticky top-14 z-20 shadow-xs">
     <div class="max-w-7xl mx-auto px-3.5 sm:px-6 py-2.5 space-y-2">
-      <!-- Hàng 1: Chọn Tháng + Chọn Sale -->
       <div class="grid grid-cols-2 gap-2">
         <div class="relative">
           <span class="text-[10px] font-bold uppercase text-slate-400 absolute left-2.5 top-1">Tháng</span>
@@ -77,7 +72,6 @@
         </div>
       </div>
 
-      <!-- Hàng 2: Thanh lọc nhanh Brand -->
       <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5" id="brandChipsContainer">
         <button onclick="selectBrandChip('ALL')" data-brand="ALL" class="brand-chip px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap bg-emerald-700 text-white">Tất cả Brand</button>
         <button onclick="selectBrandChip('1664 Blanc')" data-brand="1664 Blanc" class="brand-chip px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-slate-100 text-slate-600">1664 Blanc</button>
@@ -126,8 +120,6 @@
 
     <!-- ==================== TAB 1: ĐỐI CHIẾU SẢN LƯỢNG & LŨY KẾ ==================== -->
     <div id="view-reconcile" class="space-y-3">
-
-      <!-- HERO CARD: TỔNG LŨY KẾ CUỐI KỲ -->
       <div class="bg-gradient-to-br from-emerald-950 via-emerald-900 to-teal-950 text-white rounded-2xl p-4 shadow-md">
         <div class="flex items-start justify-between gap-2">
           <div>
@@ -142,14 +134,12 @@
             <button onclick="openSkuModal()" class="bg-white/10 hover:bg-white/20 text-emerald-100 text-[11px] font-semibold px-2.5 py-1.5 rounded-xl flex items-center gap-1">
               <i data-lucide="layers" class="w-3.5 h-3.5"></i> Mã SKU
             </button>
-            <!-- Nút bật/tắt nhanh dòng Hàng 0đ & Voucher ngay trong bảng -->
             <button onclick="togglePromoInline()" id="btnTogglePromoInline" class="bg-amber-400/20 border border-amber-300/30 text-amber-200 text-[10px] font-semibold px-2.5 py-1 rounded-lg flex items-center gap-1">
               <i data-lucide="eye" class="w-3 h-3"></i> <span id="lblTogglePromo">Hiện 0đ / KM</span>
             </button>
           </div>
         </div>
 
-        <!-- 4 Chỉ số thành phần -->
         <div class="grid grid-cols-4 gap-1.5 mt-3.5 pt-3 border-t border-white/15 text-center">
           <div class="bg-white/10 rounded-xl py-2 px-1">
             <span class="text-[10px] text-emerald-200 block">Bán KV</span>
@@ -169,7 +159,6 @@
           </div>
         </div>
 
-        <!-- Thanh tóm tắt nhanh Hàng 0đ KV & Voucher DMS (bấm để nhảy qua Tab 5) -->
         <div onclick="switchTab('promo')" class="mt-2.5 bg-white/10 hover:bg-white/15 active:scale-99 cursor-pointer rounded-xl px-3 py-2 flex items-center justify-between text-[11px]">
           <span class="text-amber-200 font-medium flex items-center gap-1.5">
             <i data-lucide="gift" class="w-3.5 h-3.5 text-amber-300"></i>
@@ -182,9 +171,8 @@
         </div>
       </div>
 
-      <!-- BẢNG ĐỐI CHIẾU GỌN NHƯ ẢNH THAM CHIẾU (VỪA KHÍT 1 MÀN HÌNH ĐIỆN THOẠI) -->
+      <!-- BẢNG ĐỐI CHIẾU SKU -->
       <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-        <!-- Chú thích màu sắc chuẩn nghiệp vụ -->
         <div class="px-3 py-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between text-[10px] text-slate-500">
           <span class="font-bold text-slate-700 uppercase">Bảng Đối Chiếu SKU</span>
           <div class="flex items-center gap-2.5">
@@ -214,53 +202,106 @@
       </div>
     </div>
 
-    <!-- ==================== TAB 2: KHÁCH HÀNG KIOTVIET ==================== -->
-    <div id="view-kv" class="hidden space-y-3">
+    <!-- ==================== TAB 2: KHÁCH HÀNG KIOTVIET (DẠNG BẢNG GỌN + BẤM XỔ 3 THÁNG) ==================== -->
+    <div id="view-kv" class="hidden space-y-2.5">
       <div class="relative">
         <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-3"></i>
         <input type="text" id="searchKvCust" onkeyup="renderKvCustomersTab()" placeholder="Tìm tên quán, mã KH hoặc SĐT KiotViet..." class="w-full bg-white pl-10 pr-4 py-2.5 text-sm border border-slate-200 rounded-2xl shadow-xs focus:ring-emerald-600 focus:border-emerald-600" />
       </div>
-      <div id="kvCustomersList" class="space-y-2.5"></div>
+
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+        <div class="px-3 py-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between text-[10px] text-slate-500">
+          <span class="font-bold text-slate-700 uppercase">Danh Sách Khách Hàng KiotViet</span>
+          <span>Bấm vào tên quán để xem SKU 3 tháng</span>
+        </div>
+        <table class="w-full text-[11px] sm:text-xs border-collapse">
+          <thead>
+            <tr class="bg-slate-800 text-white font-bold text-[10px] sm:text-xs uppercase">
+              <th class="py-2.5 px-2.5 text-left">Khách hàng / Sale</th>
+              <th class="py-2.5 px-1.5 text-right w-14 sm:w-20">Mua<br>KV</th>
+              <th class="py-2.5 px-2 text-right w-14 sm:w-20 bg-amber-900/70">Tặng<br>0đ</th>
+            </tr>
+          </thead>
+          <tbody id="kvCustomersTableBody" class="divide-y divide-slate-200"></tbody>
+          <tfoot id="kvCustomersTableFoot" class="bg-slate-900 text-white font-extrabold text-xs"></tfoot>
+        </table>
+      </div>
     </div>
 
-    <!-- ==================== TAB 3: KHÁCH HÀNG DMS ==================== -->
-    <div id="view-dms" class="hidden space-y-3">
+    <!-- ==================== TAB 3: KHÁCH HÀNG DMS (DẠNG BẢNG GỌN + BẤM XỔ 3 THÁNG) ==================== -->
+    <div id="view-dms" class="hidden space-y-2.5">
       <div class="relative">
         <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-3"></i>
         <input type="text" id="searchDmsCust" onkeyup="renderDmsCustomersTab()" placeholder="Tìm tên Outlet hoặc mã DMS (Viet Bill)..." class="w-full bg-white pl-10 pr-4 py-2.5 text-sm border border-slate-200 rounded-2xl shadow-xs focus:ring-emerald-600 focus:border-emerald-600" />
       </div>
-      <div id="dmsCustomersList" class="space-y-2.5"></div>
+
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+        <div class="px-3 py-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between text-[10px] text-slate-500">
+          <span class="font-bold text-slate-700 uppercase">Outlet DMS • NPP Viet Bill</span>
+          <span>Bấm vào tên quán để xem SKU 3 tháng</span>
+        </div>
+        <table class="w-full text-[11px] sm:text-xs border-collapse">
+          <thead>
+            <tr class="bg-slate-800 text-white font-bold text-[10px] sm:text-xs uppercase">
+              <th class="py-2.5 px-2.5 text-left">Outlet DMS / Sale</th>
+              <th class="py-2.5 px-1.5 text-right w-14 sm:w-20">Đã Key<br>(Tháng)</th>
+              <th class="py-2.5 px-2 text-right w-16 sm:w-24 bg-emerald-900">Lũy kế<br>(3 Tháng)</th>
+            </tr>
+          </thead>
+          <tbody id="dmsCustomersTableBody" class="divide-y divide-slate-200"></tbody>
+          <tfoot id="dmsCustomersTableFoot" class="bg-slate-900 text-white font-extrabold text-xs"></tfoot>
+        </table>
+      </div>
     </div>
 
     <!-- ==================== TAB 4: GHÉP & ĐỐI CHIẾU KHÁCH HÀNG ==================== -->
-    <div id="view-custMatch" class="hidden space-y-4">
-      <div class="bg-white rounded-2xl border border-slate-200 shadow-xs p-4">
-        <div class="flex items-center justify-between gap-2 pb-3 border-b border-slate-100">
+    <div id="view-custMatch" class="hidden space-y-3.5">
+      <!-- Khu vực 1: Gợi ý ghép (Có đầy đủ nút Xác nhận & Từ chối) -->
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+        <div class="px-3.5 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between gap-2">
           <div>
-            <h2 class="font-bold text-slate-800 text-sm flex items-center gap-1.5">
-              <i data-lucide="sparkles" class="w-4 h-4 text-amber-500"></i> Gợi Ý Ghép Quán 2 Bên
+            <h2 class="font-bold text-slate-800 text-xs sm:text-sm flex items-center gap-1.5">
+              <i data-lucide="sparkles" class="w-4 h-4 text-amber-500"></i> Gợi Ý Ghép Quán (<span id="sugCountBadge">0</span>)
             </h2>
-            <p class="text-[11px] text-slate-500">Xác nhận 1 lần, lưu vĩnh viễn cho các tháng sau</p>
+            <p class="text-[10px] text-slate-500">Xác nhận để gộp vĩnh viễn, hoặc Từ chối để ẩn hẳn</p>
           </div>
-          <button onclick="openManualLinkModal()" class="bg-emerald-700 active:scale-95 text-white text-xs font-bold px-3 py-2 rounded-xl flex items-center gap-1 shrink-0">
+          <button onclick="openManualLinkModal()" class="bg-emerald-700 active:scale-95 text-white text-xs font-bold px-3 py-1.5 rounded-xl flex items-center gap-1 shrink-0">
             <i data-lucide="link" class="w-3.5 h-3.5"></i> Ghép tay
           </button>
         </div>
-        <div id="suggestionsContainer" class="mt-3 space-y-2.5"></div>
+        <div id="suggestionsContainer" class="p-3 space-y-2.5"></div>
       </div>
 
-      <div class="space-y-2.5">
-        <h2 class="font-bold text-slate-800 text-sm">Quán Đã Ghép (Xem Lệch 3 Tháng)</h2>
+      <!-- Khu vực 2: Bảng Đối Chiếu Trực Quan Các Quán Đã Ghép -->
+      <div class="space-y-2">
         <div class="relative">
           <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-3"></i>
-          <input type="text" id="searchLinkedCust" onkeyup="renderLinkedCustomersComparison()" placeholder="Tìm khách hàng đã ghép..." class="w-full bg-white pl-10 pr-4 py-2.5 text-sm border border-slate-200 rounded-2xl shadow-xs" />
+          <input type="text" id="searchLinkedCust" onkeyup="renderLinkedCustomersComparison()" placeholder="Tìm khách hàng đã ghép để đối chiếu..." class="w-full bg-white pl-10 pr-4 py-2.5 text-sm border border-slate-200 rounded-2xl shadow-xs" />
         </div>
-        <div id="linkedComparisonList" class="space-y-2.5"></div>
+
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+          <div class="px-3 py-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between text-[10px] text-slate-500">
+            <span class="font-bold text-slate-700 uppercase">Bảng Đối Chiếu Theo Khách Hàng (3 Tháng)</span>
+            <span>Bấm vào tên quán để xem chi tiết SKU</span>
+          </div>
+          <table class="w-full text-[11px] sm:text-xs border-collapse">
+            <thead>
+              <tr class="bg-slate-800 text-white font-bold text-[10px] sm:text-xs uppercase">
+                <th class="py-2.5 px-2.5 text-left">Khách hàng (KV &harr; DMS)</th>
+                <th class="py-2.5 px-1.5 text-right w-12 sm:w-16">Bán<br>KV</th>
+                <th class="py-2.5 px-1.5 text-right w-12 sm:w-16">Key<br>DMS</th>
+                <th class="py-2.5 px-2 text-right w-14 sm:w-20 bg-emerald-900">Chênh<br>lệch</th>
+              </tr>
+            </thead>
+            <tbody id="linkedComparisonTableBody" class="divide-y divide-slate-200"></tbody>
+            <tfoot id="linkedComparisonTableFoot" class="bg-slate-900 text-white font-extrabold text-xs"></tfoot>
+          </table>
+        </div>
       </div>
     </div>
 
-    <!-- ==================== TAB 5: HÀNG 0Đ KV & VOUCHER DMS ==================== -->
-    <div id="view-promo" class="hidden space-y-4">
+    <!-- ==================== TAB 5: HÀNG 0Đ KV & VOUCHER DMS (DẠNG BẢNG GỌN) ==================== -->
+    <div id="view-promo" class="hidden space-y-3">
       <div class="grid grid-cols-2 bg-slate-200/80 p-1 rounded-xl">
         <button id="subPromoBtn-kv" onclick="switchPromoSub('kv')" class="py-2 text-xs font-bold rounded-lg bg-white text-amber-800 shadow-xs">
           Hàng 0đ KiotViet (<span id="badge-kvFreeTotal">0</span>)
@@ -270,11 +311,36 @@
         </button>
       </div>
 
-      <div id="promoSub-kv" class="space-y-2.5"></div>
+      <!-- Bảng Hàng 0đ KV -->
+      <div id="promoSub-kv" class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+        <table class="w-full text-[11px] sm:text-xs border-collapse">
+          <thead>
+            <tr class="bg-amber-900 text-white font-bold text-[10px] sm:text-xs uppercase">
+              <th class="py-2.5 px-2.5 text-left">Khách hàng / Sản phẩm</th>
+              <th class="py-2.5 px-2 text-left w-24 sm:w-36">Ghi chú CTKM</th>
+              <th class="py-2.5 px-2 text-right w-12 sm:w-16">SL</th>
+            </tr>
+          </thead>
+          <tbody id="kvFreeTableBody" class="divide-y divide-slate-200"></tbody>
+          <tfoot id="kvFreeTableFoot" class="bg-slate-900 text-white font-extrabold text-xs"></tfoot>
+        </table>
+      </div>
 
-      <div id="promoSub-dms" class="hidden space-y-3">
+      <!-- Bảng Voucher DMS -->
+      <div id="promoSub-dms" class="hidden space-y-2.5">
         <div id="dmsVoucherSummaryCards" class="flex flex-wrap gap-2"></div>
-        <div id="dmsVoucherList" class="space-y-2"></div>
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+          <table class="w-full text-[11px] sm:text-xs border-collapse">
+            <thead>
+              <tr class="bg-emerald-900 text-white font-bold text-[10px] sm:text-xs uppercase">
+                <th class="py-2.5 px-2.5 text-left">Outlet / Loại Voucher</th>
+                <th class="py-2.5 px-2 text-right w-14 sm:w-20">Suất</th>
+              </tr>
+            </thead>
+            <tbody id="dmsVoucherTableBody" class="divide-y divide-slate-200"></tbody>
+            <tfoot id="dmsVoucherTableFoot" class="bg-slate-900 text-white font-extrabold text-xs"></tfoot>
+          </table>
+        </div>
       </div>
     </div>
 
@@ -410,7 +476,7 @@
     let supabaseClient = null;
     let activeTab = 'reconcile';
     let selectedBrand = 'ALL';
-    let showPromoInline = false; // Mặc định ẩn thông tin 0đ/KM trong bảng chính, bấm để hiện
+    let showPromoInline = false;
 
     let state = {
       salesReps: [],
@@ -612,12 +678,6 @@
       lucide.createIcons();
     }
 
-    // =========================================================================
-    // QUY ƯỚC DẤU & MÀU SẮC THEO ĐÚNG YÊU CẦU MỚI CỦA ANH:
-    // Chênh lệch hiển thị = (Bán KV - Key DMS) + Tồn trước (đã quy đổi cùng chiều)
-    // - Số dương (+ X) Màu Xanh Lá: Sale bán KV chưa key về DMS (còn phải key thêm)
-    // - Số âm (X) Màu Đỏ: Key DMS dư hơn so với số bán thực tế trên KV
-    // =========================================================================
     function formatBalance(val) {
       const n = Number(val || 0);
       if (n > 0) return `+${n.toLocaleString('vi-VN')}`;
@@ -627,8 +687,8 @@
 
     function balanceTextColor(val) {
       const n = Number(val || 0);
-      if (n > 0) return 'text-emerald-600'; // Xanh lá: chưa key bên DMS
-      if (n < 0) return 'text-rose-600';    // Đỏ: key dư DMS
+      if (n > 0) return 'text-emerald-600';
+      if (n < 0) return 'text-rose-600';
       return 'text-slate-500';
     }
 
@@ -640,7 +700,7 @@
     }
 
     // =========================================================================
-    // TAB 1: BẢNG ĐỐI CHIẾU GỌN NHƯ ẢNH THAM CHIẾU + CLICK ĐỂ XỔ CHI TIẾT
+    // TAB 1: BẢNG ĐỐI CHIẾU SKU
     // =========================================================================
     function renderReconcileTab() {
       const groupedMap = new Map();
@@ -656,7 +716,6 @@
             kv_paid_qty: 0,
             kv_free_qty: 0,
             dms_order_qty: 0,
-            // Đảo chiều từ SQL view (trước đây DMS - KV) sang chiều chuẩn mới: (KV - DMS)
             prev_balance: 0,
             month_balance: 0,
             total_balance: 0
@@ -704,7 +763,6 @@
               <td class="py-2.5 px-1.5 text-right font-semibold tabular-nums bg-slate-50/90 ${balanceTextColor(r.prev_balance)}">${formatBalance(r.prev_balance)}</td>
               <td class="py-2.5 px-2 text-right font-extrabold tabular-nums ${balanceCellBg(r.total_balance)}">${formatBalance(r.total_balance)}</td>
             </tr>
-            <!-- Dòng chi tiết ẩn mặc định, bấm vào sản phẩm sẽ xổ ra -->
             <tr id="${rowId}" class="hidden bg-slate-50/90">
               <td colspan="5" class="px-3 py-2 text-[11px] text-slate-600 border-t border-dashed border-slate-200">
                 <div class="flex flex-wrap items-center justify-between gap-2">
@@ -727,7 +785,6 @@
         `;
       }
 
-      // Cập nhật Hero Card & Banner 0đ / Voucher
       const freeTotal = state.kvLinesMonth.filter(l => l.is_free_gift).reduce((s, l) => s + Number(l.quantity), 0);
       const voucherTotal = state.dmsLinesMonth.filter(l => l.is_posm_voucher && l.order_type === 'Order').reduce((s, l) => s + Number(l.quantity), 0);
 
@@ -769,15 +826,22 @@
         return !kw || code.toLowerCase().includes(kw) || (c.kv_customer_name || '').toLowerCase().includes(kw) || (c.phone || '').includes(kw);
       }).sort((a, b) => b[1].paid - a[1].paid);
 
-      const container = document.getElementById('kvCustomersList');
+      const tbody = document.getElementById('kvCustomersTableBody');
+      const tfoot = document.getElementById('kvCustomersTableFoot');
+
       if (list.length === 0) {
-        container.innerHTML = `<div class="bg-white p-8 rounded-2xl border text-center text-slate-400 text-xs">Không tìm thấy khách hàng KiotViet trong tháng này.</div>`;
+        tbody.innerHTML = `<tr><td colspan="3" class="py-8 text-center text-xs text-slate-400">Không tìm thấy khách hàng KiotViet trong tháng này.</td></tr>`;
+        tfoot.innerHTML = '';
         return;
       }
 
-      container.innerHTML = list.map(([code, data]) => {
+      let sumPaid = 0, sumFree = 0;
+      tbody.innerHTML = list.map(([code, data]) => {
+        sumPaid += data.paid;
+        sumFree += data.free;
         const c = custMap.get(code) || { kv_customer_name: code };
         const repName = repMap.get(c.sales_rep_id) || 'Chưa gán sale';
+
         const hist3M = state.kvLines3M.filter(l => l.kv_customer_code === code);
         const histByMonth = {};
         hist3M.forEach(h => {
@@ -787,44 +851,42 @@
           histByMonth[m][key] = (histByMonth[m][key] || 0) + Number(h.quantity);
         });
 
+        const detId = `kv-row-${code}`;
         return `
-          <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-            <button onclick="toggleAccordion('kv-det-${code}')" class="w-full p-3.5 flex items-center justify-between gap-2 text-left active:bg-slate-50">
-              <div class="min-w-0">
-                <div class="flex items-center gap-1.5">
-                  <span class="text-[10px] font-mono bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded shrink-0">${code}</span>
-                  <span class="text-[11px] font-semibold text-emerald-700 truncate">${repName}</span>
-                </div>
-                <p class="font-bold text-slate-900 text-sm mt-0.5 line-clamp-1">${c.kv_customer_name}</p>
-              </div>
-              <div class="flex items-center gap-2.5 shrink-0">
-                <div class="text-right">
-                  <span class="font-extrabold text-slate-900 text-sm block">${fmtNum(data.paid)}</span>
-                  ${data.free > 0 ? `<span class="text-[10px] font-bold text-amber-600">+${fmtNum(data.free)} 0đ</span>` : `<span class="text-[10px] text-slate-400">thùng/két</span>`}
-                </div>
-                <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400"></i>
-              </div>
-            </button>
-
-            <div id="kv-det-${code}" class="hidden border-t border-slate-100 bg-slate-50 p-3.5 space-y-2.5">
-              <p class="text-[11px] font-bold text-slate-600 uppercase">Lịch sử mua 3 tháng gần nhất:</p>
+          <tr onclick="toggleAccordion('${detId}')" class="hover:bg-slate-50 active:bg-slate-100 cursor-pointer transition">
+            <td class="py-2.5 px-2.5">
+              <div class="font-bold text-slate-900 leading-snug line-clamp-2">${c.kv_customer_name}</div>
+              <div class="text-[10px] text-slate-400 mt-0.5">${code} • <span class="text-emerald-700 font-medium">${repName}</span></div>
+            </td>
+            <td class="py-2.5 px-1.5 text-right font-extrabold text-slate-900 tabular-nums">${fmtNum(data.paid)}</td>
+            <td class="py-2.5 px-2 text-right font-bold tabular-nums bg-amber-50/70 text-amber-700">${data.free > 0 ? `+${fmtNum(data.free)}` : '-'}</td>
+          </tr>
+          <tr id="${detId}" class="hidden bg-slate-50">
+            <td colspan="3" class="p-3 border-t border-dashed border-slate-200 space-y-2">
+              <p class="text-[10px] font-bold text-slate-500 uppercase">Lịch sử mua 3 tháng gần nhất:</p>
               ${Object.entries(histByMonth).sort().reverse().map(([m, prods]) => `
-                <div class="bg-white p-2.5 rounded-xl border border-slate-200 text-xs">
+                <div class="bg-white p-2 rounded-xl border border-slate-200 text-[11px]">
                   <div class="font-bold text-emerald-800 border-b pb-1 mb-1">Tháng ${m}</div>
-                  <ul class="space-y-1">
-                    ${Object.entries(prods).map(([pName, q]) => `
-                      <li class="flex justify-between gap-2">
-                        <span class="text-slate-600">${pName}</span>
-                        <span class="font-bold text-slate-900 shrink-0">${fmtNum(q)}</span>
-                      </li>
-                    `).join('')}
-                  </ul>
+                  ${Object.entries(prods).map(([pName, q]) => `
+                    <div class="flex justify-between gap-2 py-0.5">
+                      <span class="text-slate-600">${pName}</span>
+                      <span class="font-bold text-slate-900 shrink-0 tabular-nums">${fmtNum(q)}</span>
+                    </div>
+                  `).join('')}
                 </div>
               `).join('')}
-            </div>
-          </div>
+            </td>
+          </tr>
         `;
       }).join('');
+
+      tfoot.innerHTML = `
+        <tr>
+          <td class="py-3 px-2.5 uppercase text-[11px]">Tổng cộng (${list.length} quán)</td>
+          <td class="py-3 px-1.5 text-right tabular-nums">${fmtNum(sumPaid)}</td>
+          <td class="py-3 px-2 text-right tabular-nums text-amber-300">${sumFree > 0 ? `+${fmtNum(sumFree)}` : '0'}</td>
+        </tr>
+      `;
     }
 
     // =========================================================================
@@ -835,24 +897,36 @@
       const outMap = new Map(state.dmsOutlets.map(o => [o.dms_outlet_code, o]));
       const repMap = new Map(state.salesReps.map(r => [r.id, r.full_name]));
 
-      const agg = new Map();
+      const aggMonth = new Map();
       state.dmsLinesMonth.filter(l => l.order_type === 'Order' && !l.is_posm_voucher).forEach(line => {
-        if (!agg.has(line.dms_outlet_code)) agg.set(line.dms_outlet_code, { qty: 0 });
-        agg.get(line.dms_outlet_code).qty += Number(line.quantity);
+        aggMonth.set(line.dms_outlet_code, (aggMonth.get(line.dms_outlet_code) || 0) + Number(line.quantity));
       });
 
-      const list = Array.from(agg.entries()).filter(([code]) => {
+      const agg3M = new Map();
+      state.dmsLines3M.filter(l => l.order_type === 'Order' && !l.is_posm_voucher).forEach(line => {
+        agg3M.set(line.dms_outlet_code, (agg3M.get(line.dms_outlet_code) || 0) + Number(line.quantity));
+      });
+
+      const list = Array.from(aggMonth.entries()).filter(([code]) => {
         const o = outMap.get(code) || {};
         return !kw || code.toLowerCase().includes(kw) || (o.dms_outlet_name || '').toLowerCase().includes(kw);
-      }).sort((a, b) => b[1].qty - a[1].qty);
+      }).sort((a, b) => b[1] - a[1]);
 
-      const container = document.getElementById('dmsCustomersList');
+      const tbody = document.getElementById('dmsCustomersTableBody');
+      const tfoot = document.getElementById('dmsCustomersTableFoot');
+
       if (list.length === 0) {
-        container.innerHTML = `<div class="bg-white p-8 rounded-2xl border text-center text-slate-400 text-xs">Không tìm thấy Outlet DMS trong tháng này.</div>`;
+        tbody.innerHTML = `<tr><td colspan="3" class="py-8 text-center text-xs text-slate-400">Không tìm thấy Outlet DMS trong tháng này.</td></tr>`;
+        tfoot.innerHTML = '';
         return;
       }
 
-      container.innerHTML = list.map(([code, data]) => {
+      let sumMonth = 0, sum3M = 0;
+      tbody.innerHTML = list.map(([code, qtyMonth]) => {
+        const qty3M = agg3M.get(code) || 0;
+        sumMonth += qtyMonth;
+        sum3M += qty3M;
+
         const o = outMap.get(code) || { dms_outlet_name: code };
         const repName = repMap.get(o.sales_rep_id) || 'Chưa gán sale';
         const hist3M = state.dmsLines3M.filter(l => l.dms_outlet_code === code && l.order_type === 'Order' && !l.is_posm_voucher);
@@ -863,44 +937,42 @@
           histByMonth[m][h.raw_product_name] = (histByMonth[m][h.raw_product_name] || 0) + Number(h.quantity);
         });
 
+        const detId = `dms-row-${code}`;
         return `
-          <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-            <button onclick="toggleAccordion('dms-det-${code}')" class="w-full p-3.5 flex items-center justify-between gap-2 text-left active:bg-slate-50">
-              <div class="min-w-0">
-                <div class="flex items-center gap-1.5">
-                  <span class="text-[10px] font-mono bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded shrink-0">${code}</span>
-                  <span class="text-[11px] font-semibold text-slate-500 truncate">${repName}</span>
-                </div>
-                <p class="font-bold text-slate-900 text-sm mt-0.5 line-clamp-1">${o.dms_outlet_name}</p>
-              </div>
-              <div class="flex items-center gap-2.5 shrink-0">
-                <div class="text-right">
-                  <span class="font-extrabold text-emerald-700 text-sm block">${fmtNum(data.qty)}</span>
-                  <span class="text-[10px] text-slate-400">pack key</span>
-                </div>
-                <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400"></i>
-              </div>
-            </button>
-
-            <div id="dms-det-${code}" class="hidden border-t border-slate-100 bg-slate-50 p-3.5 space-y-2.5">
-              <p class="text-[11px] font-bold text-slate-600 uppercase">Lịch sử key 3 tháng gần nhất:</p>
+          <tr onclick="toggleAccordion('${detId}')" class="hover:bg-slate-50 active:bg-slate-100 cursor-pointer transition">
+            <td class="py-2.5 px-2.5">
+              <div class="font-bold text-slate-900 leading-snug line-clamp-2">${o.dms_outlet_name}</div>
+              <div class="text-[10px] text-slate-400 mt-0.5">${code} • <span class="text-slate-600 font-medium">${repName}</span></div>
+            </td>
+            <td class="py-2.5 px-1.5 text-right font-extrabold text-emerald-700 tabular-nums">${fmtNum(qtyMonth)}</td>
+            <td class="py-2.5 px-2 text-right font-bold tabular-nums bg-emerald-50/60 text-emerald-900">${fmtNum(qty3M)}</td>
+          </tr>
+          <tr id="${detId}" class="hidden bg-slate-50">
+            <td colspan="3" class="p-3 border-t border-dashed border-slate-200 space-y-2">
+              <p class="text-[10px] font-bold text-slate-500 uppercase">Lịch sử key 3 tháng gần nhất trên DMS:</p>
               ${Object.entries(histByMonth).sort().reverse().map(([m, prods]) => `
-                <div class="bg-white p-2.5 rounded-xl border border-slate-200 text-xs">
+                <div class="bg-white p-2 rounded-xl border border-slate-200 text-[11px]">
                   <div class="font-bold text-emerald-800 border-b pb-1 mb-1">Tháng ${m}</div>
-                  <ul class="space-y-1">
-                    ${Object.entries(prods).map(([pName, q]) => `
-                      <li class="flex justify-between gap-2">
-                        <span class="text-slate-600">${pName}</span>
-                        <span class="font-bold text-slate-900 shrink-0">${fmtNum(q)}</span>
-                      </li>
-                    `).join('')}
-                  </ul>
+                  ${Object.entries(prods).map(([pName, q]) => `
+                    <div class="flex justify-between gap-2 py-0.5">
+                      <span class="text-slate-600">${pName}</span>
+                      <span class="font-bold text-slate-900 shrink-0 tabular-nums">${fmtNum(q)}</span>
+                    </div>
+                  `).join('')}
                 </div>
               `).join('')}
-            </div>
-          </div>
+            </td>
+          </tr>
         `;
       }).join('');
+
+      tfoot.innerHTML = `
+        <tr>
+          <td class="py-3 px-2.5 uppercase text-[11px]">Tổng cộng (${list.length} outlet)</td>
+          <td class="py-3 px-1.5 text-right tabular-nums text-amber-300">${fmtNum(sumMonth)}</td>
+          <td class="py-3 px-2 text-right tabular-nums bg-emerald-800 text-emerald-200">${fmtNum(sum3M)}</td>
+        </tr>
+      `;
     }
 
     // =========================================================================
@@ -909,26 +981,39 @@
     function renderCustomerMatchTab() {
       const selectedRep = document.getElementById('filterSalesRep').value;
       const sugs = state.suggestions.filter(s => selectedRep === 'ALL' || s.sales_rep_id === selectedRep);
+      document.getElementById('sugCountBadge').innerText = sugs.length;
       const sugContainer = document.getElementById('suggestionsContainer');
 
       if (sugs.length === 0) {
-        sugContainer.innerHTML = `<p class="text-xs text-slate-400 text-center py-2">Không có gợi ý tự động mới. Bấm "Ghép tay" nếu cần nối thêm.</p>`;
+        sugContainer.innerHTML = `<p class="text-xs text-slate-400 text-center py-2">Không còn gợi ý nào cần duyệt. Bấm <b>Ghép tay</b> nếu muốn nối thêm quán.</p>`;
       } else {
         sugContainer.innerHTML = sugs.slice(0, 15).map(s => `
-          <div class="p-3 rounded-xl border border-slate-200 bg-slate-50 space-y-2.5">
-            <div class="space-y-1.5 text-xs">
-              <div class="bg-white p-2 rounded-lg border border-slate-200">
-                <span class="text-[10px] font-bold text-slate-400">KIOTVIET • ${s.kv_customer_code}</span>
-                <p class="font-bold text-slate-900">${s.kv_customer_name}</p>
+          <div class="p-3 rounded-xl border border-slate-200 bg-slate-50/80 space-y-2.5">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+              <div class="bg-white p-2.5 rounded-lg border border-slate-200">
+                <div class="flex items-center justify-between text-[10px] font-bold text-slate-400">
+                  <span>KIOTVIET • ${s.kv_customer_code}</span>
+                  <span>${s.sales_rep_name || ''}</span>
+                </div>
+                <p class="font-bold text-slate-900 mt-0.5">${s.kv_customer_name}</p>
               </div>
-              <div class="bg-white p-2 rounded-lg border border-emerald-200">
-                <span class="text-[10px] font-bold text-emerald-600">DMS • ${s.dms_outlet_code} (Giống ${s.similarity_score}%)</span>
-                <p class="font-bold text-emerald-900">${s.dms_outlet_name}</p>
+              <div class="bg-white p-2.5 rounded-lg border border-emerald-200">
+                <div class="flex items-center justify-between text-[10px] font-bold text-emerald-600">
+                  <span>DMS • ${s.dms_outlet_code}</span>
+                  <span class="bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded">Giống ${s.similarity_score}%</span>
+                </div>
+                <p class="font-bold text-emerald-900 mt-0.5">${s.dms_outlet_name}</p>
               </div>
             </div>
-            <button onclick="confirmCustomerLink('${s.kv_customer_code}', '${s.dms_outlet_code}', ${s.similarity_score}, 'AUTO_NAME')" class="w-full bg-emerald-700 active:scale-98 text-white text-xs font-bold py-2 rounded-xl flex items-center justify-center gap-1.5">
-              <i data-lucide="check-circle-2" class="w-4 h-4"></i> Xác Nhận Là 1 Quán
-            </button>
+
+            <div class="grid grid-cols-2 gap-2">
+              <button onclick="rejectCustomerSuggestion('${s.kv_customer_code}', '${s.dms_outlet_code}')" class="bg-white hover:bg-rose-50 active:scale-98 text-rose-600 border border-rose-200 text-xs font-bold py-2 rounded-xl flex items-center justify-center gap-1.5 transition">
+                <i data-lucide="x-circle" class="w-4 h-4"></i> Từ Chối (Khác Quán)
+              </button>
+              <button onclick="confirmCustomerLink('${s.kv_customer_code}', '${s.dms_outlet_code}', ${s.similarity_score}, 'AUTO_NAME')" class="bg-emerald-700 hover:bg-emerald-800 active:scale-98 text-white text-xs font-bold py-2 rounded-xl flex items-center justify-center gap-1.5 transition">
+                <i data-lucide="check-circle-2" class="w-4 h-4"></i> Xác Nhận Là 1
+              </button>
+            </div>
           </div>
         `).join('');
       }
@@ -942,6 +1027,20 @@
         kv_customer_code: kvCode, dms_outlet_code: dmsCode, match_score: score, match_method: method
       });
       if (error) return alert('Lỗi ghép khách hàng: ' + error.message);
+      await onFilterChange();
+    }
+
+    async function rejectCustomerSuggestion(kvCode, dmsCode) {
+      if (!supabaseClient) return;
+      const { error } = await supabaseClient.from('rejected_customer_suggestions').upsert({
+        kv_customer_code: kvCode, dms_outlet_code: dmsCode
+      });
+      if (error) {
+        state.suggestions = state.suggestions.filter(s => !(s.kv_customer_code === kvCode && s.dms_outlet_code === dmsCode));
+        renderCustomerMatchTab();
+        lucide.createIcons();
+        return;
+      }
       await onFilterChange();
     }
 
@@ -982,7 +1081,9 @@
         if (grp) skuToGroup.set(`${m.source_system}_${m.raw_code}`, grp.group_name);
       });
 
-      const container = document.getElementById('linkedComparisonList');
+      const tbody = document.getElementById('linkedComparisonTableBody');
+      const tfoot = document.getElementById('linkedComparisonTableFoot');
+
       const filteredLinks = state.customerLinks.filter(l => {
         const kv = kvMap.get(l.kv_customer_code) || {};
         const dms = dmsMap.get(l.dms_outlet_code) || {};
@@ -990,11 +1091,14 @@
       });
 
       if (filteredLinks.length === 0) {
-        container.innerHTML = `<div class="bg-white p-6 rounded-2xl border text-center text-xs text-slate-400">Chưa có cặp quán nào được ghép.</div>`;
+        tbody.innerHTML = `<tr><td colspan="4" class="py-8 text-center text-xs text-slate-400">Chưa có cặp quán nào được ghép.</td></tr>`;
+        tfoot.innerHTML = '';
         return;
       }
 
-      container.innerHTML = filteredLinks.map(l => {
+      let totKv3M = 0, totDms3M = 0, totBal3M = 0;
+
+      tbody.innerHTML = filteredLinks.map(l => {
         const kv = kvMap.get(l.kv_customer_code) || { kv_customer_name: l.kv_customer_code };
         const dms = dmsMap.get(l.dms_outlet_code) || { dms_outlet_name: l.dms_outlet_code };
 
@@ -1012,47 +1116,69 @@
 
         let sumKv3M = 0, sumDms3M = 0;
         Object.values(skuMatrix).forEach(v => { sumKv3M += v.kv; sumDms3M += v.dms; });
-        const bal3M = sumKv3M - sumDms3M; // Dương xanh lá = KV bán chưa key DMS
+        const bal3M = sumKv3M - sumDms3M;
 
+        totKv3M += sumKv3M;
+        totDms3M += sumDms3M;
+        totBal3M += bal3M;
+
+        const detId = `link-row-${l.id}`;
         return `
-          <div class="bg-white rounded-2xl border border-slate-200 p-3.5 shadow-xs">
-            <div class="flex items-start justify-between gap-2 cursor-pointer" onclick="toggleAccordion('link-det-${l.id}')">
-              <div class="min-w-0">
-                <p class="font-bold text-slate-900 text-sm line-clamp-1">${kv.kv_customer_name}</p>
-                <p class="text-xs text-emerald-700 font-medium line-clamp-1">&harr; ${dms.dms_outlet_name}</p>
+          <tr onclick="toggleAccordion('${detId}')" class="hover:bg-slate-50 active:bg-slate-100 cursor-pointer transition">
+            <td class="py-2.5 px-2.5">
+              <div class="font-bold text-slate-900 leading-snug line-clamp-1">${kv.kv_customer_name}</div>
+              <div class="text-[10px] text-emerald-700 font-medium line-clamp-1">&harr; ${dms.dms_outlet_name}</div>
+            </td>
+            <td class="py-2.5 px-1.5 text-right font-bold text-slate-900 tabular-nums">${fmtNum(sumKv3M)}</td>
+            <td class="py-2.5 px-1.5 text-right font-bold text-slate-700 tabular-nums">${fmtNum(sumDms3M)}</td>
+            <td class="py-2.5 px-2 text-right font-extrabold tabular-nums ${balanceCellBg(bal3M)}">${formatBalance(bal3M)}</td>
+          </tr>
+          <tr id="${detId}" class="hidden bg-slate-50">
+            <td colspan="4" class="p-3 border-t border-dashed border-slate-200 space-y-2">
+              <div class="flex items-center justify-between text-[10px] text-slate-500">
+                <span class="font-bold uppercase">Chi tiết SKU 3 tháng gần nhất:</span>
+                <button onclick="event.stopPropagation(); unlinkCustomer('${l.id}')" class="text-rose-600 font-bold flex items-center gap-1">
+                  <i data-lucide="unlink" class="w-3 h-3"></i> Hủy ghép quán này
+                </button>
               </div>
-              <div class="flex items-center gap-2 shrink-0">
-                <span class="px-2 py-1 rounded-xl text-xs font-extrabold ${balanceCellBg(bal3M)}">
-                  ${formatBalance(bal3M)}
-                </span>
-                <button onclick="event.stopPropagation(); unlinkCustomer('${l.id}')" class="text-slate-400 p-1"><i data-lucide="unlink" class="w-3.5 h-3.5"></i></button>
+              <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                <table class="w-full text-[11px] border-collapse">
+                  <thead class="bg-slate-100 text-slate-600 font-bold">
+                    <tr>
+                      <th class="py-1.5 px-2 text-left">Sản phẩm</th>
+                      <th class="py-1.5 px-1.5 text-right">KV</th>
+                      <th class="py-1.5 px-1.5 text-right">DMS</th>
+                      <th class="py-1.5 px-2 text-right">Lệch</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-slate-100">
+                    ${Object.entries(skuMatrix).map(([gName, val]) => {
+                      const diffSku = val.kv - val.dms;
+                      return `
+                        <tr>
+                          <td class="py-1.5 px-2 font-medium text-slate-800">${gName}</td>
+                          <td class="py-1.5 px-1.5 text-right tabular-nums">${fmtNum(val.kv)}</td>
+                          <td class="py-1.5 px-1.5 text-right tabular-nums">${fmtNum(val.dms)}</td>
+                          <td class="py-1.5 px-2 text-right font-bold tabular-nums ${balanceTextColor(diffSku)}">${formatBalance(diffSku)}</td>
+                        </tr>
+                      `;
+                    }).join('')}
+                  </tbody>
+                </table>
               </div>
-            </div>
-
-            <div class="grid grid-cols-3 gap-2 mt-2.5 pt-2 border-t border-slate-100 text-center text-xs">
-              <div><span class="text-[10px] text-slate-400 block">KV (3 Tháng)</span><b>${fmtNum(sumKv3M)}</b></div>
-              <div><span class="text-[10px] text-slate-400 block">DMS (3 Tháng)</span><b>${fmtNum(sumDms3M)}</b></div>
-              <div><span class="text-[10px] text-slate-400 block">Chênh lệch</span><b class="${balanceTextColor(bal3M)}">${formatBalance(bal3M)}</b></div>
-            </div>
-
-            <div id="link-det-${l.id}" class="hidden mt-3 pt-2.5 border-t border-slate-200 space-y-1.5">
-              ${Object.entries(skuMatrix).map(([gName, val]) => {
-                const diffSku = val.kv - val.dms;
-                return `
-                  <div class="flex items-center justify-between text-xs bg-slate-50 px-2.5 py-1.5 rounded-lg">
-                    <span class="font-medium text-slate-700 truncate pr-2">${gName}</span>
-                    <div class="flex items-center gap-2 shrink-0 font-mono">
-                      <span>KV:${fmtNum(val.kv)}</span>
-                      <span>DMS:${fmtNum(val.dms)}</span>
-                      <span class="font-bold ${balanceTextColor(diffSku)}">${formatBalance(diffSku)}</span>
-                    </div>
-                  </div>
-                `;
-              }).join('')}
-            </div>
-          </div>
+            </td>
+          </tr>
         `;
       }).join('');
+
+      tfoot.innerHTML = `
+        <tr>
+          <td class="py-3 px-2.5 uppercase text-[11px]">Tổng cộng (${filteredLinks.length} quán)</td>
+          <td class="py-3 px-1.5 text-right tabular-nums">${fmtNum(totKv3M)}</td>
+          <td class="py-3 px-1.5 text-right tabular-nums text-amber-300">${fmtNum(totDms3M)}</td>
+          <td class="py-3 px-2 text-right tabular-nums ${totBal3M > 0 ? 'bg-emerald-800 text-emerald-200' : totBal3M < 0 ? 'bg-rose-900 text-rose-200' : ''}">${formatBalance(totBal3M)}</td>
+        </tr>
+      `;
     }
 
     // =========================================================================
@@ -1067,21 +1193,32 @@
       const totalFree = freeLines.reduce((s, l) => s + Number(l.quantity), 0);
       document.getElementById('badge-kvFreeTotal').innerText = fmtNum(totalFree);
 
-      document.getElementById('promoSub-kv').innerHTML = freeLines.length === 0
-        ? `<div class="bg-white p-8 rounded-2xl border text-center text-xs text-slate-400">Không có hàng xuất 0đ trong tháng này.</div>`
-        : freeLines.map(l => `
-          <div class="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs space-y-1.5">
-            <div class="flex items-start justify-between gap-2">
-              <p class="font-bold text-slate-900 text-xs sm:text-sm line-clamp-1">${custMap.get(l.kv_customer_code) || l.kv_customer_code}</p>
-              <span class="bg-amber-100 text-amber-800 font-extrabold text-xs px-2 py-0.5 rounded-lg shrink-0">+${fmtNum(l.quantity)}</span>
-            </div>
-            <p class="text-xs text-slate-700">${l.raw_product_name}</p>
-            <div class="flex items-center justify-between text-[11px] text-slate-500 pt-1 border-t border-slate-100">
-              <span>${l.sale_date.slice(0, 10)} • ${repMap.get(l.sales_rep_id) || ''}</span>
-              <span class="italic text-amber-700 font-medium">${l.combined_note || ''}</span>
-            </div>
-          </div>
+      const kvFreeBody = document.getElementById('kvFreeTableBody');
+      const kvFreeFoot = document.getElementById('kvFreeTableFoot');
+
+      if (freeLines.length === 0) {
+        kvFreeBody.innerHTML = `<tr><td colspan="3" class="py-8 text-center text-xs text-slate-400">Không có hàng xuất 0đ trong tháng này.</td></tr>`;
+        kvFreeFoot.innerHTML = '';
+      } else {
+        kvFreeBody.innerHTML = freeLines.map(l => `
+          <tr class="hover:bg-amber-50/40">
+            <td class="py-2.5 px-2.5">
+              <div class="font-bold text-slate-900 line-clamp-1">${custMap.get(l.kv_customer_code) || l.kv_customer_code}</div>
+              <div class="text-[10px] text-slate-600 mt-0.5">${l.raw_product_name}</div>
+              <div class="text-[10px] text-slate-400">${l.sale_date.slice(0, 10)} • ${repMap.get(l.sales_rep_id) || ''}</div>
+            </td>
+            <td class="py-2.5 px-2 text-[10px] text-amber-800 font-medium italic">${l.combined_note || '-'}</td>
+            <td class="py-2.5 px-2 text-right font-extrabold text-amber-700 tabular-nums bg-amber-50/60">+${fmtNum(l.quantity)}</td>
+          </tr>
         `).join('');
+
+        kvFreeFoot.innerHTML = `
+          <tr>
+            <td colspan="2" class="py-3 px-2.5 uppercase text-[11px]">Tổng hàng tặng 0đ KV</td>
+            <td class="py-3 px-2 text-right tabular-nums text-amber-300">+${fmtNum(totalFree)}</td>
+          </tr>
+        `;
+      }
 
       const voucherLines = state.dmsLinesMonth.filter(l => l.is_posm_voucher && l.order_type === 'Order');
       const totalVouchers = voucherLines.reduce((s, l) => s + Number(l.quantity), 0);
@@ -1095,18 +1232,31 @@
         </div>
       `).join('');
 
-      document.getElementById('dmsVoucherList').innerHTML = voucherLines.length === 0
-        ? `<div class="bg-white p-8 rounded-2xl border text-center text-xs text-slate-400">Không có voucher DMS trong tháng này.</div>`
-        : voucherLines.map(v => `
-          <div class="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between gap-2">
-            <div class="min-w-0">
-              <p class="font-bold text-slate-900 text-xs sm:text-sm truncate">${outMap.get(v.dms_outlet_code) || v.dms_outlet_code}</p>
-              <p class="text-xs text-emerald-700 font-medium mt-0.5">${v.raw_product_name}</p>
-              <p class="text-[11px] text-slate-400 mt-0.5">${v.ordered_date.slice(0, 10)} • ${repMap.get(v.sales_rep_id) || ''}</p>
-            </div>
-            <span class="bg-emerald-100 text-emerald-800 font-extrabold text-xs px-2.5 py-1 rounded-xl shrink-0">${fmtNum(v.quantity)} suất</span>
-          </div>
+      const vBody = document.getElementById('dmsVoucherTableBody');
+      const vFoot = document.getElementById('dmsVoucherTableFoot');
+
+      if (voucherLines.length === 0) {
+        vBody.innerHTML = `<tr><td colspan="2" class="py-8 text-center text-xs text-slate-400">Không có voucher DMS trong tháng này.</td></tr>`;
+        vFoot.innerHTML = '';
+      } else {
+        vBody.innerHTML = voucherLines.map(v => `
+          <tr class="hover:bg-emerald-50/40">
+            <td class="py-2.5 px-2.5">
+              <div class="font-bold text-slate-900 line-clamp-1">${outMap.get(v.dms_outlet_code) || v.dms_outlet_code}</div>
+              <div class="text-[10px] text-emerald-700 font-medium mt-0.5">${v.raw_product_name}</div>
+              <div class="text-[10px] text-slate-400">${v.ordered_date.slice(0, 10)} • ${repMap.get(v.sales_rep_id) || ''}</div>
+            </td>
+            <td class="py-2.5 px-2 text-right font-extrabold text-emerald-700 tabular-nums bg-emerald-50/60">${fmtNum(v.quantity)}</td>
+          </tr>
         `).join('');
+
+        vFoot.innerHTML = `
+          <tr>
+            <td class="py-3 px-2.5 uppercase text-[11px]">Tổng suất voucher trả NPP</td>
+            <td class="py-3 px-2 text-right tabular-nums text-emerald-300">${fmtNum(totalVouchers)}</td>
+          </tr>
+        `;
+      }
     }
 
     // =========================================================================
@@ -1365,10 +1515,6 @@
     }
 
     function fmtNum(n) { return Number(n || 0).toLocaleString('vi-VN'); }
-    function fmtDiff(n) {
-      const val = Number(n || 0);
-      return val > 0 ? `+${val.toLocaleString('vi-VN')}` : val.toLocaleString('vi-VN');
-    }
     function toggleAccordion(id) { document.getElementById(id).classList.toggle('hidden'); }
   </script>
 </body>
