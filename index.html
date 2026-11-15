@@ -97,7 +97,7 @@
           <div class="truncate">
             <h1 class="font-extrabold text-sm sm:text-base tracking-tight truncate">ĐỐI CHIẾU SALE • TEAM BC</h1>
             <div class="flex items-center gap-1.5 text-[11px] text-emerald-300">
-              <span class="w-2 h-2 rounded-full bg-emerald-400 shrink-0"></span>
+              <span id="statusDot" class="w-2 h-2 rounded-full bg-emerald-400 shrink-0"></span><button id="btnStorageRing" onclick="openStorageModal()" class="hidden shrink-0 leading-none"></button>
               <span id="currentUserBadge" class="truncate">Đang tải...</span>
             </div>
           </div>
@@ -139,7 +139,7 @@
             <div id="monthPickerDropdown" class="hidden absolute left-0 mt-1.5 w-64 bg-white rounded-2xl border border-slate-200 shadow-xl z-40 p-3 space-y-2">
               <div class="flex items-center justify-between border-b pb-1.5 text-[11px]">
                 <span class="font-bold text-slate-700">Tick chọn các tháng:</span>
-                <button type="button" onclick="selectAllMonths()" class="text-emerald-700 font-bold hover:underline">Chọn tất cả</button>
+                <button type="button" id="btnSelectAllMonths" onclick="selectAllMonths()" class="text-emerald-700 font-bold hover:underline">Chọn tất cả</button>
               </div>
               <div id="monthCheckboxesList" class="max-h-52 overflow-y-auto space-y-1"></div>
               <button type="button" onclick="applyMonthSelection()" class="w-full bg-emerald-700 text-white text-xs font-bold py-2 rounded-xl">
@@ -208,6 +208,10 @@
             <div class="flex flex-col items-end gap-1.5 shrink-0">
               <button id="btnAdminSku" onclick="openSkuModal()" class="hidden bg-white/10 hover:bg-white/20 text-emerald-100 text-[11px] font-semibold px-2.5 py-1.5 rounded-xl flex items-center gap-1">
                 <i data-lucide="layers" class="w-3.5 h-3.5"></i> Mã SKU
+              </button>
+              <button onclick="openTransferModal()" class="bg-white/10 hover:bg-white/20 text-emerald-100 text-[11px] font-semibold px-2.5 py-1.5 rounded-xl flex items-center gap-1">
+                <i data-lucide="repeat" class="w-3.5 h-3.5"></i> Luân chuyển số
+                <span id="badge-transfer" class="hidden bg-rose-500 text-white text-[10px] font-bold rounded-full px-1.5 leading-4">0</span>
               </button>
               <button onclick="togglePromoInline()" id="btnTogglePromoInline" class="bg-amber-400/20 border border-amber-300/30 text-amber-200 text-[10px] font-semibold px-2.5 py-1 rounded-lg flex items-center gap-1">
                 <i data-lucide="eye" class="w-3 h-3"></i> <span id="lblTogglePromo">Hiện 0đ / KM</span>
@@ -413,7 +417,7 @@
         </div>
 
         <div id="promoSub-dms" class="hidden space-y-2.5">
-          <div id="dmsVoucherSummaryCards" class="flex flex-wrap gap-2"></div>
+          
           <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
             <table class="w-full text-[11px] sm:text-xs border-collapse">
               <thead>
@@ -506,6 +510,45 @@
         <p id="cpMsg" class="hidden text-xs text-rose-600 font-semibold text-center"></p>
         <button type="submit" id="btnCpSubmit" class="w-full bg-emerald-700 text-white font-bold text-sm py-3 rounded-xl">Lưu Mật Khẩu</button>
       </form>
+    </div>
+  </div>
+
+  <div id="storageModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white rounded-t-3xl sm:rounded-2xl max-w-lg w-full p-5 shadow-xl space-y-3 max-h-[90vh] flex flex-col">
+      <div class="flex items-center justify-between border-b pb-3">
+        <h3 class="font-bold text-slate-800 text-base">Dung Lượng & Dọn Dữ Liệu (Admin)</h3>
+        <button onclick="closeModal('storageModal')" class="text-slate-400 p-1"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <div id="storageSummary" class="text-xs"></div>
+      <p class="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-xl p-2">Xóa tháng cũ sẽ làm Tồn trước/Lũy kế các tháng sau thay đổi và không khôi phục được. Dung lượng có thể giảm chậm sau khi xóa.</p>
+      <div id="storageMonths" class="overflow-y-auto flex-1 space-y-2"></div>
+    </div>
+  </div>
+
+  <div id="transferModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white rounded-t-3xl sm:rounded-2xl max-w-lg w-full p-5 shadow-xl space-y-3 max-h-[92vh] flex flex-col">
+      <div class="flex items-center justify-between border-b pb-3">
+        <h3 class="font-bold text-slate-800 text-base">Luân Chuyển Số Giữa Sale</h3>
+        <button onclick="closeModal('transferModal')" class="text-slate-400 p-1"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <div class="overflow-y-auto flex-1 space-y-3">
+        <form onsubmit="submitTransfer(event)" class="bg-slate-50 p-3 rounded-2xl border border-slate-200 space-y-2 text-xs">
+          <p class="text-[11px] text-slate-500">Chuyển số <b>key DMS</b> từ sale này sang sale khác trong một tháng. Chỉ có hiệu lực sau khi SS/Admin duyệt.</p>
+          <div class="grid grid-cols-2 gap-2">
+            <label>Từ sale<select id="trFrom" class="w-full mt-0.5 px-2 py-2 border border-slate-300 rounded-xl bg-white"></select></label>
+            <label>Sang sale<select id="trTo" class="w-full mt-0.5 px-2 py-2 border border-slate-300 rounded-xl bg-white"></select></label>
+          </div>
+          <label class="block">Nhóm sản phẩm<select id="trGroup" class="w-full mt-0.5 px-2 py-2 border border-slate-300 rounded-xl bg-white"></select></label>
+          <div class="grid grid-cols-2 gap-2">
+            <label>Tháng áp dụng<select id="trMonth" class="w-full mt-0.5 px-2 py-2 border border-slate-300 rounded-xl bg-white"></select></label>
+            <label>Số lượng (thùng/két)<input id="trQty" type="number" min="1" step="1" class="w-full mt-0.5 px-2 py-2 border border-slate-300 rounded-xl bg-white" /></label>
+          </div>
+          <input id="trReason" type="text" placeholder="Lý do chuyển số (bắt buộc)" class="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white" />
+          <p id="trMsg" class="hidden text-xs text-rose-600 font-semibold"></p>
+          <button type="submit" class="w-full bg-emerald-700 text-white font-bold py-2.5 rounded-xl">Gửi Yêu Cầu Chờ Duyệt</button>
+        </form>
+        <div id="transferList" class="space-y-2"></div>
+      </div>
     </div>
   </div>
 
@@ -810,6 +853,10 @@
       document.getElementById('btnAdminUpload').classList.toggle('hidden', !isManagerRole());
       document.getElementById('btnAdminSku').classList.toggle('hidden', !isManagerRole());
       document.getElementById('btnAdminUsers').classList.toggle('hidden', currentUser.role !== 'ADMIN');
+      const isAdm = currentUser.role === 'ADMIN';
+      document.getElementById('btnStorageRing').classList.toggle('hidden', !isAdm);
+      document.getElementById('statusDot').classList.toggle('hidden', isAdm);
+      if (isAdm) loadStorageUsage();
 
       refreshAllData();
     }
@@ -920,7 +967,7 @@
         const checked = selectedMonths.includes(m) ? 'checked' : '';
         return `
           <label class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl hover:bg-slate-50 cursor-pointer text-xs font-semibold text-slate-800">
-            <input type="checkbox" value="${m}" ${checked} class="month-checkbox w-4 h-4 rounded text-emerald-700 focus:ring-emerald-600" />
+            <input type="checkbox" value="${m}" ${checked} class="month-checkbox w-4 h-4 rounded text-emerald-700 focus:ring-emerald-600" onchange="syncSelectAllLabel()" />
             <span>Tháng ${mm}/${y}</span>
           </label>
         `;
@@ -929,7 +976,14 @@
     }
 
     function selectAllMonths() {
-      document.querySelectorAll('.month-checkbox').forEach(cb => { cb.checked = true; });
+      const cbs = [...document.querySelectorAll('.month-checkbox')];
+      const allOn = cbs.every(c => c.checked);
+      cbs.forEach(c => { c.checked = !allOn; });
+      syncSelectAllLabel();
+    }
+    function syncSelectAllLabel() {
+      const cbs = [...document.querySelectorAll('.month-checkbox')], b = document.getElementById('btnSelectAllMonths');
+      if (b) b.innerText = cbs.length && cbs.every(c => c.checked) ? 'Bỏ chọn tất cả' : 'Chọn tất cả';
     }
 
     function applyMonthSelection() {
@@ -943,6 +997,7 @@
 
     function updateSelectedMonthsLabel() {
       const lbl = document.getElementById('selectedMonthsLabel');
+      syncSelectAllLabel();
       if (selectedMonths.length === 0) {
         lbl.innerText = 'Chưa chọn tháng';
         return;
@@ -1033,6 +1088,7 @@
 
     async function onFilterChange() {
       if (selectedMonths.length === 0) return;
+      const trPromise = loadTransfers();
       const selectedRep = getActiveSalesRepId();
       const buildRepFilter = (q) => (selectedRep && selectedRep !== 'ALL') ? q.eq('sales_rep_id', selectedRep) : q;
 
@@ -1053,6 +1109,7 @@
       state.dmsOutlets = dmsOData;
       state.customerLinks = linksData;
       state.suggestions = resSug.data || [];
+      await trPromise;
 
       renderActiveTab();
     }
@@ -1175,6 +1232,18 @@
         }
       });
 
+      const myRep = getActiveSalesRepId();
+      if (myRep && myRep !== 'ALL') {
+        state.transfers.filter(t => t.status === 'APPROVED').forEach(t => {
+          const item = groupedMap.get(t.product_group_id), m = String(t.month_date).slice(0, 10);
+          const d = t.from_rep_id === myRep ? -Number(t.quantity) : t.to_rep_id === myRep ? Number(t.quantity) : 0;
+          if (!item || !d) return;
+          item.transfer_net = (item.transfer_net || 0) + d;
+          if (selSet.has(m)) { item.dms_order_qty += d; item.period_balance -= d; }
+          if (m < firstSelMonth) item.prev_balance -= d;
+          if (m < firstSelMonth || selSet.has(m)) item.total_balance -= d;
+        });
+      }
       const activeRows = Array.from(groupedMap.values())
         .filter(r => r.kv_paid_qty > 0 || r.kv_free_qty > 0 || r.dms_order_qty > 0 || r.prev_balance !== 0 || r.total_balance !== 0)
         .sort((a, b) => a.display_order - b.display_order);
@@ -1238,6 +1307,7 @@
                 <td colspan="5" class="px-3 py-2 text-[11px] text-slate-600 border-t border-dashed border-slate-200">
                   <div class="flex flex-wrap items-center justify-between gap-2">
                     <span>Chênh lệch riêng kỳ chọn: <b class="${balanceTextColor(r.period_balance)}">${formatBalance(r.period_balance)}</b></span>
+                    ${r.transfer_net ? `<span class="bg-purple-100 text-purple-800 px-2 py-0.5 rounded font-semibold">Luân chuyển đã duyệt: ${r.transfer_net > 0 ? '+' : '-'}${fmtNum(Math.abs(r.transfer_net))}</span>` : ''}
                     <span class="bg-amber-100 text-amber-900 px-2 py-0.5 rounded font-semibold">Xuất tặng 0đ Kiot: <b>${fmtNum(r.kv_free_qty)}</b></span>
                   </div>
                 </td>
@@ -1767,10 +1837,7 @@
       const totalVouchers = voucherLines.reduce((x, l) => x + Number(l.quantity), 0);
       document.getElementById('badge-dmsVoucherTotal').innerText = fmtNum(totalVouchers);
       const vGroups = group(voucherLines, 'dms_outlet_code', outMap, 'ordered_date');
-      document.getElementById('dmsVoucherSummaryCards').innerHTML = vGroups.map(e => `
-        <div class="bg-purple-50 border border-purple-200 px-3 py-1.5 rounded-xl text-xs">
-          <span class="text-purple-950">${e.name}:</span> <b class="text-purple-700">${fmtNum(e.total)} suất</b>
-        </div>`).join('');
+      
       const vBody = document.getElementById('dmsVoucherTableBody');
       const vFoot = document.getElementById('dmsVoucherTableFoot');
       if (vGroups.length === 0) {
@@ -1837,6 +1904,7 @@
         if (fileKv) await importKiotVietExcel(fileKv);
         if (fileDms) await importDmsExcel(fileDms);
         logUpload('HOÀN TẤT! Đang tải lại số liệu...');
+        if (currentUser?.role === 'ADMIN') loadStorageUsage();
         await refreshAllData();
       } catch (err) {
         console.error(err);
@@ -2093,6 +2161,144 @@
     }
     function setListTier(t) { listTier = t; renderTierBars(); renderActiveTab(); }
     function fmtDate(iso) { if (!iso) return ''; const d = new Date(iso); return isNaN(d) ? String(iso).slice(0, 10) : d.toLocaleDateString('vi-VN'); }
+    // ===== DUNG LƯỢNG (ADMIN) =====
+    const DB_LIMIT_MB = 500, EST_BYTES_PER_ROW = 450;
+    async function loadStorageUsage() {
+      if (currentUser?.role !== 'ADMIN') return;
+      let usedMB, est = false;
+      const { data, error } = await supabaseClient.rpc('get_db_size');
+      if (!error && data != null) usedMB = Number(data) / 1048576;
+      else {
+        const rs = await Promise.all(['kv_sales_lines', 'dms_order_lines'].map(t => supabaseClient.from(t).select('*', { count: 'exact', head: true })));
+        usedMB = rs.reduce((a, r) => a + (r.count || 0), 0) * EST_BYTES_PER_ROW / 1048576; est = true;
+      }
+      state.storage = { usedMB, est };
+      const pct = Math.min(100, Math.round(usedMB / DB_LIMIT_MB * 100)), c = 2 * Math.PI * 6;
+      const color = pct >= 85 ? '#fb7185' : pct >= 60 ? '#fbbf24' : '#34d399';
+      const btn = document.getElementById('btnStorageRing');
+      btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6" fill="none" stroke="rgba(255,255,255,.25)" stroke-width="2.5"/><circle cx="8" cy="8" r="6" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="${(c * pct / 100).toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 8 8)"/></svg>`;
+      btn.title = `Dữ liệu: ${usedMB.toFixed(1)}/${DB_LIMIT_MB} MB`;
+    }
+    async function openStorageModal() {
+      if (currentUser?.role !== 'ADMIN') return;
+      document.getElementById('storageModal').classList.remove('hidden');
+      await renderStorageModal();
+    }
+    async function renderStorageModal() {
+      const sum = document.getElementById('storageSummary'), box = document.getElementById('storageMonths');
+      sum.innerHTML = 'Đang tải...'; box.innerHTML = '';
+      await loadStorageUsage();
+      const u = state.storage.usedMB, pct = Math.min(100, u / DB_LIMIT_MB * 100);
+      sum.innerHTML = `<div class="flex justify-between font-bold text-slate-700"><span>${u.toFixed(1)} / ${DB_LIMIT_MB} MB ${state.storage.est ? '(ước tính theo số dòng)' : ''}</span><span>${pct.toFixed(0)}%</span></div>
+        <div class="h-2 bg-slate-200 rounded-full mt-1 overflow-hidden"><div class="h-2 ${pct >= 85 ? 'bg-rose-500' : pct >= 60 ? 'bg-amber-400' : 'bg-emerald-500'}" style="width:${pct}%"></div></div>
+        ${state.storage.est ? '<p class="text-[10px] text-slate-400 mt-1">Chạy file setup_supabase.sql để hiện dung lượng thật.</p>' : ''}`;
+      const rows = await Promise.all(state.availableMonths.map(async m => {
+        const [a, b] = await Promise.all([
+          supabaseClient.from('kv_sales_lines').select('*', { count: 'exact', head: true }).eq('sale_month', m),
+          supabaseClient.from('dms_order_lines').select('*', { count: 'exact', head: true }).eq('order_month', m)]);
+        return { m, kv: a.count || 0, dms: b.count || 0 };
+      }));
+      box.innerHTML = rows.map(r => `<div class="p-3 rounded-xl border border-slate-200 flex items-center justify-between gap-2 text-xs">
+        <div><div class="font-bold text-slate-900">Tháng ${r.m.slice(5, 7)}/${r.m.slice(0, 4)}</div><div class="text-slate-500">Kiot ${fmtNum(r.kv)} dòng • DMS ${fmtNum(r.dms)} dòng</div></div>
+        <button onclick="deleteMonthData('${r.m}')" class="text-rose-600 border border-rose-200 hover:bg-rose-50 px-3 py-1.5 rounded-lg font-bold">Xóa tháng</button></div>`).join('');
+    }
+    async function deleteMonthData(m) {
+      if (currentUser?.role !== 'ADMIN') return;
+      const lbl = `${m.slice(5, 7)}/${m.slice(0, 4)}`;
+      if (!confirm(`XÓA toàn bộ dữ liệu Kiot + DMS tháng ${lbl}?\nKhông thể khôi phục.`)) return;
+      if ((prompt(`Gõ XOA để xác nhận xóa tháng ${lbl}`) || '').trim().toUpperCase() !== 'XOA') return alert('Đã hủy, chưa xóa gì.');
+      const r1 = await supabaseClient.from('kv_sales_lines').delete().eq('sale_month', m);
+      const r2 = await supabaseClient.from('dms_order_lines').delete().eq('order_month', m);
+      if (r1.error || r2.error) return alert('Lỗi xóa: ' + (r1.error || r2.error).message);
+      selectedMonths = selectedMonths.filter(x => x !== m);
+      await refreshAllData();
+      await renderStorageModal();
+    }
+
+    // ===== LUÂN CHUYỂN SỐ GIỮA SALE (CẦN SS/ADMIN DUYỆT) =====
+    state.transfers = [];
+    async function loadTransfers() {
+      const { data, error } = await supabaseClient.from('sale_transfers').select('*').order('created_at', { ascending: false }).limit(500);
+      state.transfersOk = !error;
+      state.transfers = error ? [] : (data || []);
+      const n = myTransfers().filter(t => t.status === 'PENDING').length;
+      const el = document.getElementById('badge-transfer');
+      if (el) { el.innerText = n; el.classList.toggle('hidden', n === 0); }
+    }
+    function myTransfers() {
+      if (currentUser?.role !== 'SALE') return state.transfers;
+      return state.transfers.filter(t => t.from_rep_id === currentUser.sales_rep_id || t.to_rep_id === currentUser.sales_rep_id);
+    }
+    function openTransferModal() {
+      const isSale = currentUser.role === 'SALE';
+      const opt = r => `<option value="${r.id}">${r.full_name}</option>`;
+      const me = state.salesReps.find(r => r.id === currentUser.sales_rep_id) || { id: currentUser.sales_rep_id, full_name: currentUser.display_name };
+      const fromSel = document.getElementById('trFrom');
+      fromSel.innerHTML = isSale ? opt(me) : state.salesReps.map(opt).join('');
+      fromSel.disabled = isSale;
+      document.getElementById('trTo').innerHTML = state.salesReps.filter(r => !isSale || r.id !== currentUser.sales_rep_id).map(opt).join('');
+      document.getElementById('trGroup').innerHTML = state.productGroups.map(g => `<option value="${g.id}">[${g.tier || 'Premium'}] ${g.group_name}</option>`).join('');
+      document.getElementById('trMonth').innerHTML = state.availableMonths.map(m => `<option value="${m}">Tháng ${m.slice(5, 7)}/${m.slice(0, 4)}</option>`).join('');
+      document.getElementById('trQty').value = ''; document.getElementById('trReason').value = '';
+      const msg = document.getElementById('trMsg');
+      if (!state.transfersOk) { msg.innerText = 'Chưa có bảng sale_transfers trong Supabase. Chạy file setup_supabase.sql trước.'; msg.classList.remove('hidden'); }
+      else msg.classList.add('hidden');
+      renderTransferList();
+      document.getElementById('transferModal').classList.remove('hidden');
+    }
+    async function submitTransfer(e) {
+      e.preventDefault();
+      const v = id => document.getElementById(id).value;
+      const msg = document.getElementById('trMsg');
+      const fail = t => { msg.innerText = t; msg.classList.remove('hidden'); };
+      msg.classList.add('hidden');
+      const q = Number(v('trQty')), reason = v('trReason').trim();
+      if (!v('trFrom') || !v('trTo') || v('trFrom') === v('trTo')) return fail('Chọn 2 sale khác nhau!');
+      if (!(q > 0)) return fail('Số lượng phải lớn hơn 0!');
+      if (!reason) return fail('Vui lòng nhập lý do!');
+      const { error } = await supabaseClient.from('sale_transfers').insert({
+        month_date: v('trMonth'), from_rep_id: v('trFrom'), to_rep_id: v('trTo'), product_group_id: v('trGroup'),
+        quantity: q, reason, status: 'PENDING', requested_by: currentUser.id, requested_by_name: currentUser.display_name
+      });
+      if (error) return fail('Lỗi gửi yêu cầu: ' + error.message);
+      document.getElementById('trQty').value = ''; document.getElementById('trReason').value = '';
+      await loadTransfers(); renderTransferList();
+    }
+    async function updateTransfer(id, patch, extra) {
+      let q = supabaseClient.from('sale_transfers').update(patch).eq('id', id).eq('status', 'PENDING');
+      if (extra) q = q.eq('requested_by', currentUser.id);
+      const { error } = await q;
+      if (error) return alert('Lỗi: ' + error.message);
+      await loadTransfers(); renderTransferList(); renderActiveTab();
+    }
+    function decideTransfer(id, status) {
+      if (!isManagerRole()) return;
+      let note = null;
+      if (status === 'REJECTED') { note = prompt('Lý do từ chối:'); if (note === null) return; }
+      else if (!confirm('Duyệt luân chuyển này? Số liệu đối chiếu của 2 sale sẽ thay đổi.')) return;
+      updateTransfer(id, { status, decided_by_name: currentUser.display_name, decided_at: new Date().toISOString(), decision_note: note || null });
+    }
+    function cancelTransfer(id) {
+      if (confirm('Hủy yêu cầu này?')) updateTransfer(id, { status: 'CANCELLED', decided_at: new Date().toISOString() }, true);
+    }
+    function renderTransferList() {
+      const rep = new Map(state.salesReps.map(r => [r.id, r.full_name])), grp = new Map(state.productGroups.map(g => [g.id, g.group_name]));
+      const st = { PENDING: ['Chờ duyệt', 'bg-amber-100 text-amber-800'], APPROVED: ['Đã duyệt', 'bg-emerald-100 text-emerald-800'], REJECTED: ['Từ chối', 'bg-rose-100 text-rose-800'], CANCELLED: ['Đã hủy', 'bg-slate-200 text-slate-600'] };
+      const dt = iso => iso ? new Date(iso).toLocaleString('vi-VN', { hour12: false, day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+      const list = myTransfers();
+      document.getElementById('transferList').innerHTML = list.length === 0 ? '<p class="text-xs text-slate-400 text-center py-3">Chưa có yêu cầu luân chuyển nào.</p>' : list.map(t => {
+        const [lb, cl] = st[t.status] || [t.status, 'bg-slate-100'];
+        return `<div class="p-3 rounded-xl border border-slate-200 text-xs space-y-1">
+          <div class="flex justify-between gap-2"><b class="text-slate-900">${rep.get(t.from_rep_id) || '?'} &rarr; ${rep.get(t.to_rep_id) || '?'}</b><span class="px-2 py-0.5 rounded font-bold ${cl}">${lb}</span></div>
+          <div class="text-slate-700">${grp.get(t.product_group_id) || ''} • <b>${fmtNum(t.quantity)}</b> • Tháng ${String(t.month_date).slice(5, 7)}/${String(t.month_date).slice(0, 4)}</div>
+          <div class="text-slate-500">Lý do: ${t.reason || ''}</div>
+          <div class="text-[10px] text-slate-400">Gửi: ${t.requested_by_name || ''} lúc ${dt(t.created_at)}${t.decided_at ? ` • ${lb}: ${t.decided_by_name || ''} lúc ${dt(t.decided_at)}` : ''}${t.decision_note ? ` • ${t.decision_note}` : ''}</div>
+          ${t.status === 'PENDING' ? `<div class="flex gap-2 pt-1">
+            ${isManagerRole() ? `<button onclick="decideTransfer('${t.id}','APPROVED')" class="flex-1 bg-emerald-700 text-white font-bold py-1.5 rounded-lg">Duyệt</button><button onclick="decideTransfer('${t.id}','REJECTED')" class="flex-1 bg-white border border-rose-200 text-rose-600 font-bold py-1.5 rounded-lg">Từ chối</button>` : ''}
+            ${t.requested_by === currentUser.id ? `<button onclick="cancelTransfer('${t.id}')" class="flex-1 bg-white border border-slate-300 text-slate-600 font-bold py-1.5 rounded-lg">Hủy yêu cầu</button>` : ''}</div>` : ''}
+        </div>`;
+      }).join('');
+    }
     function fmtNum(n) { return Number(n || 0).toLocaleString('vi-VN'); }
     function toggleAccordion(id) { document.getElementById(id).classList.toggle('hidden'); }
   </script>
