@@ -227,6 +227,7 @@ async function submitChangePw(e) {
 
 function handleLogout() {
   localStorage.removeItem('cb_bc_user');
+  Object.keys(localStorage).filter(k => k.startsWith('cb_cache_v1:')).forEach(k => localStorage.removeItem(k));
   currentUser = null;
   document.getElementById('appShell').classList.add('hidden');
   document.getElementById('firstChangeModal').classList.add('hidden');
@@ -257,6 +258,7 @@ function applyUserPermissions() {
   document.getElementById('settingsAvatar').innerText = (currentUser.display_name || '?').trim().charAt(0).toUpperCase();
   if (isAdm) loadStorageUsage();
 
+  hydrateFromCache();
   refreshAllData();
 }
 
@@ -453,6 +455,41 @@ async function fetchAllRows(buildQueryFn, orderCols = []) {
   return all;
 }
 
+// ---- Lưu tạm bản tải gần nhất để lần mở sau hiện số ngay, rồi cập nhật ở nền ----
+function cacheRepKey() { return currentUser?.role === 'SALE' ? currentUser.sales_rep_id : 'ALL'; }
+function cacheKey() { return `cb_cache_v1:${currentUser.id}:${cacheRepKey()}`; }
+function saveCache() {
+  try {
+    if (!currentUser || getActiveSalesRepId() !== cacheRepKey()) return;
+    localStorage.setItem(cacheKey(), JSON.stringify({
+      ts: Date.now(), reps: state.salesReps, groups: state.productGroups, maps: state.skuMappings,
+      months: state.availableMonths, sel: selectedMonths, rec: state.reconcileRowsAll, tr: state.transfers
+    }));
+  } catch (e) { /* đầy bộ nhớ thì bỏ qua */ }
+}
+function hydrateFromCache() {
+  try {
+    const raw = localStorage.getItem(cacheKey());
+    if (!raw) return false;
+    const c = JSON.parse(raw);
+    if (!c || !c.groups || !c.rec || !c.months || !c.months.length) return false;
+    state.salesReps = c.reps || []; state.productGroups = c.groups; state.skuMappings = c.maps || [];
+    state.availableMonths = c.months; state.reconcileRowsAll = c.rec; state.transfers = c.tr || [];
+    selectedMonths = (c.sel && c.sel.length) ? c.sel : [c.months[0]];
+    const repSelect = document.getElementById('filterSalesRep');
+    if (currentUser.role === 'SALE' && currentUser.sales_rep_id) {
+      const my = state.salesReps.find(r => r.id === currentUser.sales_rep_id);
+      repSelect.innerHTML = `<option value="${currentUser.sales_rep_id}">${my ? my.full_name : currentUser.display_name}</option>`;
+      repSelect.value = currentUser.sales_rep_id; repSelect.disabled = true;
+    } else {
+      repSelect.innerHTML = `<option value="ALL">Tất cả 5 Sale</option>` + state.salesReps.map(r => `<option value="${r.id}">${r.full_name}</option>`).join('');
+    }
+    renderMonthCheckboxes();
+    renderActiveTab();
+    return true;
+  } catch (e) { return false; }
+}
+
 async function refreshAllData() {
   state._staticOk = false; // nạp lại cả danh sách khách/outlet
   const [resReps, resGroups, resMaps, resVM] = await Promise.all([
@@ -517,6 +554,7 @@ let filterToken = 0;
 async function onFilterChange() {
   if (selectedMonths.length === 0) return;
   const token = ++filterToken;
+  kvLimit = dmsLimit = PAGE_ROWS;
   const firstLoad = !state._staticOk;
   const trPromise = loadTransfers();
   const selectedRep = getActiveSalesRepId();
@@ -554,6 +592,7 @@ async function onFilterChange() {
   await trPromise;
 
   renderActiveTab();
+  saveCache();
 }
 
 function switchTab(tabName) {
@@ -798,6 +837,13 @@ function renderReconcileTab() {
 // =========================================================================
 // TAB 2: KIOT
 // =========================================================================
+const PAGE_ROWS = 50;
+let kvLimit = PAGE_ROWS, dmsLimit = PAGE_ROWS, lastKvKw = '', lastDmsKw = '';
+function kvMore() { kvLimit += PAGE_ROWS; renderKvCustomersTab(); }
+function dmsMore() { dmsLimit += PAGE_ROWS; renderDmsCustomersTab(); }
+function moreRow(cols, fn, n, label) {
+  return `<tr><td colspan="${cols}" class="p-1"><button onclick="${fn}()" class="w-full text-xs font-bold text-emerald-700 py-2.5">Xem thêm ${n} ${label}</button></td></tr>`;
+}
 function renderKvCustomersTab() {
   const kw = document.getElementById('searchKvCust').value.toLowerCase().trim();
   const custMap = new Map(state.kvCustomers.map(c => [c.kv_customer_code, c]));
@@ -827,9 +873,9 @@ function renderKvCustomersTab() {
   }
 
   let sumPaid = 0, sumFree = 0;
-  tbody.innerHTML = list.map(([code, data]) => {
-    sumPaid += data.paid;
-    sumFree += data.free;
+  list.forEach(([, d]) => { sumPaid += d.paid; sumFree += d.free; });
+  if (kw !== lastKvKw) { kvLimit = PAGE_ROWS; lastKvKw = kw; }
+  tbody.innerHTML = list.slice(0, kvLimit).map(([code, data]) => {
     const c = custMap.get(code) || { kv_customer_name: code };
     const repName = repMap.get(c.sales_rep_id) || 'Chưa gán sale';
 
@@ -873,7 +919,7 @@ function renderKvCustomersTab() {
         </td>
       </tr>
     `;
-  }).join('');
+  }).join('') + (list.length > kvLimit ? moreRow(3, 'kvMore', list.length - kvLimit, 'điểm bán') : '');
 
   const trNetKv = getTransferNet(listTier);
   tfoot.innerHTML = `
@@ -927,8 +973,9 @@ function renderDmsCustomersTab() {
   }
 
   let sumBeer = 0;
-  tbody.innerHTML = list.map(([code, data]) => {
-    sumBeer += data.beerQty;
+  list.forEach(([, d]) => { sumBeer += d.beerQty; });
+  if (kw !== lastDmsKw) { dmsLimit = PAGE_ROWS; lastDmsKw = kw; }
+  tbody.innerHTML = list.slice(0, dmsLimit).map(([code, data]) => {
     const o = outMap.get(code) || { dms_outlet_name: code };
     const repName = repMap.get(o.sales_rep_id) || 'Chưa gán sale';
 
@@ -971,7 +1018,7 @@ function renderDmsCustomersTab() {
         </td>
       </tr>
     `;
-  }).join('');
+  }).join('') + (list.length > dmsLimit ? moreRow(2, 'dmsMore', list.length - dmsLimit, 'outlet') : '');
 
   tfoot.innerHTML = `
     <tr>
