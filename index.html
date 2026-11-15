@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Đối Chiếu Sale KiotViet & DMS | Carlsberg Team BC</title>
+  <title>Đối Chiếu Sale Kiot & DMS | Carlsberg Team BC</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
@@ -25,7 +25,7 @@
 </head>
 <body class="text-slate-800 antialiased select-none sm:select-auto">
 
-  <!-- ==================== MÀN HÌNH ĐĂNG NHẬP (ADMIN / SALE) ==================== -->
+  <!-- ==================== MÀN HÌNH ĐĂNG NHẬP ==================== -->
   <div id="loginScreen" class="fixed inset-0 bg-gradient-to-br from-emerald-950 via-emerald-900 to-teal-950 z-50 flex items-center justify-center p-4">
     <div class="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl space-y-5">
       <div class="text-center space-y-1.5">
@@ -39,7 +39,7 @@
       <form onsubmit="handleLogin(event)" class="space-y-3.5">
         <div>
           <label class="block text-xs font-bold text-slate-700 mb-1">Tên đăng nhập</label>
-          <input type="text" id="loginUsername" required autocomplete="username" placeholder="VD: Nhập tên đăng nhập..." class="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded-xl focus:ring-emerald-600 focus:border-emerald-600" />
+          <input type="text" id="loginUsername" required autocomplete="username" placeholder="Nhập tên đăng nhập..." class="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded-xl focus:ring-emerald-600 focus:border-emerald-600" />
         </div>
         <div>
           <label class="block text-xs font-bold text-slate-700 mb-1">Mật khẩu</label>
@@ -48,6 +48,38 @@
         <p id="loginErrorMsg" class="hidden text-xs text-rose-600 font-semibold text-center"></p>
         <button type="submit" id="btnLoginSubmit" class="w-full bg-emerald-700 hover:bg-emerald-800 active:scale-98 text-white font-bold text-sm py-3 rounded-xl shadow transition">
           Đăng Nhập Hệ Thống
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL BẮT BUỘC ĐỔI TÀI KHOẢN & MẬT KHẨU LẦN ĐẦU ==================== -->
+  <div id="firstChangeModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl space-y-4">
+      <div class="text-center space-y-1">
+        <div class="w-11 h-11 bg-amber-100 text-amber-700 rounded-2xl flex items-center justify-center mx-auto">
+          <i data-lucide="shield-check" class="w-6 h-6"></i>
+        </div>
+        <h2 class="font-extrabold text-base text-slate-900">Đổi Tài Khoản Lần Đầu</h2>
+        <p class="text-xs text-slate-500">Vui lòng đặt lại tên đăng nhập và mật khẩu cá nhân trước khi sử dụng hệ thống.</p>
+      </div>
+
+      <form onsubmit="submitFirstTimeChange(event)" class="space-y-3">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Tên đăng nhập mới</label>
+          <input type="text" id="fcNewUsername" required placeholder="Nhập tên đăng nhập mới..." class="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded-xl" />
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Mật khẩu mới</label>
+          <input type="password" id="fcNewPassword" required minlength="4" placeholder="Nhập mật khẩu mới (tối thiểu 4 ký tự)..." class="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded-xl" />
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Xác nhận lại mật khẩu mới</label>
+          <input type="password" id="fcConfirmPassword" required minlength="4" placeholder="Nhập lại mật khẩu mới..." class="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded-xl" />
+        </div>
+        <p id="fcErrorMsg" class="hidden text-xs text-rose-600 font-semibold text-center"></p>
+        <button type="submit" id="btnFcSubmit" class="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-sm py-3 rounded-xl shadow">
+          Lưu & Tiếp Tục
         </button>
       </form>
     </div>
@@ -72,11 +104,13 @@
         </div>
 
         <div class="flex items-center gap-1.5 shrink-0">
+          <!-- Admin và Sale Sup (SS) đều có nút Nạp Excel -->
           <button id="btnAdminUpload" onclick="openUploadModal()" class="hidden inline-flex items-center gap-1 bg-amber-400 hover:bg-amber-500 active:scale-95 text-slate-950 font-bold text-xs px-3 py-2 rounded-xl shadow transition">
             <i data-lucide="upload-cloud" class="w-4 h-4"></i>
             <span>Nạp Excel</span>
           </button>
-          <button id="btnAdminUsers" onclick="openUsersModal()" class="hidden p-2 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-emerald-100 transition" title="Quản lý tài khoản Sale">
+          <!-- Chỉ Admin mới có nút Quản lý Tài khoản -->
+          <button id="btnAdminUsers" onclick="openUsersModal()" class="hidden p-2 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-emerald-100 transition" title="Quản lý tài khoản">
             <i data-lucide="users" class="w-4 h-4"></i>
           </button>
           <button onclick="handleLogout()" class="p-2 rounded-xl bg-white/10 hover:bg-rose-600/80 active:scale-95 text-emerald-100 transition" title="Đăng xuất">
@@ -86,30 +120,35 @@
       </div>
     </header>
 
-    <!-- COMPACT FILTER BAR (CHỌN KHOẢNG THÁNG + SALE) -->
+    <!-- COMPACT FILTER BAR: CHỌN NHIỀU THÁNG DẠNG TICK CHỌN + NHÂN VIÊN SALE -->
     <section class="bg-white border-b border-slate-200 sticky top-14 z-20 shadow-xs">
-      <div class="max-w-7xl mx-auto px-3.5 sm:px-6 py-2.5 space-y-2">
-        <div class="grid grid-cols-12 gap-2">
-          <!-- Từ tháng -->
-          <div class="col-span-4 sm:col-span-3 relative">
-            <span class="text-[9px] font-bold uppercase text-slate-400 absolute left-2 top-1">Từ tháng</span>
-            <select id="filterFromMonth" onchange="onDateRangeChange('from')" class="w-full bg-slate-50 border border-slate-200 text-slate-900 text-xs rounded-xl pt-3.5 pb-1.5 px-2 font-bold focus:ring-emerald-600 focus:border-emerald-600">
-              <option value="">--</option>
-            </select>
-          </div>
+      <div class="max-w-7xl mx-auto px-3.5 sm:px-6 py-2.5">
+        <div class="grid grid-cols-2 gap-2">
+          <!-- Nút mở danh sách tick chọn nhiều tháng -->
+          <div class="relative">
+            <button type="button" onclick="toggleMonthPicker()" class="w-full bg-slate-50 border border-slate-200 text-slate-900 text-xs rounded-xl pt-3.5 pb-1.5 px-2.5 font-bold text-left flex items-center justify-between focus:ring-emerald-600 focus:border-emerald-600">
+              <span class="text-[9px] font-bold uppercase text-slate-400 absolute left-2.5 top-1">Tháng đối chiếu</span>
+              <span id="selectedMonthsLabel" class="truncate">Đang tải...</span>
+              <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400 shrink-0"></i>
+            </button>
 
-          <!-- Đến tháng -->
-          <div class="col-span-4 sm:col-span-3 relative">
-            <span class="text-[9px] font-bold uppercase text-slate-400 absolute left-2 top-1">Đến tháng</span>
-            <select id="filterToMonth" onchange="onDateRangeChange('to')" class="w-full bg-slate-50 border border-slate-200 text-slate-900 text-xs rounded-xl pt-3.5 pb-1.5 px-2 font-bold focus:ring-emerald-600 focus:border-emerald-600">
-              <option value="">--</option>
-            </select>
+            <!-- Dropdown tick chọn nhiều tháng -->
+            <div id="monthPickerDropdown" class="hidden absolute left-0 mt-1.5 w-64 bg-white rounded-2xl border border-slate-200 shadow-xl z-40 p-3 space-y-2">
+              <div class="flex items-center justify-between border-b pb-1.5 text-[11px]">
+                <span class="font-bold text-slate-700">Tick chọn các tháng:</span>
+                <button type="button" onclick="selectAllMonths()" class="text-emerald-700 font-bold hover:underline">Chọn tất cả</button>
+              </div>
+              <div id="monthCheckboxesList" class="max-h-52 overflow-y-auto space-y-1"></div>
+              <button type="button" onclick="applyMonthSelection()" class="w-full bg-emerald-700 text-white text-xs font-bold py-2 rounded-xl">
+                Áp Dụng Tháng Đã Chọn
+              </button>
+            </div>
           </div>
 
           <!-- Nhân viên Sale -->
-          <div class="col-span-4 sm:col-span-6 relative">
-            <span class="text-[9px] font-bold uppercase text-slate-400 absolute left-2 top-1">Nhân viên Sale</span>
-            <select id="filterSalesRep" onchange="onFilterChange()" class="w-full bg-slate-50 border border-slate-200 text-slate-900 text-xs rounded-xl pt-3.5 pb-1.5 px-2 font-bold focus:ring-emerald-600 focus:border-emerald-600 disabled:opacity-80 disabled:bg-emerald-50/70 disabled:text-emerald-900">
+          <div class="relative">
+            <span class="text-[9px] font-bold uppercase text-slate-400 absolute left-2.5 top-1">Nhân viên Sale</span>
+            <select id="filterSalesRep" onchange="onFilterChange()" class="w-full bg-slate-50 border border-slate-200 text-slate-900 text-xs rounded-xl pt-3.5 pb-1.5 px-2.5 font-bold focus:ring-emerald-600 focus:border-emerald-600 disabled:opacity-85 disabled:bg-emerald-50/70 disabled:text-emerald-900">
               <option value="ALL">Tất cả 5 Sale</option>
             </select>
           </div>
@@ -139,7 +178,7 @@
     <!-- MAIN CONTENT -->
     <main class="max-w-7xl mx-auto px-3 sm:px-6 py-3.5 space-y-3.5">
 
-      <!-- CẢNH BÁO MÃ SKU MỚI (Chỉ hiện cho Admin) -->
+      <!-- CẢNH BÁO MÃ SKU MỚI (Admin / SS) -->
       <div id="unmappedAlert" class="hidden bg-amber-50 border border-amber-300 rounded-2xl p-3 flex items-center justify-between gap-3">
         <div class="flex items-start gap-2">
           <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-600 shrink-0 mt-0.5"></i>
@@ -175,7 +214,7 @@
 
           <div class="grid grid-cols-4 gap-1.5 mt-3.5 pt-3 border-t border-white/15 text-center">
             <div class="bg-white/10 rounded-xl py-2 px-1">
-              <span class="text-[10px] text-emerald-200 block">Bán KV</span>
+              <span class="text-[10px] text-emerald-200 block">Bán Kiot</span>
               <span id="kpi-kvPaid" class="text-sm sm:text-base font-extrabold text-white">0</span>
             </div>
             <div class="bg-white/10 rounded-xl py-2 px-1">
@@ -195,7 +234,7 @@
           <div onclick="switchTab('promo')" class="mt-2.5 bg-white/10 hover:bg-white/15 active:scale-99 cursor-pointer rounded-xl px-3 py-2 flex items-center justify-between text-[11px]">
             <span class="text-amber-200 font-medium flex items-center gap-1.5">
               <i data-lucide="gift" class="w-3.5 h-3.5 text-amber-300"></i>
-              <span>Tặng 0đ KV: <b id="kpi-freeBanner" class="text-white">0</b> két/thùng</span>
+              <span>Tặng 0đ Kiot: <b id="kpi-freeBanner" class="text-white">0</b> két/thùng</span>
             </span>
             <span class="text-emerald-200 font-medium flex items-center gap-1">
               <span>Voucher DMS: <b id="kpi-voucherBanner" class="text-white">0</b> suất</span>
@@ -204,7 +243,7 @@
           </div>
         </div>
 
-        <!-- BẢNG ĐỐI CHIẾU SKU (CHIA 2 NHÓM PREMIUM & MAINSTREAM) -->
+        <!-- BẢNG ĐỐI CHIẾU SKU (TÁCH RÕ MÀU SẮC PREMIUM VS MAINSTREAM) -->
         <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
           <div class="px-3 py-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between text-[10px] text-slate-500">
             <span class="font-bold text-slate-700 uppercase">Bảng Đối Chiếu SKU</span>
@@ -219,7 +258,7 @@
               <thead>
                 <tr class="bg-slate-800 text-white font-bold text-[10px] sm:text-xs uppercase tracking-tight">
                   <th class="py-2.5 px-2.5 text-left">Sản phẩm</th>
-                  <th class="py-2.5 px-1.5 text-right w-12 sm:w-16">Bán<br>KV</th>
+                  <th class="py-2.5 px-1.5 text-right w-12 sm:w-16">Bán<br>Kiot</th>
                   <th class="py-2.5 px-1.5 text-right w-12 sm:w-16">Key<br>DMS</th>
                   <th class="py-2.5 px-1.5 text-right w-12 sm:w-16 bg-slate-700/80">Tồn<br>trước</th>
                   <th class="py-2.5 px-2 text-right w-14 sm:w-20 bg-emerald-900">Chênh<br>lệch</th>
@@ -239,19 +278,19 @@
       <div id="view-kv" class="hidden space-y-2.5">
         <div class="relative">
           <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-3"></i>
-          <input type="text" id="searchKvCust" onkeyup="renderKvCustomersTab()" placeholder="Tìm tên quán, mã hoặc SĐT trên KiotViet..." class="w-full bg-white pl-10 pr-4 py-2.5 text-sm border border-slate-200 rounded-2xl shadow-xs focus:ring-emerald-600 focus:border-emerald-600" />
+          <input type="text" id="searchKvCust" onkeyup="renderKvCustomersTab()" placeholder="Tìm tên quán, mã hoặc SĐT trên Kiot..." class="w-full bg-white pl-10 pr-4 py-2.5 text-sm border border-slate-200 rounded-2xl shadow-xs focus:ring-emerald-600 focus:border-emerald-600" />
         </div>
 
         <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
           <div class="px-3 py-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between text-[10px] text-slate-500">
-            <span class="font-bold text-slate-700 uppercase">Danh Sách Điểm Bán KiotViet</span>
+            <span class="font-bold text-slate-700 uppercase">Danh Sách Điểm Bán Kiot</span>
             <span>Bấm vào tên quán để xem chi tiết</span>
           </div>
           <table class="w-full text-[11px] sm:text-xs border-collapse">
             <thead>
               <tr class="bg-slate-800 text-white font-bold text-[10px] sm:text-xs uppercase">
                 <th class="py-2.5 px-2.5 text-left">Điểm bán / Sale</th>
-                <th class="py-2.5 px-1.5 text-right w-14 sm:w-20">Mua<br>KV</th>
+                <th class="py-2.5 px-1.5 text-right w-14 sm:w-20">Mua<br>Kiot</th>
                 <th class="py-2.5 px-2 text-right w-14 sm:w-20 bg-amber-900/70">Tặng<br>0đ</th>
               </tr>
             </thead>
@@ -304,16 +343,16 @@
         </div>
 
         <div class="space-y-2">
-          <!-- Bộ lọc hạng sản phẩm: Tất cả / Chỉ Premium / Mainstream (Huda) -->
-          <div class="grid grid-cols-3 bg-slate-200/80 p-1 rounded-xl text-[11px] sm:text-xs">
+          <!-- Bộ lọc hạng sản phẩm với màu sắc tách biệt rõ nét -->
+          <div class="grid grid-cols-3 bg-slate-200/80 p-1 rounded-xl text-[11px] sm:text-xs gap-1">
             <button onclick="setMatchTierFilter('ALL')" id="tierBtn-ALL" class="py-1.5 font-bold rounded-lg bg-white text-slate-900 shadow-xs">
               Tất cả SP
             </button>
-            <button onclick="setMatchTierFilter('Premium')" id="tierBtn-Premium" class="py-1.5 font-semibold rounded-lg text-slate-600">
-              Chỉ Premium
+            <button onclick="setMatchTierFilter('Premium')" id="tierBtn-Premium" class="py-1.5 font-semibold rounded-lg text-indigo-800">
+              ★ Premium
             </button>
-            <button onclick="setMatchTierFilter('Mainstream')" id="tierBtn-Mainstream" class="py-1.5 font-semibold rounded-lg text-slate-600">
-              Mainstream (Huda)
+            <button onclick="setMatchTierFilter('Mainstream')" id="tierBtn-Mainstream" class="py-1.5 font-semibold rounded-lg text-amber-800">
+              ● Mainstream
             </button>
           </div>
 
@@ -330,8 +369,8 @@
             <table class="w-full text-[11px] sm:text-xs border-collapse">
               <thead>
                 <tr class="bg-slate-800 text-white font-bold text-[10px] sm:text-xs uppercase">
-                  <th class="py-2.5 px-2.5 text-left">Điểm bán (KV &harr; DMS)</th>
-                  <th class="py-2.5 px-1.5 text-right w-12 sm:w-16">Bán<br>KV</th>
+                  <th class="py-2.5 px-2.5 text-left">Điểm bán (Kiot &harr; DMS)</th>
+                  <th class="py-2.5 px-1.5 text-right w-12 sm:w-16">Bán<br>Kiot</th>
                   <th class="py-2.5 px-1.5 text-right w-12 sm:w-16">Key<br>DMS</th>
                   <th class="py-2.5 px-2 text-right w-14 sm:w-20 bg-emerald-900">Chênh<br>lệch</th>
                 </tr>
@@ -347,7 +386,7 @@
       <div id="view-promo" class="hidden space-y-3">
         <div class="grid grid-cols-2 bg-slate-200/80 p-1 rounded-xl">
           <button id="subPromoBtn-kv" onclick="switchPromoSub('kv')" class="py-2 text-xs font-bold rounded-lg bg-white text-amber-800 shadow-xs">
-            Hàng 0đ KiotViet (<span id="badge-kvFreeTotal">0</span>)
+            Hàng 0đ Kiot (<span id="badge-kvFreeTotal">0</span>)
           </button>
           <button id="subPromoBtn-dms" onclick="switchPromoSub('dms')" class="py-2 text-xs font-semibold rounded-lg text-slate-600">
             Voucher DMS (<span id="badge-dmsVoucherTotal">0</span>)
@@ -414,7 +453,7 @@
     </nav>
   </div>
 
-  <!-- ==================== MODAL QUẢN LÝ TÀI KHOẢN SALE (CHỈ ADMIN) ==================== -->
+  <!-- ==================== MODAL QUẢN LÝ TÀI KHOẢN (CHỈ ADMIN) ==================== -->
   <div id="usersModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
     <div class="bg-white rounded-t-3xl sm:rounded-2xl max-w-lg w-full p-5 shadow-xl space-y-4 max-h-[90vh] flex flex-col">
       <div class="flex items-center justify-between border-b pb-3">
@@ -424,29 +463,32 @@
         <button onclick="closeModal('usersModal')" class="text-slate-400 p-1"><i data-lucide="x" class="w-5 h-5"></i></button>
       </div>
 
+      <!-- Form tạo mới tài khoản (Có đủ 3 quyền: Sale / Sale Sup / Admin) -->
       <form onsubmit="createAppUser(event)" class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-2.5 text-xs">
-        <p class="font-bold text-slate-700 uppercase">Tạo tài khoản mới cho Sale / Admin:</p>
+        <p class="font-bold text-slate-700 uppercase">Cấp tài khoản mới (Bắt buộc đổi TK/MK lần đầu):</p>
         <div class="grid grid-cols-2 gap-2">
-          <input type="text" id="newUsername" required placeholder="Tên đăng nhập (vd: Tên đăng nhập)" class="px-3 py-2 border border-slate-300 rounded-xl bg-white" />
-          <input type="text" id="newPassword" required placeholder="Mật khẩu" class="px-3 py-2 border border-slate-300 rounded-xl bg-white" />
+          <input type="text" id="newUsername" required placeholder="Tên đăng nhập..." class="px-3 py-2 border border-slate-300 rounded-xl bg-white" />
+          <input type="text" id="newPassword" required placeholder="Mật khẩu tạm..." class="px-3 py-2 border border-slate-300 rounded-xl bg-white" />
         </div>
         <div class="grid grid-cols-2 gap-2">
           <select id="newUserRole" onchange="toggleNewUserSaleSelect()" class="px-3 py-2 border border-slate-300 rounded-xl bg-white font-semibold">
             <option value="SALE">Quyền: Nhân viên Sale</option>
-            <option value="ADMIN">Quyền: Admin (Xem hết)</option>
+            <option value="SS">Quyền: Sale Sup (SS)</option>
+            <option value="ADMIN">Quyền: Admin</option>
           </select>
           <select id="newUserSalesRep" class="px-3 py-2 border border-slate-300 rounded-xl bg-white font-semibold">
             <option value="">-- Chọn tên Sale --</option>
           </select>
         </div>
-        <button type="submit" class="w-full bg-emerald-700 text-white font-bold py-2 rounded-xl">+ Cấp Tài Khoản</button>
+        <input type="text" id="newDisplayName" placeholder="Tên hiển thị (VD: SS Nguyễn Văn A - nếu là SS/Admin)" class="hidden w-full px-3 py-2 border border-slate-300 rounded-xl bg-white" />
+        <button type="submit" class="w-full bg-emerald-700 text-white font-bold py-2.5 rounded-xl">+ Cấp Tài Khoản</button>
       </form>
 
       <div class="overflow-y-auto flex-1 space-y-2" id="usersListContainer"></div>
     </div>
   </div>
 
-  <!-- ==================== MODAL NẠP EXCEL (CHỈ ADMIN) ==================== -->
+  <!-- ==================== MODAL NẠP EXCEL (ADMIN & SALE SUP) ==================== -->
   <div id="uploadModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
     <div class="bg-white rounded-t-3xl sm:rounded-2xl max-w-xl w-full p-5 sm:p-6 shadow-xl space-y-4">
       <div class="flex items-center justify-between border-b pb-3">
@@ -458,7 +500,7 @@
 
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div class="border-2 border-dashed border-slate-300 rounded-2xl p-3.5 text-center">
-          <p class="font-bold text-xs text-slate-800">1. File KiotViet (.xlsx)</p>
+          <p class="font-bold text-xs text-slate-800">1. File Kiot (.xlsx)</p>
           <p class="text-[11px] text-slate-400 mb-2">Chi tiết hóa đơn bán hàng</p>
           <input type="file" id="fileInputKv" accept=".xlsx,.xls" class="text-xs w-full file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-emerald-50 file:text-emerald-700" />
         </div>
@@ -496,13 +538,13 @@
   <div id="manualLinkModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
     <div class="bg-white rounded-t-3xl sm:rounded-2xl max-w-lg w-full p-5 shadow-xl space-y-4">
       <div class="flex items-center justify-between border-b pb-3">
-        <h3 id="manualLinkModalTitle" class="font-bold text-slate-800 text-base">Ghép Quán KiotViet &harr; DMS</h3>
+        <h3 id="manualLinkModalTitle" class="font-bold text-slate-800 text-base">Ghép Quán Kiot &harr; DMS</h3>
         <button onclick="closeModal('manualLinkModal')" class="text-slate-400 p-1"><i data-lucide="x" class="w-5 h-5"></i></button>
       </div>
       <input type="hidden" id="editingLinkId" value="" />
       <div class="space-y-3">
         <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1">1. Điểm bán KiotViet</label>
+          <label class="block text-xs font-bold text-slate-700 mb-1">1. Điểm bán Kiot</label>
           <select id="manualKvSelect" class="w-full px-3 py-2.5 text-xs border border-slate-300 rounded-xl disabled:bg-slate-100"></select>
         </div>
         <div>
@@ -526,32 +568,46 @@
     let currentUser = null;
     let activeTab = 'reconcile';
     let showPromoInline = false;
-    let matchTierFilter = 'ALL';
+    let matchTierFilter = 'ALL'; // 'ALL' | 'Premium' | 'Mainstream'
+    let selectedMonths = [];     // Mảng các tháng được tick chọn, VD: ['2026-11-01', '2026-10-01']
 
     let state = {
       salesReps: [],
       productGroups: [],
       skuMappings: [],
       availableMonths: [],
-      reconcileRowsRange: [],
+      reconcileRowsAll: [],
       kvCustomers: [],
       dmsOutlets: [],
       customerLinks: [],
       suggestions: [],
-      kvLinesRange: [],
-      dmsLinesRange: []
+      kvLinesSelected: [],
+      dmsLinesSelected: []
     };
 
     document.addEventListener('DOMContentLoaded', () => {
       lucide.createIcons();
       checkSavedSession();
+      document.addEventListener('click', (e) => {
+        const picker = document.getElementById('monthPickerDropdown');
+        if (picker && !picker.classList.contains('hidden') && !e.target.closest('#monthPickerDropdown') && !e.target.closest('button[onclick="toggleMonthPicker()"]')) {
+          picker.classList.add('hidden');
+        }
+      });
     });
 
+    // =========================================================================
+    // 1. ĐĂNG NHẬP, BẮT BUỘC ĐỔI TK/MK LẦN ĐẦU & PHÂN QUYỀN (ADMIN / SS / SALE)
+    // =========================================================================
     function checkSavedSession() {
       const saved = localStorage.getItem('cb_bc_user');
       if (saved) {
         try {
           currentUser = JSON.parse(saved);
+          if (currentUser.must_change_credentials) {
+            showFirstChangeModal();
+            return;
+          }
           applyUserPermissions();
           return;
         } catch (e) {
@@ -594,10 +650,16 @@
           username: data.username,
           display_name: data.display_name,
           role: data.role,
-          sales_rep_id: data.sales_rep_id
+          sales_rep_id: data.sales_rep_id,
+          must_change_credentials: Boolean(data.must_change_credentials)
         };
         localStorage.setItem('cb_bc_user', JSON.stringify(currentUser));
-        applyUserPermissions();
+
+        if (currentUser.must_change_credentials) {
+          showFirstChangeModal();
+        } else {
+          applyUserPermissions();
+        }
       } catch (err) {
         errEl.innerText = 'Lỗi kết nối: ' + err.message;
         errEl.classList.remove('hidden');
@@ -607,24 +669,90 @@
       }
     }
 
+    function showFirstChangeModal() {
+      document.getElementById('loginScreen').classList.add('hidden');
+      document.getElementById('appShell').classList.add('hidden');
+      document.getElementById('fcNewUsername').value = '';
+      document.getElementById('fcNewPassword').value = '';
+      document.getElementById('fcConfirmPassword').value = '';
+      document.getElementById('firstChangeModal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    async function submitFirstTimeChange(e) {
+      e.preventDefault();
+      const newUser = document.getElementById('fcNewUsername').value.trim().toLowerCase();
+      const newPass = document.getElementById('fcNewPassword').value.trim();
+      const confirmPass = document.getElementById('fcConfirmPassword').value.trim();
+      const errEl = document.getElementById('fcErrorMsg');
+      const btn = document.getElementById('btnFcSubmit');
+
+      errEl.classList.add('hidden');
+      if (newUser === currentUser.username) {
+        errEl.innerText = 'Vui lòng chọn tên đăng nhập mới khác với tài khoản mặc định được cấp!';
+        errEl.classList.remove('hidden');
+        return;
+      }
+      if (newPass !== confirmPass) {
+        errEl.innerText = 'Mật khẩu xác nhận không khớp!';
+        errEl.classList.remove('hidden');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerText = 'Đang cập nhật...';
+
+      try {
+        const { error } = await supabaseClient
+          .from('reconcile_users')
+          .update({
+            username: newUser,
+            password: newPass,
+            must_change_credentials: false
+          })
+          .eq('id', currentUser.id);
+
+        if (error) {
+          errEl.innerText = error.code === '23505'
+            ? 'Tên đăng nhập này đã có người dùng, vui lòng chọn tên khác!'
+            : 'Lỗi cập nhật: ' + error.message;
+          errEl.classList.remove('hidden');
+          return;
+        }
+
+        currentUser.username = newUser;
+        currentUser.must_change_credentials = false;
+        localStorage.setItem('cb_bc_user', JSON.stringify(currentUser));
+        document.getElementById('firstChangeModal').classList.add('hidden');
+        applyUserPermissions();
+      } finally {
+        btn.disabled = false;
+        btn.innerText = 'Lưu & Tiếp Tục';
+      }
+    }
+
     function handleLogout() {
       localStorage.removeItem('cb_bc_user');
       currentUser = null;
       document.getElementById('appShell').classList.add('hidden');
+      document.getElementById('firstChangeModal').classList.add('hidden');
       document.getElementById('loginScreen').classList.remove('hidden');
+    }
+
+    function isManagerRole() {
+      return currentUser?.role === 'ADMIN' || currentUser?.role === 'SS';
     }
 
     function applyUserPermissions() {
       document.getElementById('loginScreen').classList.add('hidden');
       document.getElementById('appShell').classList.remove('hidden');
 
-      const isAdmin = currentUser.role === 'ADMIN';
-      document.getElementById('currentUserBadge').innerText =
-        `${currentUser.display_name} (${isAdmin ? 'Admin' : 'Sale'})`;
+      const roleLabel = currentUser.role === 'ADMIN' ? 'Admin' : currentUser.role === 'SS' ? 'Sale Sup' : 'Sale';
+      document.getElementById('currentUserBadge').innerText = `${currentUser.display_name} (${roleLabel})`;
 
-      document.getElementById('btnAdminUpload').classList.toggle('hidden', !isAdmin);
-      document.getElementById('btnAdminUsers').classList.toggle('hidden', !isAdmin);
-      document.getElementById('btnAdminSku').classList.toggle('hidden', !isAdmin);
+      document.getElementById('btnAdminUpload').classList.toggle('hidden', !isManagerRole());
+      document.getElementById('btnAdminSku').classList.toggle('hidden', !isManagerRole());
+      document.getElementById('btnAdminUsers').classList.toggle('hidden', currentUser.role !== 'ADMIN');
 
       refreshAllData();
     }
@@ -641,27 +769,47 @@
 
     function toggleNewUserSaleSelect() {
       const role = document.getElementById('newUserRole').value;
-      const sel = document.getElementById('newUserSalesRep');
-      sel.disabled = role === 'ADMIN';
-      if (role === 'ADMIN') sel.value = '';
+      const saleSel = document.getElementById('newUserSalesRep');
+      const dispInput = document.getElementById('newDisplayName');
+
+      if (role === 'SALE') {
+        saleSel.classList.remove('hidden');
+        dispInput.classList.add('hidden');
+      } else {
+        saleSel.classList.add('hidden');
+        saleSel.value = '';
+        dispInput.classList.remove('hidden');
+        dispInput.placeholder = role === 'SS' ? 'Tên Sale Sup (VD: SS Nguyễn Văn A)' : 'Tên Admin (VD: Admin Phú)';
+      }
     }
 
     async function loadUsersList() {
       const { data } = await supabaseClient.from('reconcile_users').select('*').order('created_at');
       const container = document.getElementById('usersListContainer');
-      container.innerHTML = (data || []).map(u => `
-        <div class="p-3 rounded-xl border border-slate-200 bg-white flex items-center justify-between gap-2 text-xs">
-          <div>
-            <div class="font-bold text-slate-900">${u.display_name} <span class="text-[10px] px-1.5 py-0.5 rounded ${u.role === 'ADMIN' ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}">${u.role}</span></div>
-            <div class="text-slate-500 mt-0.5">TK: <b>${u.username}</b> • MK: <b>${u.password}</b></div>
+      container.innerHTML = (data || []).map(u => {
+        const badgeStyle = u.role === 'ADMIN'
+          ? 'bg-amber-100 text-amber-800'
+          : u.role === 'SS'
+          ? 'bg-indigo-100 text-indigo-800'
+          : 'bg-emerald-100 text-emerald-800';
+        return `
+          <div class="p-3 rounded-xl border border-slate-200 bg-white flex items-center justify-between gap-2 text-xs">
+            <div>
+              <div class="font-bold text-slate-900">
+                ${u.display_name}
+                <span class="text-[10px] px-1.5 py-0.5 rounded font-bold ${badgeStyle}">${u.role}</span>
+                ${u.must_change_credentials ? `<span class="text-[10px] text-amber-600 ml-1">(Chờ đổi TK)</span>` : ''}
+              </div>
+              <div class="text-slate-500 mt-0.5">TK: <b>${u.username}</b> • MK: <b>${u.password}</b></div>
+            </div>
+            ${u.username !== 'admin' ? `
+              <button onclick="deleteAppUser('${u.id}')" class="text-rose-600 hover:bg-rose-50 p-1.5 rounded-lg" title="Xóa tài khoản">
+                <i data-lucide="trash-2" class="w-4 h-4"></i>
+              </button>
+            ` : ''}
           </div>
-          ${u.username !== 'admin' ? `
-            <button onclick="deleteAppUser('${u.id}')" class="text-rose-600 hover:bg-rose-50 p-1.5 rounded-lg" title="Xóa tài khoản">
-              <i data-lucide="trash-2" class="w-4 h-4"></i>
-            </button>
-          ` : ''}
-        </div>
-      `).join('');
+        `;
+      }).join('');
       lucide.createIcons();
     }
 
@@ -671,18 +819,27 @@
       const password = document.getElementById('newPassword').value.trim();
       const role = document.getElementById('newUserRole').value;
       const salesRepId = document.getElementById('newUserSalesRep').value || null;
+      const customDisplay = document.getElementById('newDisplayName').value.trim();
 
       if (role === 'SALE' && !salesRepId) return alert('Vui lòng chọn nhân viên Sale tương ứng!');
       const rep = state.salesReps.find(r => r.id === salesRepId);
-      const displayName = role === 'ADMIN' ? `Admin (${username})` : rep.full_name;
+      const displayName = role === 'SALE'
+        ? rep.full_name
+        : (customDisplay || (role === 'SS' ? `Sale Sup (${username})` : `Admin (${username})`));
 
       const { error } = await supabaseClient.from('reconcile_users').insert({
-        username, password, display_name: displayName, role, sales_rep_id: salesRepId
+        username,
+        password,
+        display_name: displayName,
+        role,
+        sales_rep_id: role === 'SALE' ? salesRepId : null,
+        must_change_credentials: true
       });
       if (error) return alert('Lỗi tạo tài khoản: ' + error.message);
 
       document.getElementById('newUsername').value = '';
       document.getElementById('newPassword').value = '';
+      document.getElementById('newDisplayName').value = '';
       await loadUsersList();
     }
 
@@ -690,6 +847,56 @@
       if (!confirm('Xóa tài khoản này?')) return;
       await supabaseClient.from('reconcile_users').delete().eq('id', id);
       await loadUsersList();
+    }
+
+    // =========================================================================
+    // 2. BỘ CHỌN NHIỀU THÁNG (MULTI-SELECT CHECKBOX) & TẢI DỮ LIỆU
+    // =========================================================================
+    function toggleMonthPicker() {
+      document.getElementById('monthPickerDropdown').classList.toggle('hidden');
+    }
+
+    function renderMonthCheckboxes() {
+      const container = document.getElementById('monthCheckboxesList');
+      container.innerHTML = state.availableMonths.map(m => {
+        const [y, mm] = m.split('-');
+        const checked = selectedMonths.includes(m) ? 'checked' : '';
+        return `
+          <label class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl hover:bg-slate-50 cursor-pointer text-xs font-semibold text-slate-800">
+            <input type="checkbox" value="${m}" ${checked} class="month-checkbox w-4 h-4 rounded text-emerald-700 focus:ring-emerald-600" />
+            <span>Tháng ${mm}/${y}</span>
+          </label>
+        `;
+      }).join('');
+      updateSelectedMonthsLabel();
+    }
+
+    function selectAllMonths() {
+      document.querySelectorAll('.month-checkbox').forEach(cb => { cb.checked = true; });
+    }
+
+    function applyMonthSelection() {
+      const checkedVals = Array.from(document.querySelectorAll('.month-checkbox:checked')).map(cb => cb.value);
+      if (checkedVals.length === 0) return alert('Vui lòng tick chọn ít nhất 1 tháng!');
+      selectedMonths = checkedVals.sort();
+      updateSelectedMonthsLabel();
+      document.getElementById('monthPickerDropdown').classList.add('hidden');
+      onFilterChange();
+    }
+
+    function updateSelectedMonthsLabel() {
+      const lbl = document.getElementById('selectedMonthsLabel');
+      if (selectedMonths.length === 0) {
+        lbl.innerText = 'Chưa chọn tháng';
+        return;
+      }
+      const sorted = [...selectedMonths].sort();
+      if (sorted.length === 1) {
+        const [y, mm] = sorted[0].split('-');
+        lbl.innerText = `T${mm}/${y}`;
+      } else {
+        lbl.innerText = `${sorted.length} tháng (${sorted.map(m => 'T' + m.slice(5, 7)).join(', ')})`;
+      }
     }
 
     async function fetchAllRows(buildQueryFn) {
@@ -720,7 +927,7 @@
 
       const unmapped = state.skuMappings.filter(m => !m.product_group_id && !String(m.raw_code).startsWith('DMS_POSM') && m.raw_code !== '8001555');
       const alertBox = document.getElementById('unmappedAlert');
-      if (currentUser?.role === 'ADMIN' && unmapped.length > 0) {
+      if (isManagerRole() && unmapped.length > 0) {
         alertBox.classList.remove('hidden');
         document.getElementById('unmappedText').innerText = `${unmapped.length} mã mới (${unmapped.map(u => u.raw_code).join(', ')}) chưa phân nhóm.`;
       } else {
@@ -752,70 +959,35 @@
         state.availableMonths = Array.from(new Set([...mKv.map(x => x.sale_month), ...mDms.map(x => x.order_month)])).sort().reverse();
       }
 
-      const fromSel = document.getElementById('filterFromMonth');
-      const toSel = document.getElementById('filterToMonth');
-      const prevFrom = fromSel.value;
-      const prevTo = toSel.value;
-
-      if (state.availableMonths.length === 0) {
-        fromSel.innerHTML = `<option value="">--</option>`;
-        toSel.innerHTML = `<option value="">--</option>`;
-      } else {
-        const opts = state.availableMonths.map(m => {
-          const [y, mm] = m.split('-');
-          return `<option value="${m}">T${mm}/${y}</option>`;
-        }).join('');
-        fromSel.innerHTML = opts;
-        toSel.innerHTML = opts;
-
+      if (state.availableMonths.length > 0 && selectedMonths.length === 0) {
         const now = new Date();
         const currentSysMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
         const defaultMonth = state.availableMonths.includes(currentSysMonth) ? currentSysMonth : state.availableMonths[0];
-
-        fromSel.value = state.availableMonths.includes(prevFrom) ? prevFrom : defaultMonth;
-        toSel.value = state.availableMonths.includes(prevTo) ? prevTo : defaultMonth;
+        selectedMonths = [defaultMonth];
       }
+      renderMonthCheckboxes();
 
       await onFilterChange();
     }
 
-    function onDateRangeChange(changedSide) {
-      const fromSel = document.getElementById('filterFromMonth');
-      const toSel = document.getElementById('filterToMonth');
-      if (fromSel.value && toSel.value && fromSel.value > toSel.value) {
-        if (changedSide === 'from') toSel.value = fromSel.value;
-        else fromSel.value = toSel.value;
-      }
-      onFilterChange();
-    }
-
     async function onFilterChange() {
-      const fromMonth = document.getElementById('filterFromMonth').value;
-      const toMonth = document.getElementById('filterToMonth').value;
-      const selectedRep = currentUser?.role === 'SALE' ? currentUser.sales_rep_id : document.getElementById('filterSalesRep').value;
-      if (!fromMonth || !toMonth) return;
-
+      if (selectedMonths.length === 0) return;
+      const selectedRep = getActiveSalesRepId();
       const buildRepFilter = (q) => (selectedRep && selectedRep !== 'ALL') ? q.eq('sales_rep_id', selectedRep) : q;
 
       const [recData, kvData, dmsData, kvCData, dmsOData, linksData, resSug] = await Promise.all([
-        fetchAllRows(() => buildRepFilter(
-          supabaseClient.from('v_monthly_reconciliation').select('*').gte('month_date', fromMonth).lte('month_date', toMonth)
-        )),
-        fetchAllRows(() => buildRepFilter(
-          supabaseClient.from('kv_sales_lines').select('*').gte('sale_month', fromMonth).lte('sale_month', toMonth)
-        )),
-        fetchAllRows(() => buildRepFilter(
-          supabaseClient.from('dms_order_lines').select('*').gte('order_month', fromMonth).lte('order_month', toMonth).eq('dis_code', 'CD1084')
-        )),
+        fetchAllRows(() => buildRepFilter(supabaseClient.from('v_monthly_reconciliation').select('*'))),
+        fetchAllRows(() => buildRepFilter(supabaseClient.from('kv_sales_lines').select('*').in('sale_month', selectedMonths))),
+        fetchAllRows(() => buildRepFilter(supabaseClient.from('dms_order_lines').select('*').in('order_month', selectedMonths).eq('dis_code', 'CD1084'))),
         fetchAllRows(() => supabaseClient.from('kv_customers').select('*')),
         fetchAllRows(() => supabaseClient.from('dms_outlets').select('*')),
         fetchAllRows(() => supabaseClient.from('customer_links').select('*')),
         supabaseClient.from('v_customer_match_suggestions').select('*').order('similarity_score', { ascending: false }).limit(80)
       ]);
 
-      state.reconcileRowsRange = recData;
-      state.kvLinesRange = kvData;
-      state.dmsLinesRange = dmsData;
+      state.reconcileRowsAll = recData;
+      state.kvLinesSelected = kvData;
+      state.dmsLinesSelected = dmsData;
       state.kvCustomers = kvCData;
       state.dmsOutlets = dmsOData;
       state.customerLinks = linksData;
@@ -856,11 +1028,15 @@
 
     function setMatchTierFilter(tier) {
       matchTierFilter = tier;
-      ['ALL', 'Premium', 'Mainstream'].forEach(t => {
-        document.getElementById(`tierBtn-${t}`).className = t === tier
-          ? 'py-1.5 font-bold rounded-lg bg-white text-emerald-800 shadow-xs'
-          : 'py-1.5 font-semibold rounded-lg text-slate-600';
-      });
+      document.getElementById('tierBtn-ALL').className = tier === 'ALL'
+        ? 'py-1.5 font-bold rounded-lg bg-white text-slate-900 shadow-xs'
+        : 'py-1.5 font-semibold rounded-lg text-slate-600';
+      document.getElementById('tierBtn-Premium').className = tier === 'Premium'
+        ? 'py-1.5 font-bold rounded-lg bg-indigo-700 text-white shadow-xs'
+        : 'py-1.5 font-semibold rounded-lg text-indigo-800';
+      document.getElementById('tierBtn-Mainstream').className = tier === 'Mainstream'
+        ? 'py-1.5 font-bold rounded-lg bg-amber-600 text-white shadow-xs'
+        : 'py-1.5 font-semibold rounded-lg text-amber-800';
       renderLinkedCustomersComparison();
       lucide.createIcons();
     }
@@ -894,13 +1070,15 @@
     }
 
     // =========================================================================
-    // TAB 1: ĐỐI CHIẾU SẢN LƯỢNG & LŨY KẾ
+    // TAB 1: ĐỐI CHIẾU SẢN LƯỢNG & LŨY KẾ (MÀU SẮC PREMIUM VS MAINSTREAM TÁCH BIỆT)
     // =========================================================================
     function renderReconcileTab() {
-      const fromMonth = document.getElementById('filterFromMonth').value;
-      const toMonth = document.getElementById('filterToMonth').value;
-      const groupedMap = new Map();
+      const sortedSel = [...selectedMonths].sort();
+      const firstSelMonth = sortedSel[0];
+      const lastSelMonth = sortedSel[sortedSel.length - 1];
+      const selSet = new Set(sortedSel);
 
+      const groupedMap = new Map();
       state.productGroups.forEach(pg => {
         const tier = pg.tier || (pg.brand.toLowerCase().includes('huda') ? 'Mainstream' : 'Premium');
         groupedMap.set(pg.id, {
@@ -918,19 +1096,21 @@
         });
       });
 
-      state.reconcileRowsRange.forEach(r => {
+      state.reconcileRowsAll.forEach(r => {
         if (!groupedMap.has(r.product_group_id)) return;
         const item = groupedMap.get(r.product_group_id);
-        item.kv_paid_qty += Number(r.kv_paid_qty || 0);
-        item.kv_free_qty += Number(r.kv_free_qty || 0);
-        item.dms_order_qty += Number(r.dms_order_qty || 0);
-        item.period_balance += -Number(r.monthly_diff || 0);
 
-        if (r.month_date === fromMonth) {
-          item.prev_balance += -Number(r.prev_cumulative_diff || 0);
+        if (selSet.has(r.month_date)) {
+          item.kv_paid_qty += Number(r.kv_paid_qty || 0);
+          item.kv_free_qty += Number(r.kv_free_qty || 0);
+          item.dms_order_qty += Number(r.dms_order_qty || 0);
+          item.period_balance += -Number(r.monthly_diff || 0);
         }
-        if (r.month_date === toMonth) {
-          item.total_balance += -Number(r.total_cumulative_diff || 0);
+        if (r.month_date < firstSelMonth) {
+          item.prev_balance += -Number(r.monthly_diff || 0);
+        }
+        if (r.month_date <= lastSelMonth) {
+          item.total_balance += -Number(r.monthly_diff || 0);
         }
       });
 
@@ -955,45 +1135,48 @@
       const tfoot = document.getElementById('reconcileCompactFoot');
 
       if (activeRows.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-xs text-slate-400">Không có phát sinh sản lượng trong khoảng tháng đã chọn.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-xs text-slate-400">Không có phát sinh sản lượng trong các tháng đã chọn.</td></tr>`;
         tfoot.innerHTML = '';
       } else {
-        const renderSection = (title, badgeColor, list) => {
+        const renderSection = (title, headerClass, rowTintClass, accentDot, list) => {
           if (list.length === 0) return '';
           let sKv = 0, sDms = 0, sPrev = 0, sTot = 0;
           list.forEach(x => { sKv += x.kv_paid_qty; sDms += x.dms_order_qty; sPrev += x.prev_balance; sTot += x.total_balance; });
 
           const headerRow = `
-            <tr class="${badgeColor}">
-              <td class="py-1.5 px-2.5 font-extrabold text-[10px] uppercase tracking-wider">${title}</td>
-              <td class="py-1.5 px-1.5 text-right font-bold text-[10px] tabular-nums">${fmtNum(sKv)}</td>
-              <td class="py-1.5 px-1.5 text-right font-bold text-[10px] tabular-nums">${fmtNum(sDms)}</td>
-              <td class="py-1.5 px-1.5 text-right font-bold text-[10px] tabular-nums">${formatBalance(sPrev)}</td>
-              <td class="py-1.5 px-2 text-right font-extrabold text-[10px] tabular-nums">${formatBalance(sTot)}</td>
+            <tr class="${headerClass}">
+              <td class="py-2 px-2.5 font-extrabold text-[11px] uppercase tracking-wider">${title}</td>
+              <td class="py-2 px-1.5 text-right font-extrabold text-[11px] tabular-nums">${fmtNum(sKv)}</td>
+              <td class="py-2 px-1.5 text-right font-extrabold text-[11px] tabular-nums">${fmtNum(sDms)}</td>
+              <td class="py-2 px-1.5 text-right font-extrabold text-[11px] tabular-nums">${formatBalance(sPrev)}</td>
+              <td class="py-2 px-2 text-right font-extrabold text-[11px] tabular-nums">${formatBalance(sTot)}</td>
             </tr>
           `;
 
           const itemRows = list.map(r => {
             const rowId = `sku-row-${r.product_group_id}`;
             return `
-              <tr onclick="toggleAccordion('${rowId}')" class="hover:bg-slate-50 active:bg-slate-100 cursor-pointer transition">
+              <tr onclick="toggleAccordion('${rowId}')" class="${rowTintClass} hover:brightness-95 cursor-pointer transition">
                 <td class="py-2.5 px-2.5">
-                  <div class="font-bold text-slate-900 leading-snug">${r.group_name}</div>
+                  <div class="font-bold text-slate-900 leading-snug flex items-center gap-1.5">
+                    <span class="w-1.5 h-1.5 rounded-full ${accentDot} shrink-0"></span>
+                    <span>${r.group_name}</span>
+                  </div>
                   ${showPromoInline && r.kv_free_qty > 0
-                    ? `<span class="inline-flex items-center gap-1 text-[10px] font-bold text-amber-800 bg-amber-100 px-1.5 py-0.5 rounded mt-0.5">🎁 Tặng 0đ: ${fmtNum(r.kv_free_qty)}</span>`
-                    : `<span class="text-[10px] text-slate-400">${r.brand}${r.kv_free_qty > 0 ? ' • có 0đ' : ''}</span>`
+                    ? `<span class="inline-flex items-center gap-1 text-[10px] font-bold text-amber-800 bg-amber-100 px-1.5 py-0.5 rounded mt-0.5 ml-3">🎁 Tặng 0đ: ${fmtNum(r.kv_free_qty)}</span>`
+                    : `<span class="text-[10px] text-slate-400 ml-3">${r.brand}${r.kv_free_qty > 0 ? ' • có 0đ' : ''}</span>`
                   }
                 </td>
                 <td class="py-2.5 px-1.5 text-right font-bold text-slate-900 tabular-nums">${fmtNum(r.kv_paid_qty)}</td>
                 <td class="py-2.5 px-1.5 text-right font-bold text-slate-700 tabular-nums">${fmtNum(r.dms_order_qty)}</td>
-                <td class="py-2.5 px-1.5 text-right font-semibold tabular-nums bg-slate-50/90 ${balanceTextColor(r.prev_balance)}">${formatBalance(r.prev_balance)}</td>
+                <td class="py-2.5 px-1.5 text-right font-semibold tabular-nums ${balanceTextColor(r.prev_balance)}">${formatBalance(r.prev_balance)}</td>
                 <td class="py-2.5 px-2 text-right font-extrabold tabular-nums ${balanceCellBg(r.total_balance)}">${formatBalance(r.total_balance)}</td>
               </tr>
               <tr id="${rowId}" class="hidden bg-slate-50/90">
                 <td colspan="5" class="px-3 py-2 text-[11px] text-slate-600 border-t border-dashed border-slate-200">
                   <div class="flex flex-wrap items-center justify-between gap-2">
                     <span>Chênh lệch riêng kỳ chọn: <b class="${balanceTextColor(r.period_balance)}">${formatBalance(r.period_balance)}</b></span>
-                    <span class="bg-amber-100 text-amber-900 px-2 py-0.5 rounded font-semibold">Xuất tặng 0đ KV: <b>${fmtNum(r.kv_free_qty)}</b></span>
+                    <span class="bg-amber-100 text-amber-900 px-2 py-0.5 rounded font-semibold">Xuất tặng 0đ Kiot: <b>${fmtNum(r.kv_free_qty)}</b></span>
                   </div>
                 </td>
               </tr>
@@ -1004,8 +1187,8 @@
         };
 
         tbody.innerHTML =
-          renderSection('★ Nhóm Premium (Blanc • Tuborg • Carlsberg • Somersby)', 'bg-emerald-100/80 text-emerald-950', premiumRows) +
-          renderSection('● Nhóm Mainstream (Huda)', 'bg-slate-200/80 text-slate-800', mainstreamRows);
+          renderSection('★ NHÓM PREMIUM', 'bg-indigo-900 text-indigo-50', 'bg-indigo-50/35 border-l-4 border-l-indigo-600', 'bg-indigo-600', premiumRows) +
+          renderSection('● NHÓM MAINSTREAM', 'bg-amber-800 text-amber-50', 'bg-amber-50/35 border-l-4 border-l-amber-500', 'bg-amber-500', mainstreamRows);
 
         tfoot.innerHTML = `
           <tr>
@@ -1018,8 +1201,8 @@
         `;
       }
 
-      const freeTotal = state.kvLinesRange.filter(l => l.is_free_gift).reduce((s, l) => s + Number(l.quantity), 0);
-      const voucherTotal = state.dmsLinesRange.filter(l => l.is_posm_voucher && l.order_type === 'Order').reduce((s, l) => s + Number(l.quantity), 0);
+      const freeTotal = state.kvLinesSelected.filter(l => l.is_free_gift).reduce((s, l) => s + Number(l.quantity), 0);
+      const voucherTotal = state.dmsLinesSelected.filter(l => l.is_posm_voucher && l.order_type === 'Order').reduce((s, l) => s + Number(l.quantity), 0);
 
       document.getElementById('kpi-kvPaid').innerText = fmtNum(totKvPaid);
       document.getElementById('kpi-dmsOrder').innerText = fmtNum(totDms);
@@ -1033,9 +1216,9 @@
       totEl.className = `text-3xl sm:text-4xl font-extrabold tracking-tight ${totTotal > 0 ? 'text-emerald-300' : totTotal < 0 ? 'text-rose-300' : 'text-white'}`;
 
       document.getElementById('kpi-totalLabel').innerText =
-        totTotal > 0 ? `Còn ${fmtNum(totTotal)} thùng/két đã bán KV chưa key về DMS`
+        totTotal > 0 ? `Còn ${fmtNum(totTotal)} thùng/két đã bán Kiot chưa key về DMS`
         : totTotal < 0 ? `Đang key dư ${fmtNum(Math.abs(totTotal))} thùng/két trên DMS`
-        : 'Đã khớp 100% số bán KV và số key DMS';
+        : 'Đã khớp 100% số bán Kiot và số key DMS';
     }
 
     // =========================================================================
@@ -1047,7 +1230,7 @@
       const repMap = new Map(state.salesReps.map(r => [r.id, r.full_name]));
 
       const agg = new Map();
-      state.kvLinesRange.forEach(line => {
+      state.kvLinesSelected.forEach(line => {
         if (!agg.has(line.kv_customer_code)) agg.set(line.kv_customer_code, { paid: 0, free: 0, lines: [] });
         const entry = agg.get(line.kv_customer_code);
         if (line.is_free_gift) entry.free += Number(line.quantity);
@@ -1082,7 +1265,7 @@
           if (!byMonth[m]) byMonth[m] = [];
           const existing = byMonth[m].find(x => x.name === h.raw_product_name && x.isFree === h.is_free_gift);
           if (existing) existing.qty += Number(h.quantity);
-          else byMonth[m].push({ name: h.raw_product_name, isFree: h.is_free_gift, qty: Number(h.quantity), note: h.combined_note });
+          else byMonth[m].push({ name: h.raw_product_name, isFree: h.is_free_gift, qty: Number(h.quantity) });
         });
 
         const detId = `kv-row-${code}`;
@@ -1136,7 +1319,7 @@
       const repMap = new Map(state.salesReps.map(r => [r.id, r.full_name]));
 
       const agg = new Map();
-      state.dmsLinesRange.filter(l => l.order_type === 'Order').forEach(line => {
+      state.dmsLinesSelected.filter(l => l.order_type === 'Order').forEach(line => {
         if (!agg.has(line.dms_outlet_code)) agg.set(line.dms_outlet_code, { beerQty: 0, lines: [] });
         const entry = agg.get(line.dms_outlet_code);
         if (!line.is_posm_voucher) entry.beerQty += Number(line.quantity);
@@ -1234,7 +1417,7 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
               <div class="bg-white p-2.5 rounded-lg border border-slate-200">
                 <div class="flex items-center justify-between text-[10px] font-bold text-slate-400">
-                  <span>KIOTVIET • ${s.kv_customer_code}</span>
+                  <span>KIOT • ${s.kv_customer_code}</span>
                   <span>${s.sales_rep_name || ''}</span>
                 </div>
                 <p class="font-bold text-slate-900 mt-0.5">${s.kv_customer_name}</p>
@@ -1377,14 +1560,14 @@
         const dms = dmsMap.get(l.dms_outlet_code) || { dms_outlet_name: l.dms_outlet_code };
 
         const skuMatrix = {};
-        state.kvLinesRange.filter(x => x.kv_customer_code === l.kv_customer_code && !x.is_free_gift).forEach(x => {
+        state.kvLinesSelected.filter(x => x.kv_customer_code === l.kv_customer_code && !x.is_free_gift).forEach(x => {
           const info = skuInfoMap.get(`KIOTVIET_${x.raw_product_code}`) || { group_name: x.raw_product_name, tier: x.raw_product_name.toLowerCase().includes('huda') ? 'Mainstream' : 'Premium' };
           if (matchTierFilter !== 'ALL' && info.tier !== matchTierFilter) return;
           if (!skuMatrix[info.group_name]) skuMatrix[info.group_name] = { kv: 0, dms: 0, tier: info.tier };
           skuMatrix[info.group_name].kv += Number(x.quantity);
         });
 
-        state.dmsLinesRange.filter(x => x.dms_outlet_code === l.dms_outlet_code && x.order_type === 'Order' && !x.is_posm_voucher).forEach(x => {
+        state.dmsLinesSelected.filter(x => x.dms_outlet_code === l.dms_outlet_code && x.order_type === 'Order' && !x.is_posm_voucher).forEach(x => {
           const info = skuInfoMap.get(`DMS_${x.raw_product_code}`) || { group_name: x.raw_product_name, tier: x.raw_product_name.toLowerCase().includes('huda') ? 'Mainstream' : 'Premium' };
           if (matchTierFilter !== 'ALL' && info.tier !== matchTierFilter) return;
           if (!skuMatrix[info.group_name]) skuMatrix[info.group_name] = { kv: 0, dms: 0, tier: info.tier };
@@ -1430,7 +1613,7 @@
                   <thead class="bg-slate-100 text-slate-600 font-bold">
                     <tr>
                       <th class="py-1.5 px-2 text-left">Sản phẩm</th>
-                      <th class="py-1.5 px-1.5 text-right">KV</th>
+                      <th class="py-1.5 px-1.5 text-right">Kiot</th>
                       <th class="py-1.5 px-1.5 text-right">DMS</th>
                       <th class="py-1.5 px-2 text-right">Lệch</th>
                     </tr>
@@ -1440,9 +1623,10 @@
                       ? `<tr><td colspan="4" class="py-3 text-center text-slate-400">Không phát sinh nhóm ${matchTierFilter} trong kỳ này.</td></tr>`
                       : Object.entries(skuMatrix).map(([gName, val]) => {
                         const diffSku = val.kv - val.dms;
+                        const tierDot = val.tier === 'Premium' ? 'text-indigo-700' : 'text-amber-700';
                         return `
                           <tr>
-                            <td class="py-1.5 px-2 font-medium text-slate-800">${gName}</td>
+                            <td class="py-1.5 px-2 font-medium text-slate-800"><span class="${tierDot} font-bold mr-1">${val.tier === 'Premium' ? '★' : '●'}</span>${gName}</td>
                             <td class="py-1.5 px-1.5 text-right tabular-nums">${fmtNum(val.kv)}</td>
                             <td class="py-1.5 px-1.5 text-right tabular-nums">${fmtNum(val.dms)}</td>
                             <td class="py-1.5 px-2 text-right font-bold tabular-nums ${balanceTextColor(diffSku)}">${formatBalance(diffSku)}</td>
@@ -1475,7 +1659,7 @@
       const outMap = new Map(state.dmsOutlets.map(o => [o.dms_outlet_code, o.dms_outlet_name]));
       const repMap = new Map(state.salesReps.map(r => [r.id, r.full_name]));
 
-      const freeLines = state.kvLinesRange.filter(l => l.is_free_gift);
+      const freeLines = state.kvLinesSelected.filter(l => l.is_free_gift);
       const totalFree = freeLines.reduce((s, l) => s + Number(l.quantity), 0);
       document.getElementById('badge-kvFreeTotal').innerText = fmtNum(totalFree);
 
@@ -1500,13 +1684,13 @@
 
         kvFreeFoot.innerHTML = `
           <tr>
-            <td colspan="2" class="py-3 px-2.5 uppercase text-[11px]">Tổng hàng tặng 0đ KV</td>
+            <td colspan="2" class="py-3 px-2.5 uppercase text-[11px]">Tổng hàng tặng 0đ Kiot</td>
             <td class="py-3 px-2 text-right tabular-nums text-amber-300">+${fmtNum(totalFree)}</td>
           </tr>
         `;
       }
 
-      const voucherLines = state.dmsLinesRange.filter(l => l.is_posm_voucher && l.order_type === 'Order');
+      const voucherLines = state.dmsLinesSelected.filter(l => l.is_posm_voucher && l.order_type === 'Order');
       const totalVouchers = voucherLines.reduce((s, l) => s + Number(l.quantity), 0);
       document.getElementById('badge-dmsVoucherTotal').innerText = fmtNum(totalVouchers);
 
@@ -1546,14 +1730,14 @@
     }
 
     // =========================================================================
-    // QUẢN LÝ MÃ SKU MỚI & NẠP EXCEL (ADMIN)
+    // QUẢN LÝ MÃ SKU MỚI & NẠP EXCEL (ADMIN / SS)
     // =========================================================================
     function openSkuModal() {
       const container = document.getElementById('skuMappingList');
       container.innerHTML = state.skuMappings.filter(m => !String(m.raw_code).startsWith('DMS_POSM') && m.raw_code !== '8001555').map(m => `
         <div class="p-3 rounded-xl border ${!m.product_group_id ? 'bg-amber-50 border-amber-300' : 'bg-slate-50 border-slate-200'} space-y-1.5">
           <div class="flex items-center justify-between text-xs">
-            <span class="font-bold text-emerald-800">${m.source_system} • ${m.raw_code}</span>
+            <span class="font-bold text-emerald-800">${m.source_system === 'KIOTVIET' ? 'KIOT' : m.source_system} • ${m.raw_code}</span>
           </div>
           <p class="text-xs text-slate-700 font-medium">${m.raw_name}</p>
           <select onchange="updateSkuGroup('${m.id}', this.value)" class="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs font-semibold">
@@ -1630,7 +1814,7 @@
     }
 
     async function importKiotVietExcel(file) {
-      logUpload(`Đọc KiotViet: ${file.name}...`);
+      logUpload(`Đọc Kiot: ${file.name}...`);
       const buf = await file.arrayBuffer();
       const wb = XLSX.read(buf, { type: 'array', cellDates: true });
       const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: null });
@@ -1712,7 +1896,7 @@
         });
         if (error) throw error;
       }
-      logUpload(`Đã lưu xong KiotViet!`);
+      logUpload(`Đã lưu xong Kiot!`);
     }
 
     async function importDmsExcel(file) {
