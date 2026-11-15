@@ -156,7 +156,7 @@
           <i data-lucide="smartphone" class="w-4 h-4"></i> 3. DMS
         </button>
         <button onclick="switchTab('custMatch')" id="dTab-custMatch" class="py-3 text-sm font-medium text-slate-500 hover:text-slate-800 flex items-center gap-2">
-          <i data-lucide="git-merge" class="w-4 h-4"></i> 4. Ghép KH
+          <i data-lucide="git-merge" class="w-4 h-4"></i> 4. Kiot/DMS
         </button>
         <button onclick="switchTab('promo')" id="dTab-promo" class="py-3 text-sm font-medium text-slate-500 hover:text-slate-800 flex items-center gap-2">
           <i data-lucide="gift" class="w-4 h-4"></i> 5. 0đ & KM
@@ -339,8 +339,7 @@
           <div id="suggestionsContainer" class="p-3 space-y-2.5"></div>
         </div>
 
-        <details class="space-y-2 bg-white rounded-2xl border border-slate-200 shadow-xs p-2.5">
-          <summary class="cursor-pointer text-xs font-bold text-slate-700 py-1">Xem các cặp quán đã ghép <span class="font-normal text-slate-400">(bấm để mở)</span></summary>
+        <div class="space-y-2">
           <!-- Bộ lọc hạng sản phẩm với màu sắc tách biệt rõ nét -->
           <div class="grid grid-cols-3 bg-slate-200/80 p-1 rounded-xl text-[11px] sm:text-xs gap-1">
             <button onclick="setMatchTierFilter('ALL')" id="tierBtn-ALL" class="py-1.5 font-bold rounded-lg bg-white text-slate-900 shadow-xs">
@@ -377,7 +376,7 @@
               <tfoot id="linkedComparisonTableFoot" class="bg-slate-900 text-white font-extrabold text-xs"></tfoot>
             </table>
           </div>
-        </details>
+        </div>
       </div>
 
       <!-- ==================== TAB 5: 0Đ & KM ==================== -->
@@ -587,7 +586,7 @@
             <label>Từ sale<select id="trFrom" onchange="refreshTrTo()" class="w-full mt-0.5 px-2 py-2 border border-slate-300 rounded-xl bg-white"></select></label>
             <label>Sang sale<select id="trTo" class="w-full mt-0.5 px-2 py-2 border border-slate-300 rounded-xl bg-white"></select></label>
           </div>
-          <label class="block">Quán Kiot nguồn (số nhập của quán này sẽ giảm)<select id="trKv" class="w-full mt-0.5 px-2 py-2 border border-slate-300 rounded-xl bg-white"></select></label>
+          <label class="block">Quán Kiot nguồn (số nhập của quán này sẽ giảm)<input id="trKvSearch" type="text" oninput="refreshTrKv()" placeholder="Gõ tên hoặc mã quán để lọc..." class="w-full mt-0.5 mb-1 px-2 py-2 border border-slate-300 rounded-xl bg-white" /><select id="trKv" class="w-full mt-0.5 px-2 py-2 border border-slate-300 rounded-xl bg-white"></select></label>
           <label class="block">Nhóm sản phẩm<select id="trGroup" class="w-full mt-0.5 px-2 py-2 border border-slate-300 rounded-xl bg-white"></select></label>
           <div class="grid grid-cols-2 gap-2">
             <label>Tháng áp dụng<select id="trMonth" class="w-full mt-0.5 px-2 py-2 border border-slate-300 rounded-xl bg-white"></select></label>
