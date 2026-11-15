@@ -179,6 +179,8 @@
         <button onclick="openSkuModal()" class="shrink-0 bg-amber-600 text-white text-xs font-bold px-3 py-1.5 rounded-xl">Gán nhóm</button>
       </div>
 
+      <div id="transferNotice" class="hidden bg-purple-50 border border-purple-200 rounded-2xl p-3 text-[11px] text-purple-900 space-y-1"></div>
+
       <!-- ==================== TAB 1: ĐỐI CHIẾU SẢN LƯỢNG & LŨY KẾ ==================== -->
       <div id="view-reconcile" class="space-y-3">
         <div class="bg-gradient-to-br from-emerald-950 via-emerald-900 to-teal-950 text-white rounded-2xl p-4 shadow-md">
@@ -580,11 +582,12 @@
       </div>
       <div class="overflow-y-auto flex-1 space-y-3">
         <form onsubmit="submitTransfer(event)" class="bg-slate-50 p-3 rounded-2xl border border-slate-200 space-y-2 text-xs">
-          <p class="text-[11px] text-slate-500">Chuyển số bán <b>Kiot</b> từ sale này sang sale khác trong một tháng. Chỉ có hiệu lực sau khi SS/Admin duyệt.</p>
+          <p class="text-[11px] text-slate-500">Chuyển số bán <b>Kiot</b> từ sale này sang sale khác trong một tháng. Chọn quán nguồn để trừ đúng số nhập của quán đó; không chọn thì chỉ trừ trên tổng của sale. Chỉ có hiệu lực sau khi SS/Admin duyệt.</p>
           <div class="grid grid-cols-2 gap-2">
             <label>Từ sale<select id="trFrom" onchange="refreshTrTo()" class="w-full mt-0.5 px-2 py-2 border border-slate-300 rounded-xl bg-white"></select></label>
             <label>Sang sale<select id="trTo" class="w-full mt-0.5 px-2 py-2 border border-slate-300 rounded-xl bg-white"></select></label>
           </div>
+          <label class="block">Quán Kiot nguồn (số nhập của quán này sẽ giảm)<select id="trKv" class="w-full mt-0.5 px-2 py-2 border border-slate-300 rounded-xl bg-white"></select></label>
           <label class="block">Nhóm sản phẩm<select id="trGroup" class="w-full mt-0.5 px-2 py-2 border border-slate-300 rounded-xl bg-white"></select></label>
           <div class="grid grid-cols-2 gap-2">
             <label>Tháng áp dụng<select id="trMonth" class="w-full mt-0.5 px-2 py-2 border border-slate-300 rounded-xl bg-white"></select></label>
