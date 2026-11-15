@@ -57,6 +57,8 @@ async function checkSavedSession() {
   if (saved) {
     try {
       currentUser = JSON.parse(saved);
+      document.getElementById('loginScreen').classList.add('hidden');
+      document.getElementById('appShell').classList.remove('hidden');
       const { data: fresh, error: fe } = await supabaseClient.from('reconcile_users')
         .select('id,username,display_name,role,sales_rep_id,must_change_credentials,is_active').eq('id', currentUser.id).maybeSingle();
       if (!fe) {
@@ -426,28 +428,38 @@ function updateSelectedMonthsLabel() {
 }
 
 async function fetchAllRows(buildQueryFn, orderCols = []) {
-  let all = [];
-  let from = 0;
-  const pageSize = 1000;
+  // Tải nhiều trang cùng lúc (mỗi lượt 3 trang) thay vì lần lượt từng trang
+  const pageSize = 1000, batch = 3;
+  let all = [], page = 0;
   while (true) {
-    let q = buildQueryFn();
-    orderCols.forEach(c => { q = q.order(c); });
-    const { data, error } = await q.range(from, from + pageSize - 1);
-    if (error) throw error;
-    if (!data || data.length === 0) break;
-    all = all.concat(data);
-    if (data.length < pageSize) break;
-    from += pageSize;
+    const reqs = [];
+    for (let k = 0; k < batch; k++) {
+      let q = buildQueryFn();
+      orderCols.forEach(c => { q = q.order(c); });
+      const from = (page + k) * pageSize;
+      reqs.push(q.range(from, from + pageSize - 1));
+    }
+    const results = await Promise.all(reqs);
+    let done = false;
+    for (const { data, error } of results) {
+      if (error) { if (error.code === 'PGRST103') { done = true; break; } throw error; }
+      if (!data || data.length === 0) { done = true; break; }
+      all = all.concat(data);
+      if (data.length < pageSize) { done = true; break; }
+    }
+    if (done) break;
+    page += batch;
   }
   return all;
 }
 
 async function refreshAllData() {
   state._staticOk = false; // nạp lại cả danh sách khách/outlet
-  const [resReps, resGroups, resMaps] = await Promise.all([
+  const [resReps, resGroups, resMaps, resVM] = await Promise.all([
     supabaseClient.from('sales_reps').select('*').order('full_name'),
     supabaseClient.from('product_groups').select('*').order('display_order'),
-    supabaseClient.from('sku_mappings').select('*')
+    supabaseClient.from('sku_mappings').select('*'),
+    supabaseClient.from('v_available_months').select('month_date')
   ]);
 
   state.salesReps = resReps.data || [];
@@ -479,7 +491,7 @@ async function refreshAllData() {
     if ([...repSelect.options].some(o => o.value === prevRep)) repSelect.value = prevRep;
   }
 
-  const { data: viewMonths, error: vmErr } = await supabaseClient.from('v_available_months').select('month_date');
+  const { data: viewMonths, error: vmErr } = resVM;
   if (!vmErr && viewMonths && viewMonths.length > 0) {
     state.availableMonths = viewMonths.map(x => x.month_date).sort().reverse();
   } else {
@@ -501,14 +513,18 @@ async function refreshAllData() {
   await onFilterChange();
 }
 
+let filterToken = 0;
 async function onFilterChange() {
   if (selectedMonths.length === 0) return;
+  const token = ++filterToken;
+  const firstLoad = !state._staticOk;
   const trPromise = loadTransfers();
   const selectedRep = getActiveSalesRepId();
   const buildRepFilter = (q) => (selectedRep && selectedRep !== 'ALL') ? q.eq('sales_rep_id', selectedRep) : q;
 
-  const [recData, kvData, dmsData, kvCData, dmsOData, linksData, resSug] = await Promise.all([
-    fetchAllRows(() => buildRepFilter(supabaseClient.from('v_monthly_reconciliation').select('*')), ['month_date', 'product_group_id', 'sales_rep_id']),
+  // Tất cả yêu cầu chạy song song; tab Đối chiếu chỉ cần recPromise nên vẽ trước
+  const recPromise = fetchAllRows(() => buildRepFilter(supabaseClient.from('v_monthly_reconciliation').select('*')), ['month_date', 'product_group_id', 'sales_rep_id']);
+  const restPromise = Promise.all([
     fetchAllRows(() => buildRepFilter(supabaseClient.from('kv_sales_lines').select('*').in('sale_month', selectedMonths)), ['invoice_code', 'raw_product_code', 'selling_price', 'line_index']),
     fetchAllRows(() => buildRepFilter(supabaseClient.from('dms_order_lines').select('*').in('order_month', selectedMonths).eq('dis_code', DIS_CODE)), ['order_code', 'raw_product_code', 'order_type', 'line_index']),
     state._staticOk ? Promise.resolve(state.kvCustomers) : fetchAllRows(() => supabaseClient.from('kv_customers').select('*'), ['kv_customer_code']),
@@ -517,6 +533,16 @@ async function onFilterChange() {
     buildRepFilter(supabaseClient.from('v_customer_match_suggestions').select('*')).order('similarity_score', { ascending: false }).limit(80)
   ]);
 
+  if (firstLoad) {
+    const recData = await recPromise;
+    await trPromise;
+    if (token !== filterToken) return;
+    state.reconcileRowsAll = recData;
+    renderActiveTab();
+  }
+
+  const [recData, [kvData, dmsData, kvCData, dmsOData, linksData, resSug]] = await Promise.all([recPromise, restPromise]);
+  if (token !== filterToken) return;
   state.reconcileRowsAll = recData;
   state.kvLinesSelected = kvData;
   state.dmsLinesSelected = dmsData;
