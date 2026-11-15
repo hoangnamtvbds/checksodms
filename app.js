@@ -975,35 +975,19 @@ function renderCustomerMatchTab() {
   if (sugs.length === 0) {
     sugContainer.innerHTML = `<p class="text-xs text-slate-400 text-center py-2">Không còn gợi ý nào cần duyệt. Bấm <b>Ghép tay</b> nếu muốn nối thêm quán.</p>`;
   } else {
-    sugContainer.innerHTML = (showAllSugs ? sugs.slice(0, 30) : sugs.slice(0, 2)).map(s => `
-      <div class="p-3 rounded-xl border border-slate-200 bg-slate-50/80 space-y-2.5">
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-          <div class="bg-white p-2.5 rounded-lg border border-slate-200">
-            <div class="flex items-center justify-between text-[10px] font-bold text-slate-400">
-              <span>KIOT • ${s.kv_customer_code}</span>
-              <span>${esc(s.sales_rep_name || '')}</span>
-            </div>
-            <p class="font-bold text-slate-900 mt-0.5">${esc(s.kv_customer_name)}</p>
-          </div>
-          <div class="bg-white p-2.5 rounded-lg border border-emerald-200">
-            <div class="flex items-center justify-between text-[10px] font-bold text-emerald-600">
-              <span>DMS • ${s.dms_outlet_code}</span>
-              <span class="bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded">Giống ${s.similarity_score}%</span>
-            </div>
-            <p class="font-bold text-emerald-900 mt-0.5">${esc(s.dms_outlet_name)}</p>
-          </div>
+    sugContainer.innerHTML = (showAllSugs ? sugs.slice(0, 30) : sugs.slice(0, 1)).map(s => `
+      <div class="p-2 rounded-xl border border-slate-200 bg-slate-50/80 space-y-1.5">
+        <div class="text-[11px] leading-snug">
+          <div class="flex justify-between gap-2"><span class="font-bold text-slate-900 truncate">${esc(s.kv_customer_name)}</span><span class="text-[10px] text-slate-400 shrink-0">${s.kv_customer_code} • ${esc(s.sales_rep_name || '')}</span></div>
+          <div class="flex justify-between gap-2"><span class="font-bold text-emerald-800 truncate">&harr; ${esc(s.dms_outlet_name)}</span><span class="text-[10px] bg-amber-100 text-amber-800 px-1.5 rounded shrink-0">Giống ${s.similarity_score}%</span></div>
+          <div class="text-[10px] text-emerald-600">${s.dms_outlet_code}</div>
         </div>
-
-        <div class="grid grid-cols-2 gap-2">
-          <button onclick="rejectCustomerSuggestion('${s.kv_customer_code}', '${s.dms_outlet_code}')" class="bg-white hover:bg-rose-50 active:scale-98 text-rose-600 border border-rose-200 text-xs font-bold py-2 rounded-xl flex items-center justify-center gap-1.5 transition">
-            <i data-lucide="x-circle" class="w-4 h-4"></i> Từ Chối (Khác Quán)
-          </button>
-          <button onclick="confirmCustomerLink('${s.kv_customer_code}', '${s.dms_outlet_code}', ${s.similarity_score}, 'AUTO_NAME')" class="bg-emerald-700 hover:bg-emerald-800 active:scale-98 text-white text-xs font-bold py-2 rounded-xl flex items-center justify-center gap-1.5 transition">
-            <i data-lucide="check-circle-2" class="w-4 h-4"></i> Xác Nhận Là 1
-          </button>
+        <div class="grid grid-cols-2 gap-1.5">
+          <button onclick="rejectCustomerSuggestion('${s.kv_customer_code}', '${s.dms_outlet_code}')" class="bg-white text-rose-600 border border-rose-200 text-[11px] font-bold py-1.5 rounded-lg">Khác quán</button>
+          <button onclick="confirmCustomerLink('${s.kv_customer_code}', '${s.dms_outlet_code}', ${s.similarity_score}, 'AUTO_NAME')" class="bg-emerald-700 text-white text-[11px] font-bold py-1.5 rounded-lg">Là 1</button>
         </div>
       </div>
-    `).join('') + (sugs.length > 2 ? `<button onclick="toggleSugs()" class="w-full text-xs font-bold text-emerald-700 py-2">${showAllSugs ? 'Thu gọn' : 'Xem thêm ' + (sugs.length - 2) + ' gợi ý'}</button>` : '');
+    `).join('') + (sugs.length > 1 ? `<button onclick="toggleSugs()" class="w-full text-xs font-bold text-emerald-700 py-1.5">${showAllSugs ? 'Thu gọn' : 'Xem thêm ' + (sugs.length - 1) + ' gợi ý'}</button>` : '');
   }
 
   renderLinkedCustomersComparison();
@@ -1759,8 +1743,12 @@ function openSettings() { document.getElementById('settingsModal').classList.rem
 function menuGo(fn) { closeModal('settingsModal'); window[fn](); }
 function refreshTrKv() {
   const from = document.getElementById('trFrom').value;
-  const list = state.kvCustomers.filter(c => c.sales_rep_id === from);
-  document.getElementById('trKv').innerHTML = '<option value="">Không chọn quán — trừ trên tổng của sale</option>' + list.map(c => `<option value="${esc(c.kv_customer_code)}">${esc(c.kv_customer_name)}</option>`).join('');
+  const norm = s => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd');
+  const kw = norm(document.getElementById('trKvSearch').value.trim());
+  const list = state.kvCustomers.filter(c => c.sales_rep_id === from && (!kw || norm(c.kv_customer_name).includes(kw) || norm(c.kv_customer_code).includes(kw)));
+  const sel = document.getElementById('trKv');
+  sel.innerHTML = '<option value="">Không chọn quán — trừ trên tổng của sale</option>' + list.map(c => `<option value="${esc(c.kv_customer_code)}">${esc(c.kv_customer_name)}</option>`).join('');
+  if (kw && list.length === 1) sel.selectedIndex = 1;
 }
 function refreshTrTo() {
   refreshTrKv();
@@ -1824,6 +1812,7 @@ function openTransferModal() {
   const fromSel = document.getElementById('trFrom');
   fromSel.innerHTML = isSale ? opt(me) : state.salesReps.map(opt).join('');
   fromSel.disabled = isSale;
+  document.getElementById('trKvSearch').value = '';
   refreshTrTo();
   document.getElementById('trGroup').innerHTML = state.productGroups.map(g => `<option value="${g.id}">[${g.tier || 'Premium'}] ${g.group_name}</option>`).join('');
   document.getElementById('trMonth').innerHTML = state.availableMonths.map(m => `<option value="${m}">Tháng ${m.slice(5, 7)}/${m.slice(0, 4)}</option>`).join('');
