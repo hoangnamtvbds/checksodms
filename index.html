@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Đối Chiếu Sale Kiot & DMS | Carlsberg Team BC</title>
   <script src="https://cdn.tailwindcss.com/3.4.16"></script>
-  <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
-  <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4"></script>
+  <script defer src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+  <script defer src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
     body {
@@ -156,7 +156,7 @@
           <i data-lucide="smartphone" class="w-4 h-4"></i> 3. DMS
         </button>
         <button onclick="switchTab('custMatch')" id="dTab-custMatch" class="py-3 text-sm font-medium text-slate-500 hover:text-slate-800 flex items-center gap-2">
-          <i data-lucide="git-merge" class="w-4 h-4"></i> 4. Kiot/DMS
+          <i data-lucide="git-merge" class="w-4 h-4"></i> 4. Ghép KH
         </button>
         <button onclick="switchTab('promo')" id="dTab-promo" class="py-3 text-sm font-medium text-slate-500 hover:text-slate-800 flex items-center gap-2">
           <i data-lucide="gift" class="w-4 h-4"></i> 5. 0đ & KM
@@ -322,7 +322,7 @@
         </div>
       </div>
 
-      <!-- ==================== TAB 4: Kiot/DMS ==================== -->
+      <!-- ==================== TAB 4: GHÉP KH ==================== -->
       <div id="view-custMatch" class="hidden space-y-3.5">
         <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
           <div class="px-3.5 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between gap-2">
@@ -452,7 +452,7 @@
 
   <!-- ==================== MODAL QUẢN LÝ TÀI KHOẢN (CHỈ ADMIN) ==================== -->
   <div id="usersModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
-    <div class="bg-white rounded-t-3xl sm:rounded-2xl max-w-lg w-full p-5 shadow-xl space-y-4 max-h-[90vh] flex flex-col">
+    <div class="bg-white rounded-t-3xl sm:rounded-2xl max-w-lg w-full p-5 shadow-xl space-y-4 max-h-[88dvh] flex flex-col">
       <div class="flex items-center justify-between border-b pb-3">
         <h3 class="font-bold text-slate-800 text-base flex items-center gap-2">
           <i data-lucide="users" class="w-5 h-5 text-emerald-700"></i> Quản Lý Tài Khoản Team BC
@@ -502,7 +502,7 @@
   </div>
 
   <div id="settingsModal" onclick="if(event.target===this)closeModal('settingsModal')" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
-    <div class="bg-white rounded-t-3xl sm:rounded-3xl max-w-md w-full p-4 shadow-2xl space-y-3 max-h-[92vh] overflow-y-auto">
+    <div class="bg-white rounded-t-3xl sm:rounded-3xl max-w-md w-full p-4 shadow-2xl space-y-3 max-h-[88dvh] overflow-y-auto">
       <div class="flex items-center justify-between px-1">
         <h3 class="font-extrabold text-slate-900 text-base flex items-center gap-2"><i data-lucide="settings" class="w-5 h-5 text-emerald-700"></i> Cài đặt</h3>
         <button onclick="closeModal('settingsModal')" class="text-slate-400 p-1"><i data-lucide="x" class="w-5 h-5"></i></button>
@@ -552,7 +552,7 @@
   </div>
 
   <div id="transferLogModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
-    <div class="bg-white rounded-t-3xl sm:rounded-2xl max-w-lg w-full p-5 shadow-xl space-y-3 max-h-[90vh] flex flex-col">
+    <div class="bg-white rounded-t-3xl sm:rounded-2xl max-w-lg w-full p-5 shadow-xl space-y-3 max-h-[88dvh] flex flex-col">
       <div class="flex items-center justify-between border-b pb-3">
         <h3 class="font-bold text-slate-800 text-base">Nhật Ký Luân Chuyển</h3>
         <button onclick="closeModal('transferLogModal')" class="text-slate-400 p-1"><i data-lucide="x" class="w-5 h-5"></i></button>
@@ -562,7 +562,7 @@
   </div>
 
   <div id="storageModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
-    <div class="bg-white rounded-t-3xl sm:rounded-2xl max-w-lg w-full p-5 shadow-xl space-y-3 max-h-[90vh] flex flex-col">
+    <div class="bg-white rounded-t-3xl sm:rounded-2xl max-w-lg w-full p-5 shadow-xl space-y-3 max-h-[88dvh] flex flex-col">
       <div class="flex items-center justify-between border-b pb-3">
         <h3 class="font-bold text-slate-800 text-base">Dung Lượng & Dọn Dữ Liệu (Admin)</h3>
         <button onclick="closeModal('storageModal')" class="text-slate-400 p-1"><i data-lucide="x" class="w-5 h-5"></i></button>
@@ -574,7 +574,7 @@
   </div>
 
   <div id="transferModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
-    <div class="bg-white rounded-t-3xl sm:rounded-2xl max-w-lg w-full p-5 shadow-xl space-y-3 max-h-[92vh] flex flex-col">
+    <div class="bg-white rounded-t-3xl sm:rounded-2xl max-w-lg w-full p-5 shadow-xl space-y-3 max-h-[88dvh] flex flex-col">
       <div class="flex items-center justify-between border-b pb-3">
         <h3 class="font-bold text-slate-800 text-base">Luân Chuyển Số Giữa Sale</h3>
         <button onclick="closeModal('transferModal')" class="text-slate-400 p-1"><i data-lucide="x" class="w-5 h-5"></i></button>
@@ -638,7 +638,7 @@
 
   <!-- ==================== MODAL QUẢN LÝ MÃ SKU ==================== -->
   <div id="skuModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
-    <div class="bg-white rounded-t-3xl sm:rounded-2xl max-w-3xl w-full p-5 shadow-xl space-y-3 max-h-[85vh] flex flex-col">
+    <div class="bg-white rounded-t-3xl sm:rounded-2xl max-w-3xl w-full p-5 shadow-xl space-y-3 max-h-[85dvh] flex flex-col">
       <div class="flex items-center justify-between border-b pb-3">
         <h3 class="font-bold text-slate-800 text-base">Bảng Quy Đổi Mã SKU Về Nhóm Chuẩn</h3>
         <button onclick="closeModal('skuModal')" class="text-slate-400 p-1"><i data-lucide="x" class="w-5 h-5"></i></button>
@@ -673,7 +673,7 @@
   </div>
 
   <!-- ==================== JAVASCRIPT LOGIC ==================== -->
-  <script src="config.js"></script>
-  <script src="app.js"></script>
+  <script defer src="config.js"></script>
+  <script defer src="app.js"></script>
 </body>
 </html>
