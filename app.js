@@ -649,10 +649,14 @@ function renderReconcileTab() {
   });
 
   const myRep = getActiveSalesRepId();
-  if (myRep && myRep !== 'ALL') {
+  {
+    const isAll = !myRep || myRep === 'ALL';
     state.transfers.filter(t => t.status === 'APPROVED').forEach(t => {
       const item = groupedMap.get(t.product_group_id), m = String(t.month_date).slice(0, 10);
-      const d = t.from_rep_id === myRep ? -Number(t.quantity) : t.to_rep_id === myRep ? Number(t.quantity) : 0;
+      // Xem tất cả sale: chỉ luân chuyển có đầu "Tổng" làm đổi tổng (sale↔sale tự triệt tiêu)
+      const d = isAll
+        ? (!t.from_rep_id ? Number(t.quantity) : !t.to_rep_id ? -Number(t.quantity) : 0)
+        : (t.from_rep_id === myRep ? -Number(t.quantity) : t.to_rep_id === myRep ? Number(t.quantity) : 0);
       if (!item || !d) return;
       item.transfer_net = (item.transfer_net || 0) + d;
       if (selSet.has(m)) { item.kv_paid_qty += d; item.period_balance += d; }
@@ -1744,9 +1748,10 @@ async function deleteMonthData(m) {
 // ===== LUÂN CHUYỂN SỐ GIỮA SALE (CẦN SS/ADMIN DUYỆT) =====
 function openSettings() { document.getElementById('settingsModal').classList.remove('hidden'); }
 function menuGo(fn) { closeModal('settingsModal'); window[fn](); }
+const POOL_OPT = '<option value="POOL">Tổng (không rõ nguồn)</option>';
 function refreshTrTo() {
   const from = document.getElementById('trFrom').value;
-  document.getElementById('trTo').innerHTML = state.salesReps.filter(r => r.id !== from).map(r => `<option value="${r.id}">${r.full_name}</option>`).join('');
+  document.getElementById('trTo').innerHTML = (from === 'POOL' ? '' : POOL_OPT) + state.salesReps.filter(r => r.id !== from).map(r => `<option value="${r.id}">${r.full_name}</option>`).join('');
 }
 async function logTransfer(action, t, note) {
   const rep = id => state.salesReps.find(r => r.id === id)?.full_name || '?';
@@ -1803,7 +1808,7 @@ function openTransferModal() {
   const opt = r => `<option value="${r.id}">${r.full_name}</option>`;
   const me = state.salesReps.find(r => r.id === currentUser.sales_rep_id) || { id: currentUser.sales_rep_id, full_name: currentUser.display_name };
   const fromSel = document.getElementById('trFrom');
-  fromSel.innerHTML = isSale ? opt(me) : state.salesReps.map(opt).join('');
+  fromSel.innerHTML = isSale ? opt(me) + POOL_OPT : POOL_OPT + state.salesReps.map(opt).join('');
   fromSel.disabled = isSale;
   refreshTrTo();
   document.getElementById('trGroup').innerHTML = state.productGroups.map(g => `<option value="${g.id}">[${g.tier || 'Premium'}] ${g.group_name}</option>`).join('');
@@ -1822,15 +1827,16 @@ async function submitTransfer(e) {
   const fail = t => { msg.innerText = t; msg.classList.remove('hidden'); };
   msg.classList.add('hidden');
   const q = Number(v('trQty')), reason = v('trReason').trim();
-  if (!v('trFrom') || !v('trTo') || v('trFrom') === v('trTo')) return fail('Chọn 2 sale khác nhau!');
+  if (!v('trFrom') || !v('trTo') || v('trFrom') === v('trTo')) return fail('Chọn 2 bên khác nhau!');
+  const toId = x => x === 'POOL' ? null : x;
   if (!(q > 0)) return fail('Số lượng phải lớn hơn 0!');
   if (!reason) return fail('Vui lòng nhập lý do!');
   const { error } = await supabaseClient.from('sale_transfers').insert({
-    month_date: v('trMonth'), from_rep_id: v('trFrom'), to_rep_id: v('trTo'), product_group_id: v('trGroup'),
+    month_date: v('trMonth'), from_rep_id: toId(v('trFrom')), to_rep_id: toId(v('trTo')), product_group_id: v('trGroup'),
     quantity: q, reason, status: 'PENDING', requested_by: currentUser.id, requested_by_name: currentUser.display_name
   });
   if (error) return fail('Lỗi gửi yêu cầu: ' + error.message);
-  await logTransfer('CREATE', { from_rep_id: v('trFrom'), to_rep_id: v('trTo'), product_group_id: v('trGroup'), quantity: q, month_date: v('trMonth'), reason });
+  await logTransfer('CREATE', { from_rep_id: toId(v('trFrom')), to_rep_id: toId(v('trTo')), product_group_id: v('trGroup'), quantity: q, month_date: v('trMonth'), reason });
   document.getElementById('trQty').value = ''; document.getElementById('trReason').value = '';
   await loadTransfers(); renderTransferList();
 }
@@ -1861,7 +1867,7 @@ function renderTransferList() {
   document.getElementById('transferList').innerHTML = list.length === 0 ? '<p class="text-xs text-slate-400 text-center py-3">Chưa có yêu cầu luân chuyển nào.</p>' : list.map(t => {
     const [lb, cl] = st[t.status] || [t.status, 'bg-slate-100'];
     return `<div class="p-3 rounded-xl border border-slate-200 text-xs space-y-1">
-      <div class="flex justify-between gap-2"><b class="text-slate-900">${rep.get(t.from_rep_id) || '?'} &rarr; ${rep.get(t.to_rep_id) || '?'}</b><span class="px-2 py-0.5 rounded font-bold ${cl}">${lb}</span></div>
+      <div class="flex justify-between gap-2"><b class="text-slate-900">${t.from_rep_id ? (rep.get(t.from_rep_id) || '?') : 'Tổng'} &rarr; ${t.to_rep_id ? (rep.get(t.to_rep_id) || '?') : 'Tổng'}</b><span class="px-2 py-0.5 rounded font-bold ${cl}">${lb}</span></div>
       <div class="text-slate-700">${grp.get(t.product_group_id) || ''} • <b>${fmtNum(t.quantity)}</b> • Tháng ${String(t.month_date).slice(5, 7)}/${String(t.month_date).slice(0, 4)}</div>
       <div class="text-slate-500">Lý do: ${esc(t.reason || '')}</div>
       <div class="text-[10px] text-slate-400">Gửi: ${esc(t.requested_by_name || '')} lúc ${dt(t.created_at)}${t.decided_at ? ` • ${lb}: ${esc(t.decided_by_name || '')} lúc ${dt(t.decided_at)}` : ''}${t.decision_note ? ` • ${esc(t.decision_note)}` : ''}</div>
@@ -1875,7 +1881,7 @@ function renderTransferList() {
 // Tổng luân chuyển đã duyệt của sale đang chọn trong các tháng đã chọn (theo hạng SP nếu có lọc)
 function getTransferNet(tierFilter) {
   const rep = getActiveSalesRepId();
-  if (!rep || rep === 'ALL') return 0;
+  const isAll = !rep || rep === 'ALL';
   const sel = new Set(selectedMonths);
   let net = 0;
   state.transfers.filter(t => t.status === 'APPROVED' && sel.has(String(t.month_date).slice(0, 10))).forEach(t => {
@@ -1883,7 +1889,9 @@ function getTransferNet(tierFilter) {
     if (!g) return;
     const tier = g.tier || (g.brand.toLowerCase().includes('huda') ? 'Mainstream' : 'Premium');
     if (tierFilter && tierFilter !== 'ALL' && tier !== tierFilter) return;
-    net += t.from_rep_id === rep ? -Number(t.quantity) : t.to_rep_id === rep ? Number(t.quantity) : 0;
+    net += isAll
+      ? (!t.from_rep_id ? Number(t.quantity) : !t.to_rep_id ? -Number(t.quantity) : 0)
+      : (t.from_rep_id === rep ? -Number(t.quantity) : t.to_rep_id === rep ? Number(t.quantity) : 0);
   });
   return net;
 }
