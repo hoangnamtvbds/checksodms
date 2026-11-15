@@ -649,14 +649,10 @@ function renderReconcileTab() {
   });
 
   const myRep = getActiveSalesRepId();
-  {
-    const isAll = !myRep || myRep === 'ALL';
+  if (myRep && myRep !== 'ALL') {
     state.transfers.filter(t => t.status === 'APPROVED').forEach(t => {
       const item = groupedMap.get(t.product_group_id), m = String(t.month_date).slice(0, 10);
-      // Xem tất cả sale: chỉ luân chuyển có đầu "Tổng" làm đổi tổng (sale↔sale tự triệt tiêu)
-      const d = isAll
-        ? (!t.from_rep_id ? Number(t.quantity) : !t.to_rep_id ? -Number(t.quantity) : 0)
-        : (t.from_rep_id === myRep ? -Number(t.quantity) : t.to_rep_id === myRep ? Number(t.quantity) : 0);
+      const d = t.from_rep_id === myRep ? -Number(t.quantity) : t.to_rep_id === myRep ? Number(t.quantity) : 0;
       if (!item || !d) return;
       item.transfer_net = (item.transfer_net || 0) + d;
       if (selSet.has(m)) { item.kv_paid_qty += d; item.period_balance += d; }
@@ -770,6 +766,7 @@ function renderReconcileTab() {
   document.getElementById('kpi-totalLabel').innerText =
     (totPos === 0 && totNeg === 0) ? 'Đã khớp 100% số bán Kiot và số key DMS'
     : `Chưa key DMS: ${fmtNum(totPos)} • Key dư: ${fmtNum(totNeg)} (thùng/két)`;
+  renderTransferNotice();
 }
 
 // =========================================================================
@@ -966,6 +963,8 @@ function getActiveSalesRepId() {
   return document.getElementById('filterSalesRep').value;
 }
 
+let showAllSugs = false;
+function toggleSugs() { showAllSugs = !showAllSugs; renderCustomerMatchTab(); }
 function renderCustomerMatchTab() {
   const selectedRep = getActiveSalesRepId();
   const linkedDmsNow = new Set(state.customerLinks.map(l => l.dms_outlet_code));
@@ -976,7 +975,7 @@ function renderCustomerMatchTab() {
   if (sugs.length === 0) {
     sugContainer.innerHTML = `<p class="text-xs text-slate-400 text-center py-2">Không còn gợi ý nào cần duyệt. Bấm <b>Ghép tay</b> nếu muốn nối thêm quán.</p>`;
   } else {
-    sugContainer.innerHTML = sugs.slice(0, 15).map(s => `
+    sugContainer.innerHTML = (showAllSugs ? sugs.slice(0, 30) : sugs.slice(0, 2)).map(s => `
       <div class="p-3 rounded-xl border border-slate-200 bg-slate-50/80 space-y-2.5">
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
           <div class="bg-white p-2.5 rounded-lg border border-slate-200">
@@ -1004,7 +1003,7 @@ function renderCustomerMatchTab() {
           </button>
         </div>
       </div>
-    `).join('');
+    `).join('') + (sugs.length > 2 ? `<button onclick="toggleSugs()" class="w-full text-xs font-bold text-emerald-700 py-2">${showAllSugs ? 'Thu gọn' : 'Xem thêm ' + (sugs.length - 2) + ' gợi ý'}</button>` : '');
   }
 
   renderLinkedCustomersComparison();
@@ -1160,6 +1159,16 @@ function renderLinkedCustomersComparison() {
       skuMatrix[info.group_name].dms += Number(x.quantity);
     });
 
+    const selM = new Set(selectedMonths);
+    state.transfers.filter(t => t.status === 'APPROVED' && t.kv_customer_code === l.kv_customer_code && selM.has(String(t.month_date).slice(0, 10))).forEach(t => {
+      const g = state.productGroups.find(x => x.id === t.product_group_id);
+      if (!g) return;
+      const tier = g.tier || (g.brand.toLowerCase().includes('huda') ? 'Mainstream' : 'Premium');
+      if (matchTierFilter !== 'ALL' && tier !== matchTierFilter) return;
+      if (!skuMatrix[g.group_name]) skuMatrix[g.group_name] = { kv: 0, dms: 0, tier };
+      skuMatrix[g.group_name].kv -= Number(t.quantity);
+    });
+
     let sumKv = 0, sumDms = 0;
     Object.values(skuMatrix).forEach(v => { sumKv += v.kv; sumDms += v.dms; });
     const bal = sumKv - sumDms;
@@ -1244,7 +1253,7 @@ function renderLinkedCustomersComparison() {
     if (matchTierFilter !== 'ALL' && getLineTier('DMS', x) !== matchTierFilter) return;
     unDms += Number(x.quantity);
   });
-  const trNetL = getTransferNet(matchTierFilter);
+  const trNetL = getTransferNet(matchTierFilter, true);
 
   tfoot.innerHTML = `
     <tr>
@@ -1748,10 +1757,15 @@ async function deleteMonthData(m) {
 // ===== LUÂN CHUYỂN SỐ GIỮA SALE (CẦN SS/ADMIN DUYỆT) =====
 function openSettings() { document.getElementById('settingsModal').classList.remove('hidden'); }
 function menuGo(fn) { closeModal('settingsModal'); window[fn](); }
-const POOL_OPT = '<option value="POOL">Tổng (không rõ nguồn)</option>';
-function refreshTrTo() {
+function refreshTrKv() {
   const from = document.getElementById('trFrom').value;
-  document.getElementById('trTo').innerHTML = (from === 'POOL' ? '' : POOL_OPT) + state.salesReps.filter(r => r.id !== from).map(r => `<option value="${r.id}">${r.full_name}</option>`).join('');
+  const list = state.kvCustomers.filter(c => c.sales_rep_id === from);
+  document.getElementById('trKv').innerHTML = '<option value="">Không chọn quán — trừ trên tổng của sale</option>' + list.map(c => `<option value="${esc(c.kv_customer_code)}">${esc(c.kv_customer_name)}</option>`).join('');
+}
+function refreshTrTo() {
+  refreshTrKv();
+  const from = document.getElementById('trFrom').value;
+  document.getElementById('trTo').innerHTML = state.salesReps.filter(r => r.id !== from).map(r => `<option value="${r.id}">${r.full_name}</option>`).join('');
 }
 async function logTransfer(action, t, note) {
   const rep = id => state.salesReps.find(r => r.id === id)?.full_name || '?';
@@ -1808,7 +1822,7 @@ function openTransferModal() {
   const opt = r => `<option value="${r.id}">${r.full_name}</option>`;
   const me = state.salesReps.find(r => r.id === currentUser.sales_rep_id) || { id: currentUser.sales_rep_id, full_name: currentUser.display_name };
   const fromSel = document.getElementById('trFrom');
-  fromSel.innerHTML = isSale ? opt(me) + POOL_OPT : POOL_OPT + state.salesReps.map(opt).join('');
+  fromSel.innerHTML = isSale ? opt(me) : state.salesReps.map(opt).join('');
   fromSel.disabled = isSale;
   refreshTrTo();
   document.getElementById('trGroup').innerHTML = state.productGroups.map(g => `<option value="${g.id}">[${g.tier || 'Premium'}] ${g.group_name}</option>`).join('');
@@ -1827,16 +1841,15 @@ async function submitTransfer(e) {
   const fail = t => { msg.innerText = t; msg.classList.remove('hidden'); };
   msg.classList.add('hidden');
   const q = Number(v('trQty')), reason = v('trReason').trim();
-  if (!v('trFrom') || !v('trTo') || v('trFrom') === v('trTo')) return fail('Chọn 2 bên khác nhau!');
-  const toId = x => x === 'POOL' ? null : x;
+  if (!v('trFrom') || !v('trTo') || v('trFrom') === v('trTo')) return fail('Chọn 2 sale khác nhau!');
   if (!(q > 0)) return fail('Số lượng phải lớn hơn 0!');
   if (!reason) return fail('Vui lòng nhập lý do!');
   const { error } = await supabaseClient.from('sale_transfers').insert({
-    month_date: v('trMonth'), from_rep_id: toId(v('trFrom')), to_rep_id: toId(v('trTo')), product_group_id: v('trGroup'),
+    month_date: v('trMonth'), from_rep_id: v('trFrom'), to_rep_id: v('trTo'), product_group_id: v('trGroup'), kv_customer_code: v('trKv') || null,
     quantity: q, reason, status: 'PENDING', requested_by: currentUser.id, requested_by_name: currentUser.display_name
   });
   if (error) return fail('Lỗi gửi yêu cầu: ' + error.message);
-  await logTransfer('CREATE', { from_rep_id: toId(v('trFrom')), to_rep_id: toId(v('trTo')), product_group_id: v('trGroup'), quantity: q, month_date: v('trMonth'), reason });
+  await logTransfer('CREATE', { from_rep_id: v('trFrom'), to_rep_id: v('trTo'), product_group_id: v('trGroup'), quantity: q, month_date: v('trMonth'), reason });
   document.getElementById('trQty').value = ''; document.getElementById('trReason').value = '';
   await loadTransfers(); renderTransferList();
 }
@@ -1867,9 +1880,9 @@ function renderTransferList() {
   document.getElementById('transferList').innerHTML = list.length === 0 ? '<p class="text-xs text-slate-400 text-center py-3">Chưa có yêu cầu luân chuyển nào.</p>' : list.map(t => {
     const [lb, cl] = st[t.status] || [t.status, 'bg-slate-100'];
     return `<div class="p-3 rounded-xl border border-slate-200 text-xs space-y-1">
-      <div class="flex justify-between gap-2"><b class="text-slate-900">${t.from_rep_id ? (rep.get(t.from_rep_id) || '?') : 'Tổng'} &rarr; ${t.to_rep_id ? (rep.get(t.to_rep_id) || '?') : 'Tổng'}</b><span class="px-2 py-0.5 rounded font-bold ${cl}">${lb}</span></div>
+      <div class="flex justify-between gap-2"><b class="text-slate-900">${rep.get(t.from_rep_id) || '?'} &rarr; ${rep.get(t.to_rep_id) || '?'}</b><span class="px-2 py-0.5 rounded font-bold ${cl}">${lb}</span></div>
       <div class="text-slate-700">${grp.get(t.product_group_id) || ''} • <b>${fmtNum(t.quantity)}</b> • Tháng ${String(t.month_date).slice(5, 7)}/${String(t.month_date).slice(0, 4)}</div>
-      <div class="text-slate-500">Lý do: ${esc(t.reason || '')}</div>
+      <div class="text-slate-500">${t.kv_customer_code ? 'Quán nguồn: <b>' + esc((state.kvCustomers.find(c => c.kv_customer_code === t.kv_customer_code) || {}).kv_customer_name || t.kv_customer_code) + '</b> • ' : 'Trừ trên tổng • '}Lý do: ${esc(t.reason || '')}</div>
       <div class="text-[10px] text-slate-400">Gửi: ${esc(t.requested_by_name || '')} lúc ${dt(t.created_at)}${t.decided_at ? ` • ${lb}: ${esc(t.decided_by_name || '')} lúc ${dt(t.decided_at)}` : ''}${t.decision_note ? ` • ${esc(t.decision_note)}` : ''}</div>
       ${isManagerRole() ? `<button onclick="deleteTransfer('${t.id}')" class="text-[11px] text-rose-600 font-bold hover:underline">Xóa yêu cầu</button>` : ''}
       ${t.status === 'PENDING' ? `<div class="flex gap-2 pt-1">
@@ -1879,9 +1892,10 @@ function renderTransferList() {
   }).join('');
 }
 // Tổng luân chuyển đã duyệt của sale đang chọn trong các tháng đã chọn (theo hạng SP nếu có lọc)
-function getTransferNet(tierFilter) {
+function getTransferNet(tierFilter, skipLinkedFrom) {
   const rep = getActiveSalesRepId();
   const isAll = !rep || rep === 'ALL';
+  const linked = skipLinkedFrom ? new Set(state.customerLinks.map(l => l.kv_customer_code)) : null;
   const sel = new Set(selectedMonths);
   let net = 0;
   state.transfers.filter(t => t.status === 'APPROVED' && sel.has(String(t.month_date).slice(0, 10))).forEach(t => {
@@ -1889,11 +1903,29 @@ function getTransferNet(tierFilter) {
     if (!g) return;
     const tier = g.tier || (g.brand.toLowerCase().includes('huda') ? 'Mainstream' : 'Premium');
     if (tierFilter && tierFilter !== 'ALL' && tier !== tierFilter) return;
-    net += isAll
-      ? (!t.from_rep_id ? Number(t.quantity) : !t.to_rep_id ? -Number(t.quantity) : 0)
-      : (t.from_rep_id === rep ? -Number(t.quantity) : t.to_rep_id === rep ? Number(t.quantity) : 0);
+    const q = Number(t.quantity);
+    // Bên chuyển đi đã trừ trực tiếp ở dòng quán (nếu quán đã ghép) thì không trừ lại ở dòng tổng
+    const skip = linked && t.kv_customer_code && linked.has(t.kv_customer_code);
+    if ((isAll || t.from_rep_id === rep) && !skip) net -= q;
+    if (isAll || t.to_rep_id === rep) net += q;
   });
   return net;
+}
+// Thông báo cho sale biết số luân chuyển đã duyệt liên quan tới mình
+function renderTransferNotice() {
+  const el = document.getElementById('transferNotice');
+  if (!el) return;
+  const rep = getActiveSalesRepId();
+  const sel = new Set(selectedMonths);
+  const list = (!rep || rep === 'ALL') ? [] : state.transfers.filter(t => t.status === 'APPROVED' && sel.has(String(t.month_date).slice(0, 10)) && (t.from_rep_id === rep || t.to_rep_id === rep));
+  if (!list.length) { el.classList.add('hidden'); return; }
+  const rn = new Map(state.salesReps.map(r => [r.id, r.full_name])), gn = new Map(state.productGroups.map(g => [g.id, g.group_name]));
+  el.innerHTML = '<div class="font-bold">Luân chuyển số đã duyệt trong kỳ</div>' + list.map(t => {
+    const out = t.from_rep_id === rep;
+    const q = t.kv_customer_code ? ((state.kvCustomers.find(c => c.kv_customer_code === t.kv_customer_code) || {}).kv_customer_name || t.kv_customer_code) : null;
+    return `<div>${out ? '−' : '+'}${fmtNum(t.quantity)} ${esc(gn.get(t.product_group_id) || '')} • ${out ? 'chuyển sang ' + esc(rn.get(t.to_rep_id) || '?') : 'nhận từ ' + esc(rn.get(t.from_rep_id) || '?')}${q ? ' • quán ' + esc(q) : ''} <span class="text-purple-600">(${esc(t.reason || '')})</span></div>`;
+  }).join('');
+  el.classList.remove('hidden');
 }
 function fmtNum(n) { return Number(n || 0).toLocaleString('vi-VN'); }
 function toggleAccordion(id) { document.getElementById(id).classList.toggle('hidden'); }
