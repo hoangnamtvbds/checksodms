@@ -103,23 +103,9 @@
           </div>
         </div>
 
-        <div class="flex items-center gap-1.5 shrink-0">
-          <!-- Admin và Sale Sup (SS) đều có nút Nạp Excel -->
-          <button id="btnAdminUpload" onclick="openUploadModal()" class="hidden inline-flex items-center gap-1 bg-amber-400 hover:bg-amber-500 active:scale-95 text-slate-950 font-bold text-xs px-3 py-2 rounded-xl shadow transition">
-            <i data-lucide="upload-cloud" class="w-4 h-4"></i>
-            <span>Nạp Excel</span>
-          </button>
-          <!-- Chỉ Admin mới có nút Quản lý Tài khoản -->
-          <button id="btnAdminUsers" onclick="openUsersModal()" class="hidden p-2 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-emerald-100 transition" title="Quản lý tài khoản">
-            <i data-lucide="users" class="w-4 h-4"></i>
-          </button>
-          <button onclick="openChangePwModal()" class="p-2 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-emerald-100 transition" title="Đổi mật khẩu">
-            <i data-lucide="key" class="w-4 h-4"></i>
-          </button>
-          <button onclick="handleLogout()" class="p-2 rounded-xl bg-white/10 hover:bg-rose-600/80 active:scale-95 text-emerald-100 transition" title="Đăng xuất">
-            <i data-lucide="log-out" class="w-4 h-4"></i>
-          </button>
-        </div>
+        <button onclick="openSettings()" class="shrink-0 p-2.5 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-emerald-100 transition" title="Cài đặt">
+          <i data-lucide="settings" class="w-5 h-5"></i>
+        </button>
       </div>
     </header>
 
@@ -513,6 +499,66 @@
     </div>
   </div>
 
+  <div id="settingsModal" onclick="if(event.target===this)closeModal('settingsModal')" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white rounded-t-3xl sm:rounded-3xl max-w-md w-full p-4 shadow-2xl space-y-3 max-h-[92vh] overflow-y-auto">
+      <div class="flex items-center justify-between px-1">
+        <h3 class="font-extrabold text-slate-900 text-base flex items-center gap-2"><i data-lucide="settings" class="w-5 h-5 text-emerald-700"></i> Cài đặt</h3>
+        <button onclick="closeModal('settingsModal')" class="text-slate-400 p-1"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <div class="flex items-center gap-3 bg-gradient-to-r from-emerald-900 to-teal-800 text-white rounded-2xl p-3.5">
+        <span id="settingsAvatar" class="w-11 h-11 rounded-full bg-white/20 flex items-center justify-center font-extrabold text-lg">?</span>
+        <div class="min-w-0"><div id="settingsName" class="font-bold text-sm truncate"></div><div id="settingsRole" class="text-[11px] text-emerald-200"></div></div>
+      </div>
+      <div class="space-y-1.5">
+      <button id="btnAdminUpload" onclick="menuGo('openUploadModal')" class="hidden w-full flex items-center gap-3 p-3 rounded-2xl bg-amber-50 hover:bg-amber-100 text-left active:scale-[.99] transition">
+        <span class="w-9 h-9 shrink-0 rounded-xl bg-amber-400 text-slate-900 flex items-center justify-center"><i data-lucide="upload-cloud" class="w-4 h-4"></i></span>
+        <span class="flex-1 min-w-0"><b class="block text-sm text-slate-900">Nạp file Excel</b><span class="block text-[11px] text-slate-500">Cập nhật số Kiot & DMS</span></span>
+        <i data-lucide="chevron-right" class="w-4 h-4 text-slate-400 shrink-0"></i>
+      </button>
+      <button id="btnMenuSku" onclick="menuGo('openSkuModal')" class="hidden w-full flex items-center gap-3 p-3 rounded-2xl bg-slate-50 hover:bg-slate-100 text-left active:scale-[.99] transition">
+        <span class="w-9 h-9 shrink-0 rounded-xl bg-emerald-700 text-white flex items-center justify-center"><i data-lucide="layers" class="w-4 h-4"></i></span>
+        <span class="flex-1 min-w-0"><b class="block text-sm text-slate-900">Mã SKU</b><span class="block text-[11px] text-slate-500">Gán nhóm cho mã hàng mới</span></span>
+        <i data-lucide="chevron-right" class="w-4 h-4 text-slate-400 shrink-0"></i>
+      </button>
+      <button id="btnMenuLog" onclick="menuGo('openTransferLog')" class="hidden w-full flex items-center gap-3 p-3 rounded-2xl bg-slate-50 hover:bg-slate-100 text-left active:scale-[.99] transition">
+        <span class="w-9 h-9 shrink-0 rounded-xl bg-emerald-700 text-white flex items-center justify-center"><i data-lucide="history" class="w-4 h-4"></i></span>
+        <span class="flex-1 min-w-0"><b class="block text-sm text-slate-900">Nhật ký luân chuyển</b><span class="block text-[11px] text-slate-500">Tạo, duyệt, từ chối, xóa</span></span>
+        <i data-lucide="chevron-right" class="w-4 h-4 text-slate-400 shrink-0"></i>
+      </button>
+      <button id="btnAdminUsers" onclick="menuGo('openUsersModal')" class="hidden w-full flex items-center gap-3 p-3 rounded-2xl bg-slate-50 hover:bg-slate-100 text-left active:scale-[.99] transition">
+        <span class="w-9 h-9 shrink-0 rounded-xl bg-emerald-700 text-white flex items-center justify-center"><i data-lucide="users" class="w-4 h-4"></i></span>
+        <span class="flex-1 min-w-0"><b class="block text-sm text-slate-900">Quản lý tài khoản</b><span class="block text-[11px] text-slate-500">Cấp, xem, xóa tài khoản</span></span>
+        <i data-lucide="chevron-right" class="w-4 h-4 text-slate-400 shrink-0"></i>
+      </button>
+      <button id="btnMenuStorage" onclick="menuGo('openStorageModal')" class="hidden w-full flex items-center gap-3 p-3 rounded-2xl bg-slate-50 hover:bg-slate-100 text-left active:scale-[.99] transition">
+        <span class="w-9 h-9 shrink-0 rounded-xl bg-emerald-700 text-white flex items-center justify-center"><i data-lucide="database" class="w-4 h-4"></i></span>
+        <span class="flex-1 min-w-0"><b class="block text-sm text-slate-900">Dung lượng & dọn dữ liệu</b><span class="block text-[11px] text-slate-500">Xem bộ nhớ, xóa dữ liệu theo tháng</span></span>
+        <i data-lucide="chevron-right" class="w-4 h-4 text-slate-400 shrink-0"></i>
+      </button>
+      <button onclick="menuGo('openChangePwModal')" class="w-full flex items-center gap-3 p-3 rounded-2xl bg-slate-50 hover:bg-slate-100 text-left active:scale-[.99] transition">
+        <span class="w-9 h-9 shrink-0 rounded-xl bg-emerald-700 text-white flex items-center justify-center"><i data-lucide="key" class="w-4 h-4"></i></span>
+        <span class="flex-1 min-w-0"><b class="block text-sm text-slate-900">Đổi mật khẩu</b><span class="block text-[11px] text-slate-500">Đổi mật khẩu đăng nhập của bạn</span></span>
+        <i data-lucide="chevron-right" class="w-4 h-4 text-slate-400 shrink-0"></i>
+      </button>
+      <button onclick="menuGo('handleLogout')" class="w-full flex items-center gap-3 p-3 rounded-2xl bg-rose-50 hover:bg-rose-100 text-left active:scale-[.99] transition">
+        <span class="w-9 h-9 shrink-0 rounded-xl bg-rose-500 text-white flex items-center justify-center"><i data-lucide="log-out" class="w-4 h-4"></i></span>
+        <span class="flex-1 min-w-0"><b class="block text-sm text-slate-900">Đăng xuất</b><span class="block text-[11px] text-slate-500">Thoát khỏi hệ thống</span></span>
+        <i data-lucide="chevron-right" class="w-4 h-4 text-slate-400 shrink-0"></i>
+      </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="transferLogModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white rounded-t-3xl sm:rounded-2xl max-w-lg w-full p-5 shadow-xl space-y-3 max-h-[90vh] flex flex-col">
+      <div class="flex items-center justify-between border-b pb-3">
+        <h3 class="font-bold text-slate-800 text-base">Nhật Ký Luân Chuyển</h3>
+        <button onclick="closeModal('transferLogModal')" class="text-slate-400 p-1"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <div id="transferLogList" class="overflow-y-auto flex-1 space-y-2"></div>
+    </div>
+  </div>
+
   <div id="storageModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
     <div class="bg-white rounded-t-3xl sm:rounded-2xl max-w-lg w-full p-5 shadow-xl space-y-3 max-h-[90vh] flex flex-col">
       <div class="flex items-center justify-between border-b pb-3">
@@ -533,9 +579,9 @@
       </div>
       <div class="overflow-y-auto flex-1 space-y-3">
         <form onsubmit="submitTransfer(event)" class="bg-slate-50 p-3 rounded-2xl border border-slate-200 space-y-2 text-xs">
-          <p class="text-[11px] text-slate-500">Chuyển số <b>key DMS</b> từ sale này sang sale khác trong một tháng. Chỉ có hiệu lực sau khi SS/Admin duyệt.</p>
+          <p class="text-[11px] text-slate-500">Chuyển số bán <b>Kiot</b> từ sale này sang sale khác trong một tháng. Chỉ có hiệu lực sau khi SS/Admin duyệt.</p>
           <div class="grid grid-cols-2 gap-2">
-            <label>Từ sale<select id="trFrom" class="w-full mt-0.5 px-2 py-2 border border-slate-300 rounded-xl bg-white"></select></label>
+            <label>Từ sale<select id="trFrom" onchange="refreshTrTo()" class="w-full mt-0.5 px-2 py-2 border border-slate-300 rounded-xl bg-white"></select></label>
             <label>Sang sale<select id="trTo" class="w-full mt-0.5 px-2 py-2 border border-slate-300 rounded-xl bg-white"></select></label>
           </div>
           <label class="block">Nhóm sản phẩm<select id="trGroup" class="w-full mt-0.5 px-2 py-2 border border-slate-300 rounded-xl bg-white"></select></label>
@@ -856,6 +902,11 @@
       const isAdm = currentUser.role === 'ADMIN';
       document.getElementById('btnStorageRing').classList.toggle('hidden', !isAdm);
       document.getElementById('statusDot').classList.toggle('hidden', isAdm);
+      ['btnMenuSku', 'btnMenuLog'].forEach(id => document.getElementById(id).classList.toggle('hidden', !isManagerRole()));
+      document.getElementById('btnMenuStorage').classList.toggle('hidden', !isAdm);
+      document.getElementById('settingsName').innerText = currentUser.display_name;
+      document.getElementById('settingsRole').innerText = roleLabel;
+      document.getElementById('settingsAvatar').innerText = (currentUser.display_name || '?').trim().charAt(0).toUpperCase();
       if (isAdm) loadStorageUsage();
 
       refreshAllData();
@@ -1239,9 +1290,9 @@
           const d = t.from_rep_id === myRep ? -Number(t.quantity) : t.to_rep_id === myRep ? Number(t.quantity) : 0;
           if (!item || !d) return;
           item.transfer_net = (item.transfer_net || 0) + d;
-          if (selSet.has(m)) { item.dms_order_qty += d; item.period_balance -= d; }
-          if (m < firstSelMonth) item.prev_balance -= d;
-          if (m < firstSelMonth || selSet.has(m)) item.total_balance -= d;
+          if (selSet.has(m)) { item.kv_paid_qty += d; item.period_balance += d; }
+          if (m < firstSelMonth) item.prev_balance += d;
+          if (m < firstSelMonth || selSet.has(m)) item.total_balance += d;
         });
       }
       const activeRows = Array.from(groupedMap.values())
@@ -2216,6 +2267,49 @@
     }
 
     // ===== LUÂN CHUYỂN SỐ GIỮA SALE (CẦN SS/ADMIN DUYỆT) =====
+    function openSettings() { document.getElementById('settingsModal').classList.remove('hidden'); }
+    function menuGo(fn) { closeModal('settingsModal'); window[fn](); }
+    function refreshTrTo() {
+      const from = document.getElementById('trFrom').value;
+      document.getElementById('trTo').innerHTML = state.salesReps.filter(r => r.id !== from).map(r => `<option value="${r.id}">${r.full_name}</option>`).join('');
+    }
+    async function logTransfer(action, t, note) {
+      const rep = id => state.salesReps.find(r => r.id === id)?.full_name || '?';
+      const grp = state.productGroups.find(g => g.id === t.product_group_id)?.group_name || '';
+      const m = String(t.month_date);
+      await supabaseClient.from('sale_transfer_logs').insert({
+        transfer_id: t.id ? String(t.id) : null, action, actor_id: String(currentUser.id), actor_name: currentUser.display_name, actor_role: currentUser.role,
+        detail: `${rep(t.from_rep_id)} → ${rep(t.to_rep_id)} • ${grp} • ${t.quantity} • T${m.slice(5, 7)}/${m.slice(0, 4)}${t.reason ? ' • Lý do: ' + t.reason : ''}${note ? ' • ' + note : ''}`
+      });
+    }
+    async function deleteTransfer(id) {
+      if (!isManagerRole()) return;
+      const t = state.transfers.find(x => x.id === id);
+      if (!t) return;
+      if (!confirm(t.status === 'APPROVED' ? 'Xóa luân chuyển ĐÃ DUYỆT?\nSố liệu của 2 sale sẽ trở về như chưa chuyển.' : 'Xóa yêu cầu này?')) return;
+      const { error } = await supabaseClient.from('sale_transfers').delete().eq('id', id);
+      if (error) return alert('Lỗi xóa: ' + error.message);
+      await logTransfer('DELETE', t, 'Trạng thái lúc xóa: ' + t.status);
+      await loadTransfers(); renderTransferList(); renderActiveTab();
+    }
+    async function openTransferLog() {
+      if (!isManagerRole()) return;
+      const box = document.getElementById('transferLogList');
+      box.innerHTML = '<p class="text-xs text-slate-400 text-center py-3">Đang tải...</p>';
+      document.getElementById('transferLogModal').classList.remove('hidden');
+      const { data, error } = await supabaseClient.from('sale_transfer_logs').select('*').order('created_at', { ascending: false }).limit(300);
+      if (error) { box.innerHTML = '<p class="text-xs text-rose-600 text-center py-3">Chưa có bảng sale_transfer_logs. Chạy lại file setup_supabase.sql.</p>'; return; }
+      const rows = currentUser.role === 'ADMIN' ? data : data.filter(l => l.actor_role !== 'ADMIN');
+      const ac = { CREATE: ['Tạo yêu cầu', 'bg-blue-100 text-blue-800'], APPROVE: ['Duyệt', 'bg-emerald-100 text-emerald-800'], REJECT: ['Từ chối', 'bg-amber-100 text-amber-800'], CANCEL: ['Hủy yêu cầu', 'bg-slate-200 text-slate-600'], DELETE: ['Xóa', 'bg-rose-100 text-rose-800'] };
+      const dt = iso => new Date(iso).toLocaleString('vi-VN', { hour12: false, day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+      box.innerHTML = rows.length === 0 ? '<p class="text-xs text-slate-400 text-center py-3">Chưa có thao tác nào.</p>' : rows.map(l => {
+        const [lb, cl] = ac[l.action] || [l.action, 'bg-slate-100'];
+        return `<div class="p-3 rounded-xl border border-slate-200 text-xs space-y-1">
+          <div class="flex justify-between gap-2"><span class="px-2 py-0.5 rounded font-bold ${cl}">${lb}</span><span class="text-[10px] text-slate-400">${dt(l.created_at)}</span></div>
+          <div class="text-slate-800">${l.detail || ''}</div>
+          <div class="text-[10px] text-slate-500">Bởi: <b>${l.actor_name || ''}</b> (${l.actor_role || ''})</div></div>`;
+      }).join('');
+    }
     state.transfers = [];
     async function loadTransfers() {
       const { data, error } = await supabaseClient.from('sale_transfers').select('*').order('created_at', { ascending: false }).limit(500);
@@ -2236,7 +2330,7 @@
       const fromSel = document.getElementById('trFrom');
       fromSel.innerHTML = isSale ? opt(me) : state.salesReps.map(opt).join('');
       fromSel.disabled = isSale;
-      document.getElementById('trTo').innerHTML = state.salesReps.filter(r => !isSale || r.id !== currentUser.sales_rep_id).map(opt).join('');
+      refreshTrTo();
       document.getElementById('trGroup').innerHTML = state.productGroups.map(g => `<option value="${g.id}">[${g.tier || 'Premium'}] ${g.group_name}</option>`).join('');
       document.getElementById('trMonth').innerHTML = state.availableMonths.map(m => `<option value="${m}">Tháng ${m.slice(5, 7)}/${m.slice(0, 4)}</option>`).join('');
       document.getElementById('trQty').value = ''; document.getElementById('trReason').value = '';
@@ -2261,6 +2355,7 @@
         quantity: q, reason, status: 'PENDING', requested_by: currentUser.id, requested_by_name: currentUser.display_name
       });
       if (error) return fail('Lỗi gửi yêu cầu: ' + error.message);
+      await logTransfer('CREATE', { from_rep_id: v('trFrom'), to_rep_id: v('trTo'), product_group_id: v('trGroup'), quantity: q, month_date: v('trMonth'), reason });
       document.getElementById('trQty').value = ''; document.getElementById('trReason').value = '';
       await loadTransfers(); renderTransferList();
     }
@@ -2269,6 +2364,8 @@
       if (extra) q = q.eq('requested_by', currentUser.id);
       const { error } = await q;
       if (error) return alert('Lỗi: ' + error.message);
+      const t0 = state.transfers.find(x => x.id === id);
+      if (t0) await logTransfer({ APPROVED: 'APPROVE', REJECTED: 'REJECT', CANCELLED: 'CANCEL' }[patch.status], t0, patch.decision_note);
       await loadTransfers(); renderTransferList(); renderActiveTab();
     }
     function decideTransfer(id, status) {
@@ -2293,6 +2390,7 @@
           <div class="text-slate-700">${grp.get(t.product_group_id) || ''} • <b>${fmtNum(t.quantity)}</b> • Tháng ${String(t.month_date).slice(5, 7)}/${String(t.month_date).slice(0, 4)}</div>
           <div class="text-slate-500">Lý do: ${t.reason || ''}</div>
           <div class="text-[10px] text-slate-400">Gửi: ${t.requested_by_name || ''} lúc ${dt(t.created_at)}${t.decided_at ? ` • ${lb}: ${t.decided_by_name || ''} lúc ${dt(t.decided_at)}` : ''}${t.decision_note ? ` • ${t.decision_note}` : ''}</div>
+          ${isManagerRole() ? `<button onclick="deleteTransfer('${t.id}')" class="text-[11px] text-rose-600 font-bold hover:underline">Xóa yêu cầu</button>` : ''}
           ${t.status === 'PENDING' ? `<div class="flex gap-2 pt-1">
             ${isManagerRole() ? `<button onclick="decideTransfer('${t.id}','APPROVED')" class="flex-1 bg-emerald-700 text-white font-bold py-1.5 rounded-lg">Duyệt</button><button onclick="decideTransfer('${t.id}','REJECTED')" class="flex-1 bg-white border border-rose-200 text-rose-600 font-bold py-1.5 rounded-lg">Từ chối</button>` : ''}
             ${t.requested_by === currentUser.id ? `<button onclick="cancelTransfer('${t.id}')" class="flex-1 bg-white border border-slate-300 text-slate-600 font-bold py-1.5 rounded-lg">Hủy yêu cầu</button>` : ''}</div>` : ''}
