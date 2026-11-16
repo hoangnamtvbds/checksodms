@@ -71,11 +71,11 @@
         </div>
         <div>
           <label class="block text-xs font-bold text-slate-700 mb-1">Mật khẩu mới</label>
-          <input type="password" id="fcNewPassword" required minlength="4" placeholder="Nhập mật khẩu mới (tối thiểu 4 ký tự)..." class="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded-xl" />
+          <input type="password" id="fcNewPassword" required minlength="6" placeholder="Nhập mật khẩu mới (tối thiểu 6 ký tự)..." class="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded-xl" />
         </div>
         <div>
           <label class="block text-xs font-bold text-slate-700 mb-1">Xác nhận lại mật khẩu mới</label>
-          <input type="password" id="fcConfirmPassword" required minlength="4" placeholder="Nhập lại mật khẩu mới..." class="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded-xl" />
+          <input type="password" id="fcConfirmPassword" required minlength="6" placeholder="Nhập lại mật khẩu mới..." class="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded-xl" />
         </div>
         <p id="fcErrorMsg" class="hidden text-xs text-rose-600 font-semibold text-center"></p>
         <button type="submit" id="btnFcSubmit" class="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-sm py-3 rounded-xl shadow">
@@ -156,7 +156,7 @@
           <i data-lucide="smartphone" class="w-4 h-4"></i> 3. DMS
         </button>
         <button onclick="switchTab('custMatch')" id="dTab-custMatch" class="py-3 text-sm font-medium text-slate-500 hover:text-slate-800 flex items-center gap-2">
-          <i data-lucide="git-merge" class="w-4 h-4"></i> 4. Ghép KH
+          <i data-lucide="git-merge" class="w-4 h-4"></i> 4. Kiot/DMS
         </button>
         <button onclick="switchTab('promo')" id="dTab-promo" class="py-3 text-sm font-medium text-slate-500 hover:text-slate-800 flex items-center gap-2">
           <i data-lucide="gift" class="w-4 h-4"></i> 5. 0đ & KM
@@ -330,7 +330,6 @@
               <h2 class="font-bold text-slate-800 text-xs sm:text-sm flex items-center gap-1.5">
                 <i data-lucide="sparkles" class="w-4 h-4 text-amber-500"></i> Gợi Ý Ghép Quán (<span id="sugCountBadge">0</span>)
               </h2>
-              <p class="text-[10px] text-slate-500">Lọc đúng theo Sale đang chọn • Xác nhận hoặc Từ chối</p>
             </div>
             <button onclick="openManualLinkModal()" class="bg-emerald-700 active:scale-95 text-white text-xs font-bold px-3 py-1.5 rounded-xl flex items-center gap-1 shrink-0">
               <i data-lucide="link" class="w-3.5 h-3.5"></i> Ghép tay
@@ -361,7 +360,6 @@
           <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
             <div class="px-3 py-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between text-[10px] text-slate-500">
               <span class="font-bold text-slate-700 uppercase">Đối Chiếu Điểm Bán Đã Ghép</span>
-              <span>Bấm vào tên quán để xem SKU / Đổi quán</span>
             </div>
             <table class="w-full text-[11px] sm:text-xs border-collapse">
               <thead>
@@ -493,8 +491,8 @@
       </div>
       <form onsubmit="submitChangePw(event)" class="space-y-3">
         <input type="password" id="cpCurrent" required placeholder="Mật khẩu hiện tại" class="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded-xl" />
-        <input type="password" id="cpNew" required minlength="4" placeholder="Mật khẩu mới (tối thiểu 4 ký tự)" class="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded-xl" />
-        <input type="password" id="cpConfirm" required minlength="4" placeholder="Nhập lại mật khẩu mới" class="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded-xl" />
+        <input type="password" id="cpNew" required minlength="6" placeholder="Mật khẩu mới (tối thiểu 6 ký tự)" class="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded-xl" />
+        <input type="password" id="cpConfirm" required minlength="6" placeholder="Nhập lại mật khẩu mới" class="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded-xl" />
         <p id="cpMsg" class="hidden text-xs text-rose-600 font-semibold text-center"></p>
         <button type="submit" id="btnCpSubmit" class="w-full bg-emerald-700 text-white font-bold text-sm py-3 rounded-xl">Lưu Mật Khẩu</button>
       </form>
@@ -514,37 +512,37 @@
       <div class="space-y-1.5">
       <button id="btnAdminUpload" onclick="menuGo('openUploadModal')" class="hidden w-full flex items-center gap-3 p-3 rounded-2xl bg-amber-50 hover:bg-amber-100 text-left active:scale-[.99] transition">
         <span class="w-9 h-9 shrink-0 rounded-xl bg-amber-400 text-slate-900 flex items-center justify-center"><i data-lucide="upload-cloud" class="w-4 h-4"></i></span>
-        <span class="flex-1 min-w-0"><b class="block text-sm text-slate-900">Nạp file Excel</b><span class="block text-[11px] text-slate-500">Cập nhật số Kiot & DMS</span></span>
+        <span class="flex-1 min-w-0"><b class="block text-sm text-slate-900">Nạp file Excel</b></span>
         <i data-lucide="chevron-right" class="w-4 h-4 text-slate-400 shrink-0"></i>
       </button>
       <button id="btnMenuSku" onclick="menuGo('openSkuModal')" class="hidden w-full flex items-center gap-3 p-3 rounded-2xl bg-slate-50 hover:bg-slate-100 text-left active:scale-[.99] transition">
         <span class="w-9 h-9 shrink-0 rounded-xl bg-emerald-700 text-white flex items-center justify-center"><i data-lucide="layers" class="w-4 h-4"></i></span>
-        <span class="flex-1 min-w-0"><b class="block text-sm text-slate-900">Mã SKU</b><span class="block text-[11px] text-slate-500">Gán nhóm cho mã hàng mới</span></span>
+        <span class="flex-1 min-w-0"><b class="block text-sm text-slate-900">Mã SKU</b></span>
         <i data-lucide="chevron-right" class="w-4 h-4 text-slate-400 shrink-0"></i>
       </button>
       <button id="btnMenuLog" onclick="menuGo('openTransferLog')" class="hidden w-full flex items-center gap-3 p-3 rounded-2xl bg-slate-50 hover:bg-slate-100 text-left active:scale-[.99] transition">
         <span class="w-9 h-9 shrink-0 rounded-xl bg-emerald-700 text-white flex items-center justify-center"><i data-lucide="history" class="w-4 h-4"></i></span>
-        <span class="flex-1 min-w-0"><b class="block text-sm text-slate-900">Nhật ký luân chuyển</b><span class="block text-[11px] text-slate-500">Tạo, duyệt, từ chối, xóa</span></span>
+        <span class="flex-1 min-w-0"><b class="block text-sm text-slate-900">Nhật ký luân chuyển</b></span>
         <i data-lucide="chevron-right" class="w-4 h-4 text-slate-400 shrink-0"></i>
       </button>
       <button id="btnAdminUsers" onclick="menuGo('openUsersModal')" class="hidden w-full flex items-center gap-3 p-3 rounded-2xl bg-slate-50 hover:bg-slate-100 text-left active:scale-[.99] transition">
         <span class="w-9 h-9 shrink-0 rounded-xl bg-emerald-700 text-white flex items-center justify-center"><i data-lucide="users" class="w-4 h-4"></i></span>
-        <span class="flex-1 min-w-0"><b class="block text-sm text-slate-900">Quản lý tài khoản</b><span class="block text-[11px] text-slate-500">Cấp, xem, xóa tài khoản</span></span>
+        <span class="flex-1 min-w-0"><b class="block text-sm text-slate-900">Quản lý tài khoản</b></span>
         <i data-lucide="chevron-right" class="w-4 h-4 text-slate-400 shrink-0"></i>
       </button>
       <button id="btnMenuStorage" onclick="menuGo('openStorageModal')" class="hidden w-full flex items-center gap-3 p-3 rounded-2xl bg-slate-50 hover:bg-slate-100 text-left active:scale-[.99] transition">
         <span class="w-9 h-9 shrink-0 rounded-xl bg-emerald-700 text-white flex items-center justify-center"><i data-lucide="database" class="w-4 h-4"></i></span>
-        <span class="flex-1 min-w-0"><b class="block text-sm text-slate-900">Dung lượng & dọn dữ liệu</b><span class="block text-[11px] text-slate-500">Xem bộ nhớ, xóa dữ liệu theo tháng</span></span>
+        <span class="flex-1 min-w-0"><b class="block text-sm text-slate-900">Dung lượng & dọn dữ liệu</b></span>
         <i data-lucide="chevron-right" class="w-4 h-4 text-slate-400 shrink-0"></i>
       </button>
       <button onclick="menuGo('openChangePwModal')" class="w-full flex items-center gap-3 p-3 rounded-2xl bg-slate-50 hover:bg-slate-100 text-left active:scale-[.99] transition">
         <span class="w-9 h-9 shrink-0 rounded-xl bg-emerald-700 text-white flex items-center justify-center"><i data-lucide="key" class="w-4 h-4"></i></span>
-        <span class="flex-1 min-w-0"><b class="block text-sm text-slate-900">Đổi mật khẩu</b><span class="block text-[11px] text-slate-500">Đổi mật khẩu đăng nhập của bạn</span></span>
+        <span class="flex-1 min-w-0"><b class="block text-sm text-slate-900">Đổi mật khẩu</b></span>
         <i data-lucide="chevron-right" class="w-4 h-4 text-slate-400 shrink-0"></i>
       </button>
       <button onclick="menuGo('handleLogout')" class="w-full flex items-center gap-3 p-3 rounded-2xl bg-rose-50 hover:bg-rose-100 text-left active:scale-[.99] transition">
         <span class="w-9 h-9 shrink-0 rounded-xl bg-rose-500 text-white flex items-center justify-center"><i data-lucide="log-out" class="w-4 h-4"></i></span>
-        <span class="flex-1 min-w-0"><b class="block text-sm text-slate-900">Đăng xuất</b><span class="block text-[11px] text-slate-500">Thoát khỏi hệ thống</span></span>
+        <span class="flex-1 min-w-0"><b class="block text-sm text-slate-900">Đăng xuất</b></span>
         <i data-lucide="chevron-right" class="w-4 h-4 text-slate-400 shrink-0"></i>
       </button>
       </div>
@@ -576,25 +574,24 @@
   <div id="transferModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
     <div class="bg-white rounded-t-3xl sm:rounded-2xl max-w-lg w-full p-5 shadow-xl space-y-3 max-h-[88dvh] flex flex-col">
       <div class="flex items-center justify-between border-b pb-3">
-        <h3 class="font-bold text-slate-800 text-base">Luân Chuyển Số Giữa Sale</h3>
+        <h3 class="font-bold text-slate-800 text-base">Luân Chuyển Số</h3>
         <button onclick="closeModal('transferModal')" class="text-slate-400 p-1"><i data-lucide="x" class="w-5 h-5"></i></button>
       </div>
       <div class="overflow-y-auto flex-1 space-y-3">
         <form onsubmit="submitTransfer(event)" class="bg-slate-50 p-3 rounded-2xl border border-slate-200 space-y-2 text-xs">
-          <p class="text-[11px] text-slate-500">Chuyển số bán <b>Kiot</b> từ sale này sang sale khác trong một tháng. Chọn quán nguồn để trừ đúng số nhập của quán đó; không chọn thì chỉ trừ trên tổng của sale. Chỉ có hiệu lực sau khi SS/Admin duyệt.</p>
-          <div class="grid grid-cols-2 gap-2">
-            <label>Từ sale<select id="trFrom" onchange="refreshTrTo()" class="w-full mt-0.5 px-2 py-2 border border-slate-300 rounded-xl bg-white"></select></label>
+                    <div class="grid grid-cols-2 gap-2">
+            <label>Nguồn<select id="trFrom" onchange="refreshTrTo()" class="w-full mt-0.5 px-2 py-2 border border-slate-300 rounded-xl bg-white"></select></label>
             <label>Sang sale<select id="trTo" class="w-full mt-0.5 px-2 py-2 border border-slate-300 rounded-xl bg-white"></select></label>
           </div>
-          <label class="block">Quán Kiot nguồn (số nhập của quán này sẽ giảm)<input id="trKvSearch" type="text" oninput="refreshTrKv()" placeholder="Gõ tên hoặc mã quán để lọc..." class="w-full mt-0.5 mb-1 px-2 py-2 border border-slate-300 rounded-xl bg-white" /><select id="trKv" class="w-full mt-0.5 px-2 py-2 border border-slate-300 rounded-xl bg-white"></select></label>
+          <label class="block" id="trKvWrap">Quán nguồn (tùy chọn)<input id="trKvSearch" type="text" oninput="refreshTrKv()" placeholder="Tìm quán..." class="w-full mt-0.5 mb-1 px-2 py-2 border border-slate-300 rounded-xl bg-white" /><select id="trKv" class="w-full mt-0.5 px-2 py-2 border border-slate-300 rounded-xl bg-white"></select></label>
           <label class="block">Nhóm sản phẩm<select id="trGroup" class="w-full mt-0.5 px-2 py-2 border border-slate-300 rounded-xl bg-white"></select></label>
           <div class="grid grid-cols-2 gap-2">
             <label>Tháng áp dụng<select id="trMonth" class="w-full mt-0.5 px-2 py-2 border border-slate-300 rounded-xl bg-white"></select></label>
             <label>Số lượng (thùng/két)<input id="trQty" type="number" min="1" step="1" class="w-full mt-0.5 px-2 py-2 border border-slate-300 rounded-xl bg-white" /></label>
           </div>
-          <input id="trReason" type="text" placeholder="Lý do chuyển số (bắt buộc)" class="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white" />
+          <input id="trReason" type="text" placeholder="Lý do (bắt buộc)" class="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white" />
           <p id="trMsg" class="hidden text-xs text-rose-600 font-semibold"></p>
-          <button type="submit" class="w-full bg-emerald-700 text-white font-bold py-2.5 rounded-xl">Gửi Yêu Cầu Chờ Duyệt</button>
+          <button type="submit" class="w-full bg-emerald-700 text-white font-bold py-2.5 rounded-xl">Gửi Yêu Cầu</button>
         </form>
         <div id="transferList" class="space-y-2"></div>
       </div>
@@ -643,7 +640,21 @@
         <h3 class="font-bold text-slate-800 text-base">Bảng Quy Đổi Mã SKU Về Nhóm Chuẩn</h3>
         <button onclick="closeModal('skuModal')" class="text-slate-400 p-1"><i data-lucide="x" class="w-5 h-5"></i></button>
       </div>
-      <div class="overflow-y-auto flex-1 space-y-2" id="skuMappingList"></div>
+      <div class="overflow-y-auto flex-1 space-y-2">
+        <details class="p-3 rounded-xl border border-slate-200 bg-slate-50 text-xs">
+          <summary class="font-bold text-slate-700 cursor-pointer">+ Tạo nhóm mới</summary>
+          <div class="space-y-2 mt-2">
+            <input id="skuNewName" type="text" placeholder="Tên nhóm (VD: Carlsberg Pilsner Chai 330ml)" class="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white" />
+            <div class="grid grid-cols-2 gap-2">
+              <select id="skuNewTier" class="px-2 py-2 border border-slate-300 rounded-xl bg-white"><option value="Premium">Premium</option><option value="Mainstream">Mainstream</option></select>
+              <input id="skuNewBrand" type="text" value="Carlsberg" placeholder="Hãng" class="px-3 py-2 border border-slate-300 rounded-xl bg-white" />
+            </div>
+            <p id="skuNewMsg" class="hidden text-xs text-rose-600 font-semibold"></p>
+            <button type="button" onclick="createProductGroup()" class="w-full bg-emerald-700 text-white font-bold py-2 rounded-xl">Tạo nhóm</button>
+          </div>
+        </details>
+        <div id="skuMappingList" class="space-y-2"></div>
+      </div>
     </div>
   </div>
 
