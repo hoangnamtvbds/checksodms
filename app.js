@@ -1111,8 +1111,8 @@ async function unlinkCustomer(linkId) {
   await onFilterChange();
 }
 
-function openManualLinkModal(editLink = null) {
-  const selectedRep = getActiveSalesRepId();
+function openManualLinkModal(editLink = null, preKv = null, preDms = null) {
+  let selectedRep = getActiveSalesRepId();
   const linkedKv = new Set(state.customerLinks.map(l => l.kv_customer_code));
   const linkedDms = new Set(state.customerLinks.map(l => l.dms_outlet_code));
 
@@ -1136,11 +1136,16 @@ function openManualLinkModal(editLink = null) {
   } else {
     titleEl.innerText = 'Ghép Thủ Công Khách Hàng 2 Bên';
     kvSel.disabled = false;
+    // Mở từ danh sách khách hàng: chỉ gợi ý các quán cùng sale với quán đã chọn
+    if (preKv) { const c = state.kvCustomers.find(x => x.kv_customer_code === preKv); if (c?.sales_rep_id) selectedRep = c.sales_rep_id; }
+    else if (preDms) { const o = state.dmsOutlets.find(x => x.dms_outlet_code === preDms); if (o?.sales_rep_id) selectedRep = o.sales_rep_id; }
     const availKv = state.kvCustomers.filter(c => !linkedKv.has(c.kv_customer_code) && (selectedRep === 'ALL' || c.sales_rep_id === selectedRep));
     const availDms = state.dmsOutlets.filter(o => !linkedDms.has(o.dms_outlet_code) && (selectedRep === 'ALL' || o.sales_rep_id === selectedRep));
 
     kvSel.innerHTML = availKv.map(c => `<option value="${c.kv_customer_code}">[${esc(c.kv_customer_code)}] ${esc(c.kv_customer_name)}</option>`).join('');
     dmsSel.innerHTML = availDms.map(o => `<option value="${o.dms_outlet_code}">[${esc(o.dms_outlet_code)}] ${esc(o.dms_outlet_name)}</option>`).join('');
+    if (preKv && availKv.some(c => c.kv_customer_code === preKv)) kvSel.value = preKv;
+    if (preDms && availDms.some(o => o.dms_outlet_code === preDms)) dmsSel.value = preDms;
   }
 
   document.getElementById('manualLinkModal').classList.remove('hidden');
@@ -1155,6 +1160,111 @@ async function saveManualLink() {
   // Đổi quán ghép: upsert theo kv_customer_code sẽ thay outlet DMS của đúng dòng cũ, không cần xóa trước
   const ok = await confirmCustomerLink(kvCode, dmsCode, 100, 'MANUAL', editLinkId || null);
   if (ok) closeModal('manualLinkModal');
+}
+
+
+// ===== DANH SÁCH KHÁCH HÀNG (đã ghép / chưa ghép) - mục nhỏ trong tab Kiot/DMS =====
+let custListOpen = false, custListMode = 'linked', custListLimit = 40;
+function toggleCustList() { custListOpen = !custListOpen; renderCustList(); lucide.createIcons(); }
+function setCustListMode(m) { custListMode = m; custListLimit = 40; renderCustList(); lucide.createIcons(); }
+function custListMore() { custListLimit += 40; renderCustList(); lucide.createIcons(); }
+function renderCustList() {
+  const box = document.getElementById('custListBox');
+  if (!box) return;
+  const kw = document.getElementById('searchLinkedCust').value.toLowerCase().trim();
+  const selectedRep = getActiveSalesRepId();
+  const repOk = (rep) => !selectedRep || selectedRep === 'ALL' || rep === selectedRep;
+  const hit = (...a) => !kw || a.some(t => String(t || '').toLowerCase().includes(kw));
+  const prodOn = prodFilter !== 'ALL';
+  const kvMap = new Map(state.kvCustomers.map(c => [c.kv_customer_code, c]));
+  const dmsMap = new Map(state.dmsOutlets.map(o => [o.dms_outlet_code, o]));
+
+  // Sản lượng kỳ chọn của từng quán (theo hạng / sản phẩm đang lọc)
+  const kvQty = new Map(), dmsQty = new Map();
+  state.kvLinesSelected.forEach(x => {
+    if (x.is_free_gift) return;
+    if (matchTierFilter !== 'ALL' && getLineTier('KIOTVIET', x) !== matchTierFilter) return;
+    if (prodOn && getLineGroup('KIOTVIET', x) !== prodFilter) return;
+    kvQty.set(x.kv_customer_code, (kvQty.get(x.kv_customer_code) || 0) + Number(x.quantity));
+  });
+  state.dmsLinesSelected.forEach(x => {
+    if (x.order_type !== 'Order' || x.is_posm_voucher) return;
+    if (matchTierFilter !== 'ALL' && getLineTier('DMS', x) !== matchTierFilter) return;
+    if (prodOn && getLineGroup('DMS', x) !== prodFilter) return;
+    dmsQty.set(x.dms_outlet_code, (dmsQty.get(x.dms_outlet_code) || 0) + Number(x.quantity));
+  });
+
+  const linkedKv = new Set(state.customerLinks.map(l => l.kv_customer_code));
+  const linkedDms = new Set(state.customerLinks.map(l => l.dms_outlet_code));
+
+  const linked = state.customerLinks.filter(l => {
+    const kv = kvMap.get(l.kv_customer_code) || {}, dms = dmsMap.get(l.dms_outlet_code) || {};
+    if (!repOk(kv.sales_rep_id || dms.sales_rep_id)) return false;
+    if (prodOn && !(kvQty.get(l.kv_customer_code) || dmsQty.get(l.dms_outlet_code))) return false;
+    return hit(kv.kv_customer_name, dms.dms_outlet_name, l.kv_customer_code, l.dms_outlet_code);
+  }).sort((a, b) => Math.abs((kvQty.get(b.kv_customer_code) || 0) - (dmsQty.get(b.dms_outlet_code) || 0)) - Math.abs((kvQty.get(a.kv_customer_code) || 0) - (dmsQty.get(a.dms_outlet_code) || 0)));
+  const unKv = state.kvCustomers.filter(c => !linkedKv.has(c.kv_customer_code) && (kvQty.get(c.kv_customer_code) || 0) > 0 && repOk(c.sales_rep_id) && hit(c.kv_customer_name, c.kv_customer_code))
+    .sort((a, b) => kvQty.get(b.kv_customer_code) - kvQty.get(a.kv_customer_code));
+  const unDms = state.dmsOutlets.filter(o => !linkedDms.has(o.dms_outlet_code) && (dmsQty.get(o.dms_outlet_code) || 0) > 0 && repOk(o.sales_rep_id) && hit(o.dms_outlet_name, o.dms_outlet_code))
+    .sort((a, b) => dmsQty.get(b.dms_outlet_code) - dmsQty.get(a.dms_outlet_code));
+
+  const head = `<button onclick="toggleCustList()" class="w-full bg-white rounded-2xl border border-slate-200 shadow-xs px-3 py-2.5 flex items-center justify-between gap-2 text-[11px] active:bg-slate-50">
+    <span class="font-bold text-slate-700 flex items-center gap-1.5"><i data-lucide="users" class="w-3.5 h-3.5 text-slate-500"></i>Danh sách khách hàng</span>
+    <span class="flex items-center gap-1.5 text-[10px] text-slate-500">${unKv.length + unDms.length > 0 ? `<span class="bg-amber-100 text-amber-800 font-bold px-1.5 py-0.5 rounded-full">${unKv.length + unDms.length} chưa ghép</span>` : '<span class="text-emerald-700 font-semibold">đã ghép hết</span>'}<i data-lucide="${custListOpen ? 'chevron-up' : 'chevron-down'}" class="w-4 h-4"></i></span>
+  </button>`;
+  if (!custListOpen) { box.innerHTML = head; return; }
+
+  const seg = (m, label, n, on) => `<button onclick="setCustListMode('${m}')" class="py-1.5 rounded-lg ${custListMode === m ? 'font-bold shadow-xs ' + on : 'font-semibold text-slate-600'}">${label} <span class="tabular-nums">${n}</span></button>`;
+  let rows = '', total = 0;
+  if (custListMode === 'linked') {
+    total = linked.length;
+    rows = linked.slice(0, custListLimit).map(l => {
+      const kv = kvMap.get(l.kv_customer_code) || { kv_customer_name: l.kv_customer_code };
+      const dms = dmsMap.get(l.dms_outlet_code) || { dms_outlet_name: l.dms_outlet_code };
+      const k = kvQty.get(l.kv_customer_code) || 0, d = dmsQty.get(l.dms_outlet_code) || 0;
+      const low = l.match_method === 'AUTO_NAME' && Number(l.match_score) < 90;
+      const json = JSON.stringify({ id: l.id, kv_customer_code: l.kv_customer_code, dms_outlet_code: l.dms_outlet_code }).replace(/"/g, '&quot;');
+      return `<div class="flex items-center gap-2 px-3 py-2 border-t border-slate-100">
+        <div class="min-w-0 flex-1">
+          <div class="text-[11px] font-bold text-slate-900 truncate">${esc(kv.kv_customer_name)}</div>
+          <div class="text-[10px] text-emerald-700 truncate">&harr; ${esc(dms.dms_outlet_name)}${low ? ` <span class="bg-amber-100 text-amber-800 font-bold px-1 rounded">tự ghép ${Math.round(l.match_score)}%</span>` : ''}</div>
+        </div>
+        <div class="text-[10px] tabular-nums text-right text-slate-500 shrink-0"><b class="text-slate-800">${fmtNum(k)}</b> | <b class="text-slate-800">${fmtNum(d)}</b></div>
+        <button onclick="openManualLinkModal(${json})" class="shrink-0 text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-200 px-2 py-1 rounded-lg">Đổi</button>
+        <button onclick="unlinkCustomer('${l.id}')" class="shrink-0 text-[10px] font-bold text-rose-600 bg-rose-50 border border-rose-200 px-2 py-1 rounded-lg">Hủy</button>
+      </div>`;
+    }).join('');
+  } else {
+    const isKv = custListMode === 'kv';
+    const list = isKv ? unKv : unDms;
+    total = list.length;
+    rows = list.slice(0, custListLimit).map(c => {
+      const code = isKv ? c.kv_customer_code : c.dms_outlet_code;
+      const name = isKv ? c.kv_customer_name : c.dms_outlet_name;
+      const q = isKv ? kvQty.get(code) : dmsQty.get(code);
+      const repName = (state.salesReps.find(r => r.id === c.sales_rep_id) || {}).full_name || '';
+      return `<div class="flex items-center gap-2 px-3 py-2 border-t border-slate-100">
+        <div class="min-w-0 flex-1">
+          <div class="text-[11px] font-bold text-slate-900 truncate">${esc(name)}</div>
+          <div class="text-[10px] text-slate-400 truncate">${esc(code)}${repName ? ' • ' + esc(repName) : ''}</div>
+        </div>
+        <div class="text-[11px] font-extrabold tabular-nums text-slate-800 shrink-0">${fmtNum(q)}</div>
+        <button onclick="openManualLinkModal(null, ${isKv ? `'${code}', null` : `null, '${code}'`})" class="shrink-0 text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-lg">Ghép</button>
+      </div>`;
+    }).join('');
+  }
+  const hint = custListMode === 'linked' ? 'Kiot | DMS trong kỳ chọn • sắp theo lệch nhiều nhất' : custListMode === 'kv' ? 'Quán Kiot có bán trong kỳ nhưng chưa ghép DMS' : 'Outlet DMS có key trong kỳ nhưng chưa ghép quán Kiot';
+  box.innerHTML = head.replace('rounded-2xl border border-slate-200 shadow-xs', 'rounded-t-2xl border border-slate-200 shadow-xs') + `
+    <div class="bg-white rounded-b-2xl border-x border-b border-slate-200 shadow-xs overflow-hidden">
+      <div class="grid grid-cols-3 bg-slate-200/80 p-1 gap-1 text-[10px] m-2 rounded-xl">
+        ${seg('linked', 'Đã ghép', linked.length, 'bg-white text-slate-900')}
+        ${seg('kv', 'Chưa ghép Kiot', unKv.length, 'bg-white text-amber-800')}
+        ${seg('dms', 'Chưa ghép DMS', unDms.length, 'bg-white text-amber-800')}
+      </div>
+      <div class="px-3 pb-1.5 text-[10px] text-slate-400">${hint}</div>
+      ${rows || '<div class="px-3 py-5 text-center text-[11px] text-slate-400 border-t border-slate-100">Không có khách hàng nào.</div>'}
+      ${total > custListLimit ? `<button onclick="custListMore()" class="w-full text-[11px] font-bold text-emerald-700 py-2.5 border-t border-slate-100">Xem thêm ${total - custListLimit} khách hàng</button>` : ''}
+    </div>`;
 }
 
 function renderLinkedCustomersComparison() {
@@ -1176,6 +1286,7 @@ function renderLinkedCustomersComparison() {
   const tfoot = document.getElementById('linkedComparisonTableFoot');
 
   // ---- Bộ lọc sản phẩm dùng chung (nút nhỏ dưới ô tìm kiếm) ----
+  renderCustList();
   const grpOf = (src, x) => (skuInfoMap.get(`${src}_${x.raw_product_code}`) || { group_name: x.raw_product_name, tier: String(x.raw_product_name || '').toLowerCase().includes('huda') ? 'Mainstream' : 'Premium' });
   renderProdFilterUI();
   const prodOn = prodFilter !== 'ALL';
@@ -1268,7 +1379,7 @@ function renderLinkedCustomersComparison() {
         <td class="py-2.5 px-1.5 text-right font-bold text-slate-700 tabular-nums">${fmtNum(sumDms)}</td>
         <td class="py-2.5 px-2 text-right font-extrabold tabular-nums ${balanceCellBg(bal)}">${formatBalance(bal)}</td>
       </tr>
-      <tr id="${detId}" class="${prodOn ? '' : 'hidden'} bg-slate-50">
+      <tr id="${detId}" class="hidden bg-slate-50">
         <td colspan="4" class="p-3 border-t border-dashed border-slate-200 space-y-2">
           <div class="flex flex-wrap items-center justify-between gap-2 text-[10px]">
             <span class="font-bold text-slate-500 uppercase">Chi tiết SKU kỳ chọn (${matchTierFilter === 'ALL' ? 'Tất cả' : matchTierFilter}):</span>
