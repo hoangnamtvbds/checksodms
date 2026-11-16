@@ -1446,7 +1446,14 @@ async function createProductGroup() {
   if (!name) return fail('Nhập tên nhóm!');
   if (state.productGroups.some(g => String(g.group_name).trim().toLowerCase() === name.toLowerCase())) return fail('Nhóm này đã tồn tại!');
   const maxOrder = Math.max(0, ...state.productGroups.map(g => Number(g.display_order) || 0));
-  const { error } = await supabaseClient.from('product_groups').insert({ group_name: name, tier, brand, display_order: maxOrder + 1 });
+  // Lấy một nhóm tương tự (cùng chai/lon) làm mẫu để điền sẵn các cột bắt buộc như quy cách
+  const isChai = /chai/i.test(name);
+  const tpl = state.productGroups.find(g => /chai/i.test(g.group_name) === isChai && g.tier === tier)
+    || state.productGroups.find(g => /chai/i.test(g.group_name) === isChai) || state.productGroups[0] || {};
+  const row = { ...tpl };
+  Object.keys(row).forEach(k => { if (k === 'id' || /created|updated/i.test(k)) delete row[k]; });
+  Object.assign(row, { group_name: name, tier, brand, display_order: maxOrder + 1 });
+  const { error } = await supabaseClient.from('product_groups').insert(row);
   if (error) return fail('Không tạo được nhóm: ' + error.message);
   document.getElementById('skuNewName').value = '';
   await refreshAllData();
