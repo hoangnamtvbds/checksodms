@@ -503,6 +503,8 @@ async function refreshAllData() {
   state.productGroups = resGroups.data || [];
   state.skuMappings = resMaps.data || [];
   state._tierMap = null;
+  state._grpMap = null;
+  state._prodOpts = null;
 
   const unmapped = state.skuMappings.filter(m => !m.product_group_id && !isIgnoredSku(m.raw_code));
   const alertBox = document.getElementById('unmappedAlert');
@@ -848,12 +850,13 @@ function moreRow(cols, fn, n, label) {
   return `<tr><td colspan="${cols}" class="p-1"><button onclick="${fn}()" class="w-full text-xs font-bold text-emerald-700 py-2.5">Xem thêm ${n} ${label}</button></td></tr>`;
 }
 function renderKvCustomersTab() {
+  renderProdFilterUI();
   const kw = document.getElementById('searchKvCust').value.toLowerCase().trim();
   const custMap = new Map(state.kvCustomers.map(c => [c.kv_customer_code, c]));
   const repMap = new Map(state.salesReps.map(r => [r.id, r.full_name]));
 
   const agg = new Map();
-  state.kvLinesSelected.filter(l => listTier === 'ALL' || getLineTier('KIOTVIET', l) === listTier).forEach(line => {
+  state.kvLinesSelected.filter(l => (listTier === 'ALL' || getLineTier('KIOTVIET', l) === listTier) && (prodFilter === 'ALL' || getLineGroup('KIOTVIET', l) === prodFilter)).forEach(line => {
     if (!agg.has(line.kv_customer_code)) agg.set(line.kv_customer_code, { paid: 0, free: 0, lines: [] });
     const entry = agg.get(line.kv_customer_code);
     if (line.is_free_gift) entry.free += Number(line.quantity);
@@ -924,7 +927,7 @@ function renderKvCustomersTab() {
     `;
   }).join('') + (list.length > kvLimit ? moreRow(3, 'kvMore', list.length - kvLimit, 'điểm bán') : '');
 
-  const trNetKv = getTransferNet(listTier);
+  const trNetKv = getTransferNet(listTier, false, prodFilter !== 'ALL' ? prodFilter : null);
   tfoot.innerHTML = `
     <tr>
       <td class="py-3 px-2.5 uppercase text-[11px]">Tổng cộng (${list.length} điểm bán)</td>
@@ -949,12 +952,13 @@ function renderKvCustomersTab() {
 // TAB 3: DMS
 // =========================================================================
 function renderDmsCustomersTab() {
+  renderProdFilterUI();
   const kw = document.getElementById('searchDmsCust').value.toLowerCase().trim();
   const outMap = new Map(state.dmsOutlets.map(o => [o.dms_outlet_code, o]));
   const repMap = new Map(state.salesReps.map(r => [r.id, r.full_name]));
 
   const agg = new Map();
-  state.dmsLinesSelected.filter(l => l.order_type === 'Order' && (listTier === 'ALL' || (!l.is_posm_voucher && getLineTier('DMS', l) === listTier))).forEach(line => {
+  state.dmsLinesSelected.filter(l => l.order_type === 'Order' && (listTier === 'ALL' || (!l.is_posm_voucher && getLineTier('DMS', l) === listTier)) && (prodFilter === 'ALL' || (!l.is_posm_voucher && getLineGroup('DMS', l) === prodFilter))).forEach(line => {
     if (!agg.has(line.dms_outlet_code)) agg.set(line.dms_outlet_code, { beerQty: 0, lines: [] });
     const entry = agg.get(line.dms_outlet_code);
     if (!line.is_posm_voucher) entry.beerQty += Number(line.quantity);
@@ -1171,6 +1175,11 @@ function renderLinkedCustomersComparison() {
   const tbody = document.getElementById('linkedComparisonTableBody');
   const tfoot = document.getElementById('linkedComparisonTableFoot');
 
+  // ---- Bộ lọc sản phẩm dùng chung (nút nhỏ dưới ô tìm kiếm) ----
+  const grpOf = (src, x) => (skuInfoMap.get(`${src}_${x.raw_product_code}`) || { group_name: x.raw_product_name, tier: String(x.raw_product_name || '').toLowerCase().includes('huda') ? 'Mainstream' : 'Premium' });
+  renderProdFilterUI();
+  const prodOn = prodFilter !== 'ALL';
+
   const filteredLinks = state.customerLinks.filter(l => {
     const kv = kvMap.get(l.kv_customer_code) || {};
     const dms = dmsMap.get(l.dms_outlet_code) || {};
@@ -1200,7 +1209,7 @@ function renderLinkedCustomersComparison() {
     dmsByOutlet.get(x.dms_outlet_code).push(x);
   });
 
-  tbody.innerHTML = filteredLinks.map(l => {
+  const rows = filteredLinks.map(l => {
     const kv = kvMap.get(l.kv_customer_code) || { kv_customer_name: l.kv_customer_code };
     const dms = dmsMap.get(l.dms_outlet_code) || { dms_outlet_name: l.dms_outlet_code };
 
@@ -1208,6 +1217,7 @@ function renderLinkedCustomersComparison() {
     (kvByCust.get(l.kv_customer_code) || []).forEach(x => {
       const info = skuInfoMap.get(`KIOTVIET_${x.raw_product_code}`) || { group_name: x.raw_product_name, tier: x.raw_product_name.toLowerCase().includes('huda') ? 'Mainstream' : 'Premium' };
       if (matchTierFilter !== 'ALL' && info.tier !== matchTierFilter) return;
+      if (prodOn && info.group_name !== prodFilter) return;
       if (!skuMatrix[info.group_name]) skuMatrix[info.group_name] = { kv: 0, dms: 0, tier: info.tier };
       skuMatrix[info.group_name].kv += Number(x.quantity);
     });
@@ -1215,6 +1225,7 @@ function renderLinkedCustomersComparison() {
     (dmsByOutlet.get(l.dms_outlet_code) || []).forEach(x => {
       const info = skuInfoMap.get(`DMS_${x.raw_product_code}`) || { group_name: x.raw_product_name, tier: x.raw_product_name.toLowerCase().includes('huda') ? 'Mainstream' : 'Premium' };
       if (matchTierFilter !== 'ALL' && info.tier !== matchTierFilter) return;
+      if (prodOn && info.group_name !== prodFilter) return;
       if (!skuMatrix[info.group_name]) skuMatrix[info.group_name] = { kv: 0, dms: 0, tier: info.tier };
       skuMatrix[info.group_name].dms += Number(x.quantity);
     });
@@ -1225,9 +1236,13 @@ function renderLinkedCustomersComparison() {
       if (!g) return;
       const tier = g.tier || (g.brand.toLowerCase().includes('huda') ? 'Mainstream' : 'Premium');
       if (matchTierFilter !== 'ALL' && tier !== matchTierFilter) return;
+      if (prodOn && g.group_name !== prodFilter) return;
       if (!skuMatrix[g.group_name]) skuMatrix[g.group_name] = { kv: 0, dms: 0, tier };
       skuMatrix[g.group_name].kv -= Number(t.quantity);
     });
+
+    // Lọc theo sản phẩm: quán không phát sinh SP này (cả Kiot lẫn DMS) thì ẩn
+    if (prodOn && !Object.values(skuMatrix).some(v => v.kv !== 0 || v.dms !== 0)) return null;
 
     let sumKv = 0, sumDms = 0;
     Object.values(skuMatrix).forEach(v => { sumKv += v.kv; sumDms += v.dms; });
@@ -1242,7 +1257,7 @@ function renderLinkedCustomersComparison() {
     const detId = `link-row-${l.id}`;
     const safeLinkJson = JSON.stringify({ id: l.id, kv_customer_code: l.kv_customer_code, dms_outlet_code: l.dms_outlet_code }).replace(/"/g, '&quot;');
 
-    return `
+    return { bal, html: `
       <tr onclick="toggleAccordion('${detId}')" class="hover:bg-slate-50 active:bg-slate-100 cursor-pointer transition">
         <td class="py-2.5 px-2.5">
           <div class="font-bold text-slate-900 leading-snug line-clamp-1">${esc(kv.kv_customer_name)}</div>
@@ -1253,7 +1268,7 @@ function renderLinkedCustomersComparison() {
         <td class="py-2.5 px-1.5 text-right font-bold text-slate-700 tabular-nums">${fmtNum(sumDms)}</td>
         <td class="py-2.5 px-2 text-right font-extrabold tabular-nums ${balanceCellBg(bal)}">${formatBalance(bal)}</td>
       </tr>
-      <tr id="${detId}" class="hidden bg-slate-50">
+      <tr id="${detId}" class="${prodOn ? '' : 'hidden'} bg-slate-50">
         <td colspan="4" class="p-3 border-t border-dashed border-slate-200 space-y-2">
           <div class="flex flex-wrap items-center justify-between gap-2 text-[10px]">
             <span class="font-bold text-slate-500 uppercase">Chi tiết SKU kỳ chọn (${matchTierFilter === 'ALL' ? 'Tất cả' : matchTierFilter}):</span>
@@ -1296,8 +1311,14 @@ function renderLinkedCustomersComparison() {
           </div>
         </td>
       </tr>
-    `;
-  }).join('');
+    ` };
+  }).filter(Boolean);
+  // Đang lọc SP: quán lệch nhiều nhất lên đầu
+  if (prodOn) rows.sort((a, b) => Math.abs(b.bal) - Math.abs(a.bal));
+  const shownCount = rows.length;
+  tbody.innerHTML = shownCount
+    ? rows.map(r => r.html).join('')
+    : `<tr><td colspan="4" class="py-8 text-center text-xs text-slate-400">Không có quán đã ghép nào phát sinh "${esc(prodFilter)}" trong kỳ này.</td></tr>`;
 
   // Phần chưa ghép (để tổng khớp với Tab Đối chiếu)
   const linkedKvSet = new Set(state.customerLinks.map(l => l.kv_customer_code));
@@ -1306,18 +1327,20 @@ function renderLinkedCustomersComparison() {
   state.kvLinesSelected.forEach(x => {
     if (x.is_free_gift || linkedKvSet.has(x.kv_customer_code)) return;
     if (matchTierFilter !== 'ALL' && getLineTier('KIOTVIET', x) !== matchTierFilter) return;
+    if (prodOn && grpOf('KIOTVIET', x).group_name !== prodFilter) return;
     unKv += Number(x.quantity);
   });
   state.dmsLinesSelected.forEach(x => {
     if (x.order_type !== 'Order' || x.is_posm_voucher || linkedDmsSet.has(x.dms_outlet_code)) return;
     if (matchTierFilter !== 'ALL' && getLineTier('DMS', x) !== matchTierFilter) return;
+    if (prodOn && grpOf('DMS', x).group_name !== prodFilter) return;
     unDms += Number(x.quantity);
   });
-  const trNetL = getTransferNet(matchTierFilter, true);
+  const trNetL = getTransferNet(matchTierFilter, true, prodOn ? prodFilter : null);
 
   tfoot.innerHTML = `
     <tr>
-      <td class="py-3 px-2.5 uppercase text-[11px]">Tổng cộng (${filteredLinks.length} quán)</td>
+      <td class="py-3 px-2.5 uppercase text-[11px]">Tổng cộng (${shownCount} quán)</td>
       <td class="py-3 px-1.5 text-right tabular-nums">${fmtNum(totKv)}</td>
       <td class="py-3 px-1.5 text-right tabular-nums text-amber-300">${fmtNum(totDms)}</td>
       <td class="py-3 px-2 text-right tabular-nums ${totBal > 0 ? 'bg-emerald-800 text-emerald-200' : totBal < 0 ? 'bg-rose-900 text-rose-200' : ''}">${formatBalance(totBal)}</td>
@@ -1771,6 +1794,54 @@ function getLineTier(src, line) {
   }
   return state._tierMap.get(`${src}_${line.raw_product_code}`) || (String(line.raw_product_name || '').toLowerCase().includes('huda') ? 'Mainstream' : 'Premium');
 }
+// ===== BỘ LỌC SẢN PHẨM DÙNG CHUNG (Kiot / DMS / Kiot-DMS) =====
+let prodFilter = 'ALL';        // 'ALL' | tên nhóm SP, vd: "Tuborg Ice Lon 250ml"
+let prodPickerOpen = false;
+function getLineGroup(src, line) {
+  if (!state._grpMap) {
+    state._grpMap = new Map();
+    state.skuMappings.forEach(m => {
+      const g = state.productGroups.find(x => x.id === m.product_group_id);
+      if (g) state._grpMap.set(`${m.source_system}_${m.raw_code}`, g.group_name);
+    });
+  }
+  return state._grpMap.get(`${src}_${line.raw_product_code}`) || line.raw_product_name;
+}
+function getProdOptions(tier) {
+  if (!state._prodOpts || state._prodOpts.kv !== state.kvLinesSelected || state._prodOpts.dms !== state.dmsLinesSelected) {
+    const m = new Map();
+    state.kvLinesSelected.forEach(x => { if (!x.is_free_gift) m.set(getLineGroup('KIOTVIET', x), getLineTier('KIOTVIET', x)); });
+    state.dmsLinesSelected.forEach(x => { if (x.order_type === 'Order' && !x.is_posm_voucher) m.set(getLineGroup('DMS', x), getLineTier('DMS', x)); });
+    state._prodOpts = { kv: state.kvLinesSelected, dms: state.dmsLinesSelected, map: m };
+  }
+  const out = [...state._prodOpts.map.entries()].filter(([, t]) => !tier || tier === 'ALL' || t === tier).map(([n, t]) => [n, t]);
+  if (prodFilter !== 'ALL' && !out.some(([n]) => n === prodFilter)) out.push([prodFilter, 'Premium']);
+  return out.sort((a, b) => a[0].localeCompare(b[0], 'vi'));
+}
+function renderProdFilterUI() {
+  [['kv', listTier], ['dms', listTier], ['match', matchTierFilter]].forEach(([k, tier]) => {
+    const el = document.getElementById('prodFilter-' + k);
+    if (!el) return;
+    if (prodPickerOpen) {
+      el.innerHTML = `<div class="flex items-center gap-1.5 -mt-0.5">
+        <select onchange="setProdFilter(this.value)" class="flex-1 min-w-0 text-xs font-semibold text-slate-800 bg-white border border-indigo-200 rounded-xl py-1.5 px-2.5">
+          <option value="ALL">Tất cả sản phẩm</option>
+          ${getProdOptions(tier).map(([n, t]) => `<option value="${esc(n)}" ${n === prodFilter ? 'selected' : ''}>${t === 'Premium' ? '★' : '●'} ${esc(n)}</option>`).join('')}
+        </select>
+        <button onclick="toggleProdPicker()" class="w-7 h-7 shrink-0 rounded-full bg-slate-200 text-slate-600 text-xs font-bold">✕</button>
+      </div>`;
+    } else if (prodFilter !== 'ALL') {
+      el.innerHTML = `<div class="flex items-center justify-end gap-1.5 -mt-0.5">
+        <button onclick="toggleProdPicker()" class="max-w-[85%] truncate bg-indigo-50 text-indigo-700 border border-indigo-200 text-[10px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1"><i data-lucide="filter" class="w-3 h-3 shrink-0"></i><span class="truncate">${esc(prodFilter)}</span></button>
+        <button onclick="setProdFilter('ALL')" class="w-5 h-5 rounded-full bg-slate-200 text-slate-600 text-[10px] font-bold leading-none">✕</button>
+      </div>`;
+    } else {
+      el.innerHTML = `<div class="flex justify-end -mt-1"><button onclick="toggleProdPicker()" class="text-[10px] font-semibold text-slate-400 active:text-indigo-600 flex items-center gap-1 px-1"><i data-lucide="sliders-horizontal" class="w-3 h-3"></i>Lọc SP</button></div>`;
+    }
+  });
+}
+function toggleProdPicker() { prodPickerOpen = !prodPickerOpen; renderProdFilterUI(); lucide.createIcons(); }
+function setProdFilter(v) { prodFilter = v || 'ALL'; prodPickerOpen = false; renderActiveTab(); }
 function renderTierBars() {
   const opts = [['ALL', 'Tổng', 'bg-slate-900 text-white', 'text-slate-700'], ['Premium', '★ Premium', 'bg-indigo-700 text-white', 'text-indigo-800'], ['Mainstream', '● Mainstream', 'bg-amber-600 text-white', 'text-amber-800']];
   const html = `<div class="grid grid-cols-3 bg-slate-200/80 p-1 rounded-xl text-[11px] sm:text-xs gap-1">${opts.map(([v, l, on, off]) => `<button onclick="setListTier('${v}')" class="py-1.5 rounded-lg ${listTier === v ? 'font-bold shadow-xs ' + on : 'font-semibold ' + off}">${l}</button>`).join('')}</div>`;
@@ -1987,7 +2058,7 @@ function renderTransferList() {
   }).join('');
 }
 // Tổng luân chuyển đã duyệt của sale đang chọn trong các tháng đã chọn (theo hạng SP nếu có lọc)
-function getTransferNet(tierFilter, skipLinkedFrom) {
+function getTransferNet(tierFilter, skipLinkedFrom, groupName) {
   const rep = getActiveSalesRepId();
   const isAll = !rep || rep === 'ALL';
   const linked = skipLinkedFrom ? new Set(state.customerLinks.map(l => l.kv_customer_code)) : null;
@@ -1998,6 +2069,7 @@ function getTransferNet(tierFilter, skipLinkedFrom) {
     if (!g) return;
     const tier = g.tier || (g.brand.toLowerCase().includes('huda') ? 'Mainstream' : 'Premium');
     if (tierFilter && tierFilter !== 'ALL' && tier !== tierFilter) return;
+    if (groupName && g.group_name !== groupName) return;
     const q = Number(t.quantity);
     // Bên chuyển đi đã trừ trực tiếp ở dòng quán (nếu quán đã ghép) thì không trừ lại ở dòng tổng
     const skip = linked && t.kv_customer_code && linked.has(t.kv_customer_code);
