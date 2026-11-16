@@ -1429,10 +1429,28 @@ function openSkuModal() {
 }
 
 async function updateSkuGroup(mappingId, groupId) {
-  await supabaseClient.from('sku_mappings').update({
+  const { error } = await supabaseClient.from('sku_mappings').update({
     product_group_id: groupId || null, is_verified: Boolean(groupId)
   }).eq('id', mappingId);
+  if (error) return alert('Không gán được nhóm: ' + error.message);
   await refreshAllData();
+}
+
+async function createProductGroup() {
+  const msg = document.getElementById('skuNewMsg');
+  const fail = t => { msg.innerText = t; msg.classList.remove('hidden'); };
+  msg.classList.add('hidden');
+  const name = document.getElementById('skuNewName').value.trim();
+  const tier = document.getElementById('skuNewTier').value;
+  const brand = document.getElementById('skuNewBrand').value.trim() || 'Carlsberg';
+  if (!name) return fail('Nhập tên nhóm!');
+  if (state.productGroups.some(g => String(g.group_name).trim().toLowerCase() === name.toLowerCase())) return fail('Nhóm này đã tồn tại!');
+  const maxOrder = Math.max(0, ...state.productGroups.map(g => Number(g.display_order) || 0));
+  const { error } = await supabaseClient.from('product_groups').insert({ group_name: name, tier, brand, display_order: maxOrder + 1 });
+  if (error) return fail('Không tạo được nhóm: ' + error.message);
+  document.getElementById('skuNewName').value = '';
+  await refreshAllData();
+  openSkuModal();
 }
 
 function openUploadModal() { document.getElementById('uploadModal').classList.remove('hidden'); }
