@@ -1,676 +1,2001 @@
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Đối Chiếu Sale Kiot & DMS | Carlsberg Team BC</title>
-  <script src="https://cdn.tailwindcss.com/3.4.16"></script>
-  <script defer src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
-  <script defer src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4"></script>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-    body {
-      font-family: 'Inter', sans-serif;
-      background-color: #f1f5f9;
-      padding-bottom: 84px;
-      -webkit-tap-highlight-color: transparent;
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// ---- Helpers dùng chung ----
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const tick = () => new Promise(r => setTimeout(r, 0));
+const isIgnoredSku = (code) => String(code).startsWith(IGNORED_SKU_PREFIX) || IGNORED_SKU_CODES.includes(String(code));
+async function hashPw(username, pw) {
+  const subtle = globalThis.crypto && globalThis.crypto.subtle;
+  if (!subtle) return pw; // trình duyệt không hỗ trợ -> giữ nguyên (tương thích cũ)
+  const buf = new TextEncoder().encode(`${username}:${pw}`);
+  const h = await subtle.digest('SHA-256', buf);
+  return 'h1:' + Array.from(new Uint8Array(h)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+async function pwMatches(stored, username, pw) {
+  if (!stored) return false;
+  if (String(stored).startsWith('h1:')) return stored === await hashPw(username, pw);
+  return stored === pw; // mật khẩu cũ chưa mã hóa, sẽ được nâng cấp khi đăng nhập
+}
+
+let currentUser = null;
+let activeTab = 'reconcile';
+let showPromoInline = false;
+let matchTierFilter = 'ALL'; // 'ALL' | 'Premium' | 'Mainstream'
+let selectedMonths = [];     // Mảng các tháng được tick chọn, VD: ['2026-11-01', '2026-10-01']
+
+let state = {
+  salesReps: [],
+  productGroups: [],
+  skuMappings: [],
+  availableMonths: [],
+  reconcileRowsAll: [],
+  kvCustomers: [],
+  dmsOutlets: [],
+  customerLinks: [],
+  suggestions: [],
+  kvLinesSelected: [],
+  dmsLinesSelected: []
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+  lucide.createIcons();
+  renderTierBars();
+  checkSavedSession();
+  document.addEventListener('click', (e) => {
+    const picker = document.getElementById('monthPickerDropdown');
+    if (picker && !picker.classList.contains('hidden') && !e.target.closest('#monthPickerDropdown') && !e.target.closest('button[onclick="toggleMonthPicker()"]')) {
+      picker.classList.add('hidden');
     }
-    @media (min-width: 768px) {
-      body { padding-bottom: 24px; }
+  });
+});
+
+// =========================================================================
+// 1. ĐĂNG NHẬP, BẮT BUỘC ĐỔI TK/MK LẦN ĐẦU & PHÂN QUYỀN (ADMIN / SS / SALE)
+// =========================================================================
+async function checkSavedSession() {
+  const saved = localStorage.getItem('cb_bc_user');
+  if (saved) {
+    try {
+      currentUser = JSON.parse(saved);
+      document.getElementById('loginScreen').classList.add('hidden');
+      document.getElementById('appShell').classList.remove('hidden');
+      const { data: fresh, error: fe } = await supabaseClient.from('reconcile_users')
+        .select('id,username,display_name,role,sales_rep_id,must_change_credentials,is_active').eq('id', currentUser.id).maybeSingle();
+      if (!fe) {
+        if (!fresh || fresh.is_active === false) throw new Error('inactive');
+        currentUser = { ...currentUser, ...fresh, must_change_credentials: Boolean(fresh.must_change_credentials) };
+        localStorage.setItem('cb_bc_user', JSON.stringify(currentUser));
+      }
+      if (currentUser.must_change_credentials) {
+        showFirstChangeModal();
+        return;
+      }
+      applyUserPermissions();
+      return;
+    } catch (e) {
+      localStorage.removeItem('cb_bc_user');
     }
-    .no-scrollbar::-webkit-scrollbar { display: none; }
-    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-  </style>
-</head>
-<body class="text-slate-800 antialiased select-none sm:select-auto">
+  }
+  document.getElementById('loginScreen').classList.remove('hidden');
+  document.getElementById('appShell').classList.add('hidden');
+}
 
-  <!-- ==================== MÀN HÌNH ĐĂNG NHẬP ==================== -->
-  <div id="loginScreen" class="fixed inset-0 bg-gradient-to-br from-emerald-950 via-emerald-900 to-teal-950 z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl space-y-5">
-      <div class="text-center space-y-1.5">
-        <div class="w-12 h-12 bg-emerald-100 text-emerald-800 rounded-2xl flex items-center justify-center mx-auto">
-          <i data-lucide="scale" class="w-6 h-6"></i>
-        </div>
-        <h1 class="font-extrabold text-lg text-slate-900">ĐỐI CHIẾU SALE • TEAM BC</h1>
-        <p class="text-xs text-slate-500">Đăng nhập bằng tài khoản được cấp</p>
-      </div>
+async function handleLogin(e) {
+  e.preventDefault();
+  const username = document.getElementById('loginUsername').value.trim().toLowerCase();
+  const password = document.getElementById('loginPassword').value.trim();
+  const errEl = document.getElementById('loginErrorMsg');
+  const btn = document.getElementById('btnLoginSubmit');
 
-      <form onsubmit="handleLogin(event)" class="space-y-3.5">
-        <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1">Tên đăng nhập</label>
-          <input type="text" id="loginUsername" required autocomplete="username" placeholder="Nhập tên đăng nhập..." class="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded-xl focus:ring-emerald-600 focus:border-emerald-600" />
-        </div>
-        <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1">Mật khẩu</label>
-          <input type="password" id="loginPassword" required autocomplete="current-password" placeholder="Nhập mật khẩu..." class="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded-xl focus:ring-emerald-600 focus:border-emerald-600" />
-        </div>
-        <p id="loginErrorMsg" class="hidden text-xs text-rose-600 font-semibold text-center"></p>
-        <button type="submit" id="btnLoginSubmit" class="w-full bg-emerald-700 hover:bg-emerald-800 active:scale-98 text-white font-bold text-sm py-3 rounded-xl shadow transition">
-          Đăng Nhập Hệ Thống
-        </button>
-      </form>
-    </div>
-  </div>
+  errEl.classList.add('hidden');
+  btn.disabled = true;
+  btn.innerText = 'Đang kiểm tra...';
 
-  <!-- ==================== MODAL BẮT BUỘC ĐỔI TÀI KHOẢN & MẬT KHẨU LẦN ĐẦU ==================== -->
-  <div id="firstChangeModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl space-y-4">
-      <div class="text-center space-y-1">
-        <div class="w-11 h-11 bg-amber-100 text-amber-700 rounded-2xl flex items-center justify-center mx-auto">
-          <i data-lucide="shield-check" class="w-6 h-6"></i>
-        </div>
-        <h2 class="font-extrabold text-base text-slate-900">Đổi Tài Khoản Lần Đầu</h2>
-        <p class="text-xs text-slate-500">Vui lòng đặt lại tên đăng nhập và mật khẩu cá nhân trước khi sử dụng hệ thống.</p>
-      </div>
+  try {
+    const { data: row, error } = await supabaseClient
+      .from('reconcile_users')
+      .select('*')
+      .eq('username', username)
+      .eq('is_active', true)
+      .maybeSingle();
 
-      <form onsubmit="submitFirstTimeChange(event)" class="space-y-3">
-        <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1">Tên đăng nhập mới</label>
-          <input type="text" id="fcNewUsername" required placeholder="Nhập tên đăng nhập mới..." class="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded-xl" />
-        </div>
-        <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1">Mật khẩu mới</label>
-          <input type="password" id="fcNewPassword" required minlength="6" placeholder="Nhập mật khẩu mới (tối thiểu 6 ký tự)..." class="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded-xl" />
-        </div>
-        <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1">Xác nhận lại mật khẩu mới</label>
-          <input type="password" id="fcConfirmPassword" required minlength="6" placeholder="Nhập lại mật khẩu mới..." class="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded-xl" />
-        </div>
-        <p id="fcErrorMsg" class="hidden text-xs text-rose-600 font-semibold text-center"></p>
-        <button type="submit" id="btnFcSubmit" class="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-sm py-3 rounded-xl shadow">
-          Lưu & Tiếp Tục
-        </button>
-      </form>
-    </div>
-  </div>
+    if (error) throw error;
+    const data = (row && await pwMatches(row.password, row.username, password)) ? row : null;
+    if (data && !String(data.password).startsWith('h1:')) {
+      const hp = await hashPw(data.username, password);
+      if (hp.startsWith('h1:')) await supabaseClient.from('reconcile_users').update({ password: hp }).eq('id', data.id);
+    }
+    if (!data) {
+      errEl.innerText = 'Sai tên đăng nhập hoặc mật khẩu!';
+      errEl.classList.remove('hidden');
+      return;
+    }
 
-  <!-- ==================== APP SHELL ==================== -->
-  <div id="appShell" class="hidden">
-    <!-- TOP APP BAR -->
-    <header class="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-900 text-white shadow-md sticky top-0 z-30">
-      <div class="max-w-7xl mx-auto px-3.5 sm:px-6 h-14 flex items-center justify-between gap-2">
-        <div class="flex items-center gap-2.5 min-w-0">
-          <div class="bg-emerald-700/80 border border-emerald-500/30 p-1.5 rounded-xl shrink-0">
-            <i data-lucide="scale" class="w-5 h-5 text-emerald-200"></i>
+    currentUser = {
+      id: data.id,
+      username: data.username,
+      display_name: data.display_name,
+      role: data.role,
+      sales_rep_id: data.sales_rep_id,
+      must_change_credentials: Boolean(data.must_change_credentials)
+    };
+    localStorage.setItem('cb_bc_user', JSON.stringify(currentUser));
+
+    if (currentUser.must_change_credentials) {
+      showFirstChangeModal();
+    } else {
+      applyUserPermissions();
+    }
+  } catch (err) {
+    errEl.innerText = 'Lỗi kết nối: ' + err.message;
+    errEl.classList.remove('hidden');
+  } finally {
+    btn.disabled = false;
+    btn.innerText = 'Đăng Nhập Hệ Thống';
+  }
+}
+
+function showFirstChangeModal() {
+  document.getElementById('loginScreen').classList.add('hidden');
+  document.getElementById('appShell').classList.add('hidden');
+  document.getElementById('fcNewUsername').value = '';
+  document.getElementById('fcNewPassword').value = '';
+  document.getElementById('fcConfirmPassword').value = '';
+  document.getElementById('firstChangeModal').classList.remove('hidden');
+  lucide.createIcons();
+}
+
+async function submitFirstTimeChange(e) {
+  e.preventDefault();
+  const newUser = document.getElementById('fcNewUsername').value.trim().toLowerCase();
+  const newPass = document.getElementById('fcNewPassword').value.trim();
+  const confirmPass = document.getElementById('fcConfirmPassword').value.trim();
+  const errEl = document.getElementById('fcErrorMsg');
+  const btn = document.getElementById('btnFcSubmit');
+
+  errEl.classList.add('hidden');
+  if (newUser === currentUser.username) {
+    errEl.innerText = 'Vui lòng chọn tên đăng nhập mới khác với tài khoản mặc định được cấp!';
+    errEl.classList.remove('hidden');
+    return;
+  }
+  if (newPass !== confirmPass) {
+    errEl.innerText = 'Mật khẩu xác nhận không khớp!';
+    errEl.classList.remove('hidden');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerText = 'Đang cập nhật...';
+
+  try {
+    const { error } = await supabaseClient
+      .from('reconcile_users')
+      .update({
+        username: newUser,
+        password: await hashPw(newUser, newPass),
+        must_change_credentials: false
+      })
+      .eq('id', currentUser.id);
+
+    if (error) {
+      errEl.innerText = error.code === '23505'
+        ? 'Tên đăng nhập này đã có người dùng, vui lòng chọn tên khác!'
+        : 'Lỗi cập nhật: ' + error.message;
+      errEl.classList.remove('hidden');
+      return;
+    }
+
+    currentUser.username = newUser;
+    currentUser.must_change_credentials = false;
+    localStorage.setItem('cb_bc_user', JSON.stringify(currentUser));
+    document.getElementById('firstChangeModal').classList.add('hidden');
+    applyUserPermissions();
+  } finally {
+    btn.disabled = false;
+    btn.innerText = 'Lưu & Tiếp Tục';
+  }
+}
+
+function openChangePwModal() {
+  ['cpCurrent', 'cpNew', 'cpConfirm'].forEach(id => { document.getElementById(id).value = ''; });
+  document.getElementById('cpMsg').classList.add('hidden');
+  document.getElementById('changePwModal').classList.remove('hidden');
+}
+async function submitChangePw(e) {
+  e.preventDefault();
+  const cur = document.getElementById('cpCurrent').value.trim();
+  const np = document.getElementById('cpNew').value.trim();
+  const cf = document.getElementById('cpConfirm').value.trim();
+  const msg = document.getElementById('cpMsg');
+  const btn = document.getElementById('btnCpSubmit');
+  const fail = (t) => { msg.innerText = t; msg.classList.remove('hidden'); };
+  msg.classList.add('hidden');
+  if (np !== cf) return fail('Mật khẩu xác nhận không khớp!');
+  if (np === cur) return fail('Mật khẩu mới phải khác mật khẩu hiện tại!');
+  btn.disabled = true;
+  try {
+    const { data: me, error: e1 } = await supabaseClient.from('reconcile_users').select('id,username,password').eq('id', currentUser.id).maybeSingle();
+    if (e1) return fail('Lỗi kết nối: ' + e1.message);
+    if (!me || !(await pwMatches(me.password, me.username, cur))) return fail('Mật khẩu hiện tại không đúng!');
+    const { error: e2 } = await supabaseClient.from('reconcile_users').update({ password: await hashPw(me.username, np) }).eq('id', currentUser.id);
+    if (e2) return fail('Lỗi cập nhật: ' + e2.message);
+    closeModal('changePwModal');
+    alert('Đã đổi mật khẩu thành công!');
+  } finally { btn.disabled = false; }
+}
+
+function handleLogout() {
+  localStorage.removeItem('cb_bc_user');
+  Object.keys(localStorage).filter(k => k.startsWith('cb_cache_v1:')).forEach(k => localStorage.removeItem(k));
+  currentUser = null;
+  document.getElementById('appShell').classList.add('hidden');
+  document.getElementById('firstChangeModal').classList.add('hidden');
+  document.getElementById('loginScreen').classList.remove('hidden');
+}
+
+function isManagerRole() {
+  return currentUser?.role === 'ADMIN' || currentUser?.role === 'SS';
+}
+
+function applyUserPermissions() {
+  document.getElementById('loginScreen').classList.add('hidden');
+  document.getElementById('appShell').classList.remove('hidden');
+
+  const roleLabel = currentUser.role === 'ADMIN' ? 'Admin' : currentUser.role === 'SS' ? 'Sale Sup' : 'Sale';
+  document.getElementById('currentUserBadge').innerText = `${currentUser.display_name} (${roleLabel})`;
+
+  document.getElementById('btnAdminUpload').classList.toggle('hidden', !isManagerRole());
+  document.getElementById('btnAdminSku').classList.toggle('hidden', !isManagerRole());
+  document.getElementById('btnAdminUsers').classList.toggle('hidden', currentUser.role !== 'ADMIN');
+  const isAdm = currentUser.role === 'ADMIN';
+  document.getElementById('btnStorageRing').classList.toggle('hidden', !isAdm);
+  document.getElementById('statusDot').classList.toggle('hidden', isAdm);
+  ['btnMenuSku', 'btnMenuLog'].forEach(id => document.getElementById(id).classList.toggle('hidden', !isManagerRole()));
+  document.getElementById('btnMenuStorage').classList.toggle('hidden', !isAdm);
+  document.getElementById('settingsName').innerText = currentUser.display_name;
+  document.getElementById('settingsRole').innerText = roleLabel;
+  document.getElementById('settingsAvatar').innerText = (currentUser.display_name || '?').trim().charAt(0).toUpperCase();
+  if (isAdm) loadStorageUsage();
+
+  hydrateFromCache();
+  refreshAllData();
+}
+
+async function openUsersModal() {
+  if (currentUser?.role !== 'ADMIN') return;
+  document.getElementById('newUserSalesRep').innerHTML =
+    `<option value="">-- Chọn tên Sale --</option>` +
+    state.salesReps.map(r => `<option value="${r.id}">${r.full_name}</option>`).join('');
+  toggleNewUserSaleSelect();
+  await loadUsersList();
+  document.getElementById('usersModal').classList.remove('hidden');
+}
+
+function toggleNewUserSaleSelect() {
+  const role = document.getElementById('newUserRole').value;
+  const saleSel = document.getElementById('newUserSalesRep');
+  const dispInput = document.getElementById('newDisplayName');
+
+  if (role === 'SALE') {
+    saleSel.classList.remove('hidden');
+    dispInput.classList.add('hidden');
+  } else {
+    saleSel.classList.add('hidden');
+    saleSel.value = '';
+    dispInput.classList.remove('hidden');
+    dispInput.placeholder = role === 'SS' ? 'Tên Sale Sup (VD: SS Nguyễn Văn A)' : 'Tên Admin (VD: Admin Phú)';
+  }
+}
+
+async function loadUsersList() {
+  const { data } = await supabaseClient.from('reconcile_users').select('id,username,display_name,role,must_change_credentials,created_at').order('created_at');
+  const container = document.getElementById('usersListContainer');
+  container.innerHTML = (data || []).map(u => {
+    const badgeStyle = u.role === 'ADMIN'
+      ? 'bg-amber-100 text-amber-800'
+      : u.role === 'SS'
+      ? 'bg-indigo-100 text-indigo-800'
+      : 'bg-emerald-100 text-emerald-800';
+    return `
+      <div class="p-3 rounded-xl border border-slate-200 bg-white flex items-center justify-between gap-2 text-xs">
+        <div>
+          <div class="font-bold text-slate-900">
+            ${esc(u.display_name)}
+            <span class="text-[10px] px-1.5 py-0.5 rounded font-bold ${badgeStyle}">${u.role}</span>
+            ${u.must_change_credentials ? `<span class="text-[10px] text-amber-600 ml-1">(Chờ đổi TK)</span>` : ''}
           </div>
-          <div class="truncate">
-            <h1 class="font-extrabold text-sm sm:text-base tracking-tight truncate">ĐỐI CHIẾU SALE • TEAM BC</h1>
-            <div class="flex items-center gap-1.5 text-[11px] text-emerald-300">
-              <span id="statusDot" class="w-2 h-2 rounded-full bg-emerald-400 shrink-0"></span><button id="btnStorageRing" onclick="openStorageModal()" class="hidden shrink-0 leading-none"></button>
-              <span id="currentUserBadge" class="truncate">Đang tải...</span>
-            </div>
-          </div>
+          <div class="text-slate-500 mt-0.5">TK: <b>${esc(u.username)}</b> • MK: <b>••••••</b></div>
         </div>
-
-        <button onclick="openSettings()" class="shrink-0 p-2.5 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-emerald-100 transition" title="Cài đặt">
-          <i data-lucide="settings" class="w-5 h-5"></i>
-        </button>
-      </div>
-    </header>
-
-    <!-- COMPACT FILTER BAR: CHỌN NHIỀU THÁNG DẠNG TICK CHỌN + NHÂN VIÊN SALE -->
-    <section class="bg-white border-b border-slate-200 sticky top-14 z-20 shadow-xs">
-      <div class="max-w-7xl mx-auto px-3.5 sm:px-6 py-2.5">
-        <div class="grid grid-cols-2 gap-2">
-          <!-- Nút mở danh sách tick chọn nhiều tháng -->
-          <div class="relative">
-            <button type="button" onclick="toggleMonthPicker()" class="w-full bg-slate-50 border border-slate-200 text-slate-900 text-xs rounded-xl pt-3.5 pb-1.5 px-2.5 font-bold text-left flex items-center justify-between focus:ring-emerald-600 focus:border-emerald-600">
-              <span class="text-[9px] font-bold uppercase text-slate-400 absolute left-2.5 top-1">Tháng đối chiếu</span>
-              <span id="selectedMonthsLabel" class="truncate">Đang tải...</span>
-              <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400 shrink-0"></i>
+        <div class="flex items-center gap-1 shrink-0">
+          <button onclick="resetUserPassword('${u.id}')" class="text-amber-700 hover:bg-amber-50 p-1.5 rounded-lg" title="Đặt lại mật khẩu tạm">
+            <i data-lucide="key" class="w-4 h-4"></i>
+          </button>
+          ${u.username !== 'admin' ? `
+            <button onclick="deleteAppUser('${u.id}')" class="text-rose-600 hover:bg-rose-50 p-1.5 rounded-lg" title="Xóa tài khoản">
+              <i data-lucide="trash-2" class="w-4 h-4"></i>
             </button>
+          ` : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+  lucide.createIcons();
+}
 
-            <!-- Dropdown tick chọn nhiều tháng -->
-            <div id="monthPickerDropdown" class="hidden absolute left-0 mt-1.5 w-64 bg-white rounded-2xl border border-slate-200 shadow-xl z-40 p-3 space-y-2">
-              <div class="flex items-center justify-between border-b pb-1.5 text-[11px]">
-                <span class="font-bold text-slate-700">Tick chọn các tháng:</span>
-                <button type="button" id="btnSelectAllMonths" onclick="selectAllMonths()" class="text-emerald-700 font-bold hover:underline">Chọn tất cả</button>
+async function createAppUser(e) {
+  e.preventDefault();
+  const username = document.getElementById('newUsername').value.trim().toLowerCase();
+  const password = document.getElementById('newPassword').value.trim();
+  const role = document.getElementById('newUserRole').value;
+  const salesRepId = document.getElementById('newUserSalesRep').value || null;
+  const customDisplay = document.getElementById('newDisplayName').value.trim();
+
+  if (role === 'SALE' && !salesRepId) return alert('Vui lòng chọn nhân viên Sale tương ứng!');
+  const rep = state.salesReps.find(r => r.id === salesRepId);
+  const displayName = role === 'SALE'
+    ? rep.full_name
+    : (customDisplay || (role === 'SS' ? `Sale Sup (${username})` : `Admin (${username})`));
+
+  const { error } = await supabaseClient.from('reconcile_users').insert({
+    username,
+    password: await hashPw(username, password),
+    display_name: displayName,
+    role,
+    sales_rep_id: role === 'SALE' ? salesRepId : null,
+    must_change_credentials: true
+  });
+  if (error) return alert('Lỗi tạo tài khoản: ' + error.message);
+
+  document.getElementById('newUsername').value = '';
+  document.getElementById('newPassword').value = '';
+  document.getElementById('newDisplayName').value = '';
+  await loadUsersList();
+}
+
+async function resetUserPassword(id) {
+  if (currentUser?.role !== 'ADMIN') return;
+  const tmp = (prompt('Nhập mật khẩu tạm mới (người dùng sẽ bị buộc đổi lại khi đăng nhập):') || '').trim();
+  if (tmp.length < 6) return tmp ? alert('Mật khẩu tối thiểu 6 ký tự!') : undefined;
+  const { data: u, error: e1 } = await supabaseClient.from('reconcile_users').select('username').eq('id', id).maybeSingle();
+  if (e1 || !u) return alert('Không tìm thấy tài khoản!');
+  const { error } = await supabaseClient.from('reconcile_users').update({ password: await hashPw(u.username, tmp), must_change_credentials: true }).eq('id', id);
+  if (error) return alert('Lỗi đặt lại mật khẩu: ' + error.message);
+  alert('Đã đặt lại mật khẩu tạm.');
+  await loadUsersList();
+}
+
+async function deleteAppUser(id) {
+  if (!confirm('Xóa tài khoản này?')) return;
+  await supabaseClient.from('reconcile_users').delete().eq('id', id);
+  await loadUsersList();
+}
+
+// =========================================================================
+// 2. BỘ CHỌN NHIỀU THÁNG (MULTI-SELECT CHECKBOX) & TẢI DỮ LIỆU
+// =========================================================================
+function toggleMonthPicker() {
+  document.getElementById('monthPickerDropdown').classList.toggle('hidden');
+}
+
+function renderMonthCheckboxes() {
+  const container = document.getElementById('monthCheckboxesList');
+  container.innerHTML = state.availableMonths.map(m => {
+    const [y, mm] = m.split('-');
+    const checked = selectedMonths.includes(m) ? 'checked' : '';
+    return `
+      <label class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl hover:bg-slate-50 cursor-pointer text-xs font-semibold text-slate-800">
+        <input type="checkbox" value="${m}" ${checked} class="month-checkbox w-4 h-4 rounded text-emerald-700 focus:ring-emerald-600" onchange="syncSelectAllLabel()" />
+        <span>Tháng ${mm}/${y}</span>
+      </label>
+    `;
+  }).join('');
+  updateSelectedMonthsLabel();
+}
+
+function selectAllMonths() {
+  const cbs = [...document.querySelectorAll('.month-checkbox')];
+  const allOn = cbs.every(c => c.checked);
+  cbs.forEach(c => { c.checked = !allOn; });
+  syncSelectAllLabel();
+}
+function syncSelectAllLabel() {
+  const cbs = [...document.querySelectorAll('.month-checkbox')], b = document.getElementById('btnSelectAllMonths');
+  if (b) b.innerText = cbs.length && cbs.every(c => c.checked) ? 'Bỏ chọn tất cả' : 'Chọn tất cả';
+}
+
+function applyMonthSelection() {
+  const checkedVals = Array.from(document.querySelectorAll('.month-checkbox:checked')).map(cb => cb.value);
+  if (checkedVals.length === 0) return alert('Vui lòng tick chọn ít nhất 1 tháng!');
+  selectedMonths = checkedVals.sort();
+  updateSelectedMonthsLabel();
+  document.getElementById('monthPickerDropdown').classList.add('hidden');
+  onFilterChange();
+}
+
+function updateSelectedMonthsLabel() {
+  const lbl = document.getElementById('selectedMonthsLabel');
+  syncSelectAllLabel();
+  if (selectedMonths.length === 0) {
+    lbl.innerText = 'Chưa chọn tháng';
+    return;
+  }
+  const sorted = [...selectedMonths].sort();
+  if (sorted.length === 1) {
+    const [y, mm] = sorted[0].split('-');
+    lbl.innerText = `T${mm}/${y}`;
+  } else {
+    lbl.innerText = `${sorted.length} tháng (${sorted.map(m => 'T' + m.slice(5, 7)).join(', ')})`;
+  }
+}
+
+async function fetchAllRows(buildQueryFn, orderCols = []) {
+  // Tải nhiều trang cùng lúc (mỗi lượt 3 trang) thay vì lần lượt từng trang
+  const pageSize = 1000, batch = 3;
+  let all = [], page = 0;
+  while (true) {
+    const reqs = [];
+    for (let k = 0; k < batch; k++) {
+      let q = buildQueryFn();
+      orderCols.forEach(c => { q = q.order(c); });
+      const from = (page + k) * pageSize;
+      reqs.push(q.range(from, from + pageSize - 1));
+    }
+    const results = await Promise.all(reqs);
+    let done = false;
+    for (const { data, error } of results) {
+      if (error) { if (error.code === 'PGRST103') { done = true; break; } throw error; }
+      if (!data || data.length === 0) { done = true; break; }
+      all = all.concat(data);
+      if (data.length < pageSize) { done = true; break; }
+    }
+    if (done) break;
+    page += batch;
+  }
+  return all;
+}
+
+// ---- Lưu tạm bản tải gần nhất để lần mở sau hiện số ngay, rồi cập nhật ở nền ----
+function cacheRepKey() { return currentUser?.role === 'SALE' ? currentUser.sales_rep_id : 'ALL'; }
+function cacheKey() { return `cb_cache_v1:${currentUser.id}:${cacheRepKey()}`; }
+function saveCache() {
+  try {
+    if (!currentUser || getActiveSalesRepId() !== cacheRepKey()) return;
+    localStorage.setItem(cacheKey(), JSON.stringify({
+      ts: Date.now(), reps: state.salesReps, groups: state.productGroups, maps: state.skuMappings,
+      months: state.availableMonths, sel: selectedMonths, rec: state.reconcileRowsAll, tr: state.transfers
+    }));
+  } catch (e) { /* đầy bộ nhớ thì bỏ qua */ }
+}
+function hydrateFromCache() {
+  try {
+    const raw = localStorage.getItem(cacheKey());
+    if (!raw) return false;
+    const c = JSON.parse(raw);
+    if (!c || !c.groups || !c.rec || !c.months || !c.months.length) return false;
+    state.salesReps = c.reps || []; state.productGroups = c.groups; state.skuMappings = c.maps || [];
+    state.availableMonths = c.months; state.reconcileRowsAll = c.rec; state.transfers = c.tr || [];
+    selectedMonths = (c.sel && c.sel.length) ? c.sel : [c.months[0]];
+    const repSelect = document.getElementById('filterSalesRep');
+    if (currentUser.role === 'SALE' && currentUser.sales_rep_id) {
+      const my = state.salesReps.find(r => r.id === currentUser.sales_rep_id);
+      repSelect.innerHTML = `<option value="${currentUser.sales_rep_id}">${my ? my.full_name : currentUser.display_name}</option>`;
+      repSelect.value = currentUser.sales_rep_id; repSelect.disabled = true;
+    } else {
+      repSelect.innerHTML = `<option value="ALL">Tất cả 5 Sale</option>` + state.salesReps.map(r => `<option value="${r.id}">${r.full_name}</option>`).join('');
+    }
+    renderMonthCheckboxes();
+    renderActiveTab();
+    return true;
+  } catch (e) { return false; }
+}
+
+async function refreshAllData() {
+  state._staticOk = false; // nạp lại cả danh sách khách/outlet
+  const [resReps, resGroups, resMaps, resVM] = await Promise.all([
+    supabaseClient.from('sales_reps').select('*').order('full_name'),
+    supabaseClient.from('product_groups').select('*').order('display_order'),
+    supabaseClient.from('sku_mappings').select('*'),
+    supabaseClient.from('v_available_months').select('month_date')
+  ]);
+
+  state.salesReps = resReps.data || [];
+  state.productGroups = resGroups.data || [];
+  state.skuMappings = resMaps.data || [];
+  state._tierMap = null;
+
+  const unmapped = state.skuMappings.filter(m => !m.product_group_id && !isIgnoredSku(m.raw_code));
+  const alertBox = document.getElementById('unmappedAlert');
+  if (unmapped.length > 0) {
+    alertBox.classList.remove('hidden');
+    alertBox.querySelector('button').classList.toggle('hidden', !isManagerRole());
+    document.getElementById('unmappedText').innerText = `${unmapped.length} mã mới (${unmapped.map(u => u.raw_code).join(', ')}) chưa phân nhóm, số liệu các mã này chưa được tính.${isManagerRole() ? '' : ' Báo SS/Admin gán nhóm.'}`;
+  } else {
+    alertBox.classList.add('hidden');
+  }
+
+  const repSelect = document.getElementById('filterSalesRep');
+  if (currentUser?.role === 'SALE' && currentUser.sales_rep_id) {
+    const myRep = state.salesReps.find(r => r.id === currentUser.sales_rep_id);
+    repSelect.innerHTML = `<option value="${currentUser.sales_rep_id}">${myRep ? myRep.full_name : currentUser.display_name}</option>`;
+    repSelect.value = currentUser.sales_rep_id;
+    repSelect.disabled = true;
+  } else {
+    const prevRep = repSelect.value;
+    repSelect.disabled = false;
+    repSelect.innerHTML = `<option value="ALL">Tất cả 5 Sale</option>` +
+      state.salesReps.map(r => `<option value="${r.id}">${r.full_name}</option>`).join('');
+    if ([...repSelect.options].some(o => o.value === prevRep)) repSelect.value = prevRep;
+  }
+
+  const { data: viewMonths, error: vmErr } = resVM;
+  if (!vmErr && viewMonths && viewMonths.length > 0) {
+    state.availableMonths = viewMonths.map(x => x.month_date).sort().reverse();
+  } else {
+    const [mKv, mDms] = await Promise.all([
+      fetchAllRows(() => supabaseClient.from('kv_sales_lines').select('sale_month')),
+      fetchAllRows(() => supabaseClient.from('dms_order_lines').select('order_month'))
+    ]);
+    state.availableMonths = Array.from(new Set([...mKv.map(x => x.sale_month), ...mDms.map(x => x.order_month)])).sort().reverse();
+  }
+
+  selectedMonths = selectedMonths.filter(m => state.availableMonths.includes(m));
+  if (state.availableMonths.length > 0 && selectedMonths.length === 0) {
+    const now = new Date();
+    const currentSysMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+    const defaultMonth = state.availableMonths.includes(currentSysMonth) ? currentSysMonth : state.availableMonths[0];
+    selectedMonths = [defaultMonth];
+  }
+  renderMonthCheckboxes();
+
+  await onFilterChange();
+}
+
+let filterToken = 0;
+async function onFilterChange() {
+  if (selectedMonths.length === 0) return;
+  const token = ++filterToken;
+  kvLimit = dmsLimit = PAGE_ROWS;
+  const firstLoad = !state._staticOk;
+  const trPromise = loadTransfers();
+  const selectedRep = getActiveSalesRepId();
+  const buildRepFilter = (q) => (selectedRep && selectedRep !== 'ALL') ? q.eq('sales_rep_id', selectedRep) : q;
+
+  // Tất cả yêu cầu chạy song song; tab Đối chiếu chỉ cần recPromise nên vẽ trước
+  const recPromise = fetchAllRows(() => buildRepFilter(supabaseClient.from('v_monthly_reconciliation').select('*')), ['month_date', 'product_group_id', 'sales_rep_id']);
+  const restPromise = Promise.all([
+    fetchAllRows(() => buildRepFilter(supabaseClient.from('kv_sales_lines').select('*').in('sale_month', selectedMonths)), ['invoice_code', 'raw_product_code', 'selling_price', 'line_index']),
+    fetchAllRows(() => buildRepFilter(supabaseClient.from('dms_order_lines').select('*').in('order_month', selectedMonths).eq('dis_code', DIS_CODE)), ['order_code', 'raw_product_code', 'order_type', 'line_index']),
+    state._staticOk ? Promise.resolve(state.kvCustomers) : fetchAllRows(() => supabaseClient.from('kv_customers').select('*'), ['kv_customer_code']),
+    state._staticOk ? Promise.resolve(state.dmsOutlets) : fetchAllRows(() => supabaseClient.from('dms_outlets').select('*'), ['dms_outlet_code']),
+    fetchAllRows(() => supabaseClient.from('customer_links').select('*'), ['id']),
+    buildRepFilter(supabaseClient.from('v_customer_match_suggestions').select('*')).order('similarity_score', { ascending: false }).limit(80)
+  ]);
+
+  if (firstLoad) {
+    const recData = await recPromise;
+    await trPromise;
+    if (token !== filterToken) return;
+    state.reconcileRowsAll = recData;
+    renderActiveTab();
+  }
+
+  const [recData, [kvData, dmsData, kvCData, dmsOData, linksData, resSug]] = await Promise.all([recPromise, restPromise]);
+  if (token !== filterToken) return;
+  state.reconcileRowsAll = recData;
+  state.kvLinesSelected = kvData;
+  state.dmsLinesSelected = dmsData;
+  state.kvCustomers = kvCData;
+  state.dmsOutlets = dmsOData;
+  state.customerLinks = linksData;
+  state.suggestions = resSug.data || [];
+  state._staticOk = true;
+  await trPromise;
+
+  renderActiveTab();
+  saveCache();
+}
+
+function switchTab(tabName) {
+  activeTab = tabName;
+  ['reconcile', 'kv', 'dms', 'custMatch', 'promo'].forEach(t => {
+    document.getElementById(`view-${t}`).classList.toggle('hidden', t !== tabName);
+    const mBtn = document.getElementById(`mTab-${t}`);
+    if (mBtn) mBtn.className = `flex flex-col items-center justify-center py-1 rounded-xl ${t === tabName ? 'text-emerald-700 font-bold' : 'text-slate-400'}`;
+    const dBtn = document.getElementById(`dTab-${t}`);
+    if (dBtn) dBtn.className = `py-3 text-sm flex items-center gap-2 ${t === tabName ? 'font-bold border-b-2 border-emerald-700 text-emerald-700' : 'font-medium text-slate-500 hover:text-slate-800'}`;
+  });
+  renderActiveTab();
+}
+
+function switchPromoSub(sub) {
+  document.getElementById('promoSub-kv').classList.toggle('hidden', sub !== 'kv');
+  document.getElementById('promoSub-dms').classList.toggle('hidden', sub !== 'dms');
+  document.getElementById('subPromoBtn-kv').className = sub === 'kv'
+    ? 'py-2 text-xs font-bold rounded-lg bg-white text-amber-800 shadow-xs'
+    : 'py-2 text-xs font-semibold rounded-lg text-slate-600';
+  document.getElementById('subPromoBtn-dms').className = sub === 'dms'
+    ? 'py-2 text-xs font-bold rounded-lg bg-white text-emerald-800 shadow-xs'
+    : 'py-2 text-xs font-semibold rounded-lg text-slate-600';
+}
+
+function togglePromoInline() {
+  showPromoInline = !showPromoInline;
+  document.getElementById('lblTogglePromo').innerText = showPromoInline ? 'Ẩn 0đ / KM' : 'Hiện 0đ / KM';
+  renderReconcileTab();
+  lucide.createIcons();
+}
+
+function setMatchTierFilter(tier) {
+  matchTierFilter = tier;
+  document.getElementById('tierBtn-ALL').className = tier === 'ALL'
+    ? 'py-1.5 font-bold rounded-lg bg-white text-slate-900 shadow-xs'
+    : 'py-1.5 font-semibold rounded-lg text-slate-600';
+  document.getElementById('tierBtn-Premium').className = tier === 'Premium'
+    ? 'py-1.5 font-bold rounded-lg bg-indigo-700 text-white shadow-xs'
+    : 'py-1.5 font-semibold rounded-lg text-indigo-800';
+  document.getElementById('tierBtn-Mainstream').className = tier === 'Mainstream'
+    ? 'py-1.5 font-bold rounded-lg bg-amber-600 text-white shadow-xs'
+    : 'py-1.5 font-semibold rounded-lg text-amber-800';
+  renderLinkedCustomersComparison();
+  lucide.createIcons();
+}
+
+function renderActiveTab() {
+  if (activeTab === 'reconcile') renderReconcileTab();
+  if (activeTab === 'kv') renderKvCustomersTab();
+  if (activeTab === 'dms') renderDmsCustomersTab();
+  if (activeTab === 'custMatch') renderCustomerMatchTab();
+  if (activeTab === 'promo') renderPromoTab();
+  lucide.createIcons();
+}
+
+function formatBalance(val) {
+  const n = Number(val || 0);
+  if (n > 0) return `+${n.toLocaleString('vi-VN')}`;
+  if (n < 0) return `(${Math.abs(n).toLocaleString('vi-VN')})`;
+  return '0';
+}
+function balanceTextColor(val) {
+  const n = Number(val || 0);
+  if (n > 0) return 'text-emerald-600';
+  if (n < 0) return 'text-rose-600';
+  return 'text-slate-500';
+}
+function balanceCellBg(val) {
+  const n = Number(val || 0);
+  if (n > 0) return 'bg-emerald-50/90 text-emerald-700';
+  if (n < 0) return 'bg-rose-50/90 text-rose-700';
+  return 'bg-slate-50 text-slate-600';
+}
+
+// =========================================================================
+// TAB 1: ĐỐI CHIẾU SẢN LƯỢNG & LŨY KẾ (MÀU SẮC PREMIUM VS MAINSTREAM TÁCH BIỆT)
+// =========================================================================
+function renderReconcileTab() {
+  const sortedSel = [...selectedMonths].sort();
+  const firstSelMonth = sortedSel[0];
+  const lastSelMonth = sortedSel[sortedSel.length - 1];
+  const selSet = new Set(sortedSel);
+
+  const groupedMap = new Map();
+  state.productGroups.forEach(pg => {
+    const tier = pg.tier || (pg.brand.toLowerCase().includes('huda') ? 'Mainstream' : 'Premium');
+    groupedMap.set(pg.id, {
+      product_group_id: pg.id,
+      brand: pg.brand,
+      tier: tier,
+      group_name: pg.group_name,
+      display_order: pg.display_order,
+      kv_paid_qty: 0,
+      kv_free_qty: 0,
+      dms_order_qty: 0,
+      prev_balance: 0,
+      period_balance: 0,
+      total_balance: 0
+    });
+  });
+
+  state.reconcileRowsAll.forEach(r => {
+    if (!groupedMap.has(r.product_group_id)) return;
+    const item = groupedMap.get(r.product_group_id);
+
+    if (selSet.has(r.month_date)) {
+      item.kv_paid_qty += Number(r.kv_paid_qty || 0);
+      item.kv_free_qty += Number(r.kv_free_qty || 0);
+      item.dms_order_qty += Number(r.dms_order_qty || 0);
+      item.period_balance += -Number(r.monthly_diff || 0);
+    }
+    if (r.month_date < firstSelMonth) {
+      item.prev_balance += -Number(r.monthly_diff || 0);
+    }
+    if (r.month_date < firstSelMonth || selSet.has(r.month_date)) {
+      item.total_balance += -Number(r.monthly_diff || 0);
+    }
+  });
+
+  const myRep = getActiveSalesRepId();
+  {
+    const allReps = !myRep || myRep === 'ALL';
+    state.transfers.filter(t => t.status === 'APPROVED').forEach(t => {
+      const item = groupedMap.get(t.product_group_id), m = String(t.month_date).slice(0, 10);
+      // Xem tất cả sale: chuyển giữa các sale tự triệt tiêu, chỉ phần SS cấp số làm đổi tổng
+      const d = allReps ? (t.from_rep_id ? 0 : Number(t.quantity)) : (t.from_rep_id === myRep ? -Number(t.quantity) : t.to_rep_id === myRep ? Number(t.quantity) : 0);
+      if (!item || !d) return;
+      item.transfer_net = (item.transfer_net || 0) + d;
+      if (selSet.has(m)) { item.kv_paid_qty += d; item.period_balance += d; }
+      if (m < firstSelMonth) item.prev_balance += d;
+      if (m < firstSelMonth || selSet.has(m)) item.total_balance += d;
+    });
+  }
+  const activeRows = Array.from(groupedMap.values())
+    .filter(r => r.kv_paid_qty > 0 || r.kv_free_qty > 0 || r.dms_order_qty > 0 || r.prev_balance !== 0 || r.total_balance !== 0)
+    .sort((a, b) => a.display_order - b.display_order);
+
+  const premiumRows = activeRows.filter(r => r.tier === 'Premium');
+  const mainstreamRows = activeRows.filter(r => r.tier === 'Mainstream');
+
+  let totKvPaid = 0, totKvFree = 0, totDms = 0, totPrev = 0, totPeriod = 0, totTotal = 0, totPos = 0, totNeg = 0;
+  activeRows.forEach(r => {
+    totKvPaid += r.kv_paid_qty;
+    totKvFree += r.kv_free_qty;
+    totDms += r.dms_order_qty;
+    totPrev += r.prev_balance;
+    totPeriod += r.period_balance;
+    totTotal += r.total_balance;
+    if (r.total_balance > 0) totPos += r.total_balance; else totNeg += -r.total_balance;
+  });
+
+  const tbody = document.getElementById('reconcileCompactBody');
+  const tfoot = document.getElementById('reconcileCompactFoot');
+
+  if (activeRows.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-xs text-slate-400">Không có phát sinh sản lượng trong các tháng đã chọn.</td></tr>`;
+    tfoot.innerHTML = '';
+  } else {
+    const renderSection = (title, headerClass, rowTintClass, accentDot, list) => {
+      if (list.length === 0) return '';
+      let sKv = 0, sDms = 0, sPrev = 0, sTot = 0;
+      list.forEach(x => { sKv += x.kv_paid_qty; sDms += x.dms_order_qty; sPrev += x.prev_balance; sTot += x.total_balance; });
+
+      const headerRow = `
+        <tr class="${headerClass}">
+          <td class="py-2 px-2.5 font-extrabold text-[11px] uppercase tracking-wider">${title}</td>
+          <td class="py-2 px-1.5 text-right font-extrabold text-[11px] tabular-nums">${fmtNum(sKv)}</td>
+          <td class="py-2 px-1.5 text-right font-extrabold text-[11px] tabular-nums">${fmtNum(sDms)}</td>
+          <td class="py-2 px-1.5 text-right font-extrabold text-[11px] tabular-nums">${formatBalance(sPrev)}</td>
+          <td class="py-2 px-2 text-right font-extrabold text-[11px] tabular-nums">${formatBalance(sTot)}</td>
+        </tr>
+      `;
+
+      const itemRows = list.map(r => {
+        const rowId = `sku-row-${r.product_group_id}`;
+        return `
+          <tr onclick="toggleAccordion('${rowId}')" class="${rowTintClass} hover:brightness-95 cursor-pointer transition">
+            <td class="py-2.5 px-2.5">
+              <div class="font-bold text-slate-900 leading-snug flex items-center gap-1.5">
+                <span class="w-1.5 h-1.5 rounded-full ${accentDot} shrink-0"></span>
+                <span>${r.group_name}</span>
               </div>
-              <div id="monthCheckboxesList" class="max-h-52 overflow-y-auto space-y-1"></div>
-              <button type="button" onclick="applyMonthSelection()" class="w-full bg-emerald-700 text-white text-xs font-bold py-2 rounded-xl">
-                Áp Dụng Tháng Đã Chọn
-              </button>
-            </div>
-          </div>
-
-          <!-- Nhân viên Sale -->
-          <div class="relative">
-            <span class="text-[9px] font-bold uppercase text-slate-400 absolute left-2.5 top-1">Nhân viên Sale</span>
-            <select id="filterSalesRep" onchange="onFilterChange()" class="w-full bg-slate-50 border border-slate-200 text-slate-900 text-xs rounded-xl pt-3.5 pb-1.5 px-2.5 font-bold focus:ring-emerald-600 focus:border-emerald-600 disabled:opacity-85 disabled:bg-emerald-50/70 disabled:text-emerald-900">
-              <option value="ALL">Tất cả 5 Sale</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      <!-- DESKTOP TAB BAR -->
-      <div class="hidden md:flex max-w-7xl mx-auto px-6 space-x-6 border-t border-slate-100">
-        <button onclick="switchTab('reconcile')" id="dTab-reconcile" class="py-3 text-sm font-semibold border-b-2 border-emerald-700 text-emerald-700 flex items-center gap-2">
-          <i data-lucide="bar-chart-3" class="w-4 h-4"></i> 1. Đối chiếu
-        </button>
-        <button onclick="switchTab('kv')" id="dTab-kv" class="py-3 text-sm font-medium text-slate-500 hover:text-slate-800 flex items-center gap-2">
-          <i data-lucide="store" class="w-4 h-4"></i> 2. Kiot
-        </button>
-        <button onclick="switchTab('dms')" id="dTab-dms" class="py-3 text-sm font-medium text-slate-500 hover:text-slate-800 flex items-center gap-2">
-          <i data-lucide="smartphone" class="w-4 h-4"></i> 3. DMS
-        </button>
-        <button onclick="switchTab('custMatch')" id="dTab-custMatch" class="py-3 text-sm font-medium text-slate-500 hover:text-slate-800 flex items-center gap-2">
-          <i data-lucide="git-merge" class="w-4 h-4"></i> 4. Kiot/DMS
-        </button>
-        <button onclick="switchTab('promo')" id="dTab-promo" class="py-3 text-sm font-medium text-slate-500 hover:text-slate-800 flex items-center gap-2">
-          <i data-lucide="gift" class="w-4 h-4"></i> 5. 0đ & KM
-        </button>
-      </div>
-    </section>
-
-    <!-- MAIN CONTENT -->
-    <main class="max-w-7xl mx-auto px-3 sm:px-6 py-3.5 space-y-3.5">
-
-      <!-- CẢNH BÁO MÃ SKU MỚI (Admin / SS) -->
-      <div id="unmappedAlert" class="hidden bg-amber-50 border border-amber-300 rounded-2xl p-3 flex items-center justify-between gap-3">
-        <div class="flex items-start gap-2">
-          <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-600 shrink-0 mt-0.5"></i>
-          <div>
-            <h3 class="text-xs font-bold text-amber-900">Có mã SKU mới chưa phân nhóm!</h3>
-            <p id="unmappedText" class="text-[11px] text-amber-800 mt-0.5"></p>
-          </div>
-        </div>
-        <button onclick="openSkuModal()" class="shrink-0 bg-amber-600 text-white text-xs font-bold px-3 py-1.5 rounded-xl">Gán nhóm</button>
-      </div>
-
-      <div id="transferNotice" class="hidden bg-purple-50 border border-purple-200 rounded-2xl p-3 text-[11px] text-purple-900 space-y-1"></div>
-
-      <!-- ==================== TAB 1: ĐỐI CHIẾU SẢN LƯỢNG & LŨY KẾ ==================== -->
-      <div id="view-reconcile" class="space-y-3">
-        <div class="bg-gradient-to-br from-emerald-950 via-emerald-900 to-teal-950 text-white rounded-2xl p-4 shadow-md">
-          <div class="flex items-start justify-between gap-2">
-            <div>
-              <p class="text-[11px] font-semibold text-emerald-300 uppercase tracking-wider">Tổng Chênh Lệch Lũy Kế</p>
-              <div class="flex items-baseline gap-2 mt-0.5">
-                <span id="kpi-totalDiff" class="text-3xl sm:text-4xl font-extrabold tracking-tight text-emerald-300">0</span>
-                <span class="text-xs text-emerald-200">thùng / két</span>
+              ${showPromoInline && r.kv_free_qty > 0
+                ? `<span class="inline-flex items-center gap-1 text-[10px] font-bold text-amber-800 bg-amber-100 px-1.5 py-0.5 rounded mt-0.5 ml-3">🎁 Tặng 0đ: ${fmtNum(r.kv_free_qty)}</span>`
+                : `<span class="text-[10px] text-slate-400 ml-3">${r.brand}${r.kv_free_qty > 0 ? ' • có 0đ' : ''}</span>`
+              }
+            </td>
+            <td class="py-2.5 px-1.5 text-right font-bold text-slate-900 tabular-nums">${fmtNum(r.kv_paid_qty)}</td>
+            <td class="py-2.5 px-1.5 text-right font-bold text-slate-700 tabular-nums">${fmtNum(r.dms_order_qty)}</td>
+            <td class="py-2.5 px-1.5 text-right font-semibold tabular-nums ${balanceTextColor(r.prev_balance)}">${formatBalance(r.prev_balance)}</td>
+            <td class="py-2.5 px-2 text-right font-extrabold tabular-nums ${balanceCellBg(r.total_balance)}">${formatBalance(r.total_balance)}</td>
+          </tr>
+          <tr id="${rowId}" class="hidden bg-slate-50/90">
+            <td colspan="5" class="px-3 py-2 text-[11px] text-slate-600 border-t border-dashed border-slate-200">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <span>Chênh lệch riêng kỳ chọn: <b class="${balanceTextColor(r.period_balance)}">${formatBalance(r.period_balance)}</b></span>
+                ${r.transfer_net ? `<span class="bg-purple-100 text-purple-800 px-2 py-0.5 rounded font-semibold">Luân chuyển đã duyệt: ${r.transfer_net > 0 ? '+' : '-'}${fmtNum(Math.abs(r.transfer_net))}</span>` : ''}
+                <span class="bg-amber-100 text-amber-900 px-2 py-0.5 rounded font-semibold">Xuất tặng 0đ Kiot: <b>${fmtNum(r.kv_free_qty)}</b></span>
               </div>
-              <p id="kpi-totalLabel" class="text-xs text-emerald-100/90 mt-1">Chưa có dữ liệu</p>
-            </div>
-            <div class="flex flex-col items-end gap-1.5 shrink-0">
-              <button id="btnAdminSku" onclick="openSkuModal()" class="hidden bg-white/10 hover:bg-white/20 text-emerald-100 text-[11px] font-semibold px-2.5 py-1.5 rounded-xl flex items-center gap-1">
-                <i data-lucide="layers" class="w-3.5 h-3.5"></i> Mã SKU
-              </button>
-              <button onclick="openTransferModal()" class="bg-white/10 hover:bg-white/20 text-emerald-100 text-[11px] font-semibold px-2.5 py-1.5 rounded-xl flex items-center gap-1">
-                <i data-lucide="repeat" class="w-3.5 h-3.5"></i> Luân chuyển số
-                <span id="badge-transfer" class="hidden bg-rose-500 text-white text-[10px] font-bold rounded-full px-1.5 leading-4">0</span>
-              </button>
-              <button onclick="togglePromoInline()" id="btnTogglePromoInline" class="bg-amber-400/20 border border-amber-300/30 text-amber-200 text-[10px] font-semibold px-2.5 py-1 rounded-lg flex items-center gap-1">
-                <i data-lucide="eye" class="w-3 h-3"></i> <span id="lblTogglePromo">Hiện 0đ / KM</span>
-              </button>
-            </div>
-          </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
 
-          <div class="grid grid-cols-4 gap-1.5 mt-3.5 pt-3 border-t border-white/15 text-center">
-            <div class="bg-white/10 rounded-xl py-2 px-1">
-              <span class="text-[10px] text-emerald-200 block">Bán Kiot</span>
-              <span id="kpi-kvPaid" class="text-sm sm:text-base font-extrabold text-white">0</span>
-            </div>
-            <div class="bg-white/10 rounded-xl py-2 px-1">
-              <span class="text-[10px] text-emerald-200 block">Key DMS</span>
-              <span id="kpi-dmsOrder" class="text-sm sm:text-base font-extrabold text-amber-300">0</span>
-            </div>
-            <div class="bg-white/10 rounded-xl py-2 px-1">
-              <span class="text-[10px] text-emerald-200 block">Tồn trước</span>
-              <span id="kpi-prevDiff" class="text-sm sm:text-base font-extrabold text-white">0</span>
-            </div>
-            <div class="bg-white/10 rounded-xl py-2 px-1">
-              <span class="text-[10px] text-emerald-200 block">Lệch kỳ chọn</span>
-              <span id="kpi-monthDiff" class="text-sm sm:text-base font-extrabold text-white">0</span>
-            </div>
-          </div>
+      return headerRow + itemRows;
+    };
 
-          <div onclick="switchTab('promo')" class="mt-2.5 bg-white/10 hover:bg-white/15 active:scale-99 cursor-pointer rounded-xl px-3 py-2 flex items-center justify-between text-[11px]">
-            <span class="text-amber-200 font-medium flex items-center gap-1.5">
-              <i data-lucide="gift" class="w-3.5 h-3.5 text-amber-300"></i>
-              <span>Tặng 0đ Kiot: <b id="kpi-freeBanner" class="text-white">0</b> két/thùng</span>
-            </span>
-            <span class="text-emerald-200 font-medium flex items-center gap-1">
-              <span>Voucher DMS: <b id="kpi-voucherBanner" class="text-white">0</b> suất</span>
-              <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
-            </span>
-          </div>
+    tbody.innerHTML =
+      renderSection('★ PREMIUM', 'bg-indigo-900 text-indigo-50', 'bg-indigo-50/35 border-l-4 border-l-indigo-600', 'bg-indigo-600', premiumRows) +
+      renderSection('● MAINSTREAM', 'bg-amber-800 text-amber-50', 'bg-amber-50/35 border-l-4 border-l-amber-500', 'bg-amber-500', mainstreamRows);
+
+    tfoot.innerHTML = `
+      <tr>
+        <td class="py-3 px-2.5 uppercase text-[11px]">Tổng cộng tất cả</td>
+        <td class="py-3 px-1.5 text-right tabular-nums">${fmtNum(totKvPaid)}</td>
+        <td class="py-3 px-1.5 text-right tabular-nums text-amber-300">${fmtNum(totDms)}</td>
+        <td class="py-3 px-1.5 text-right tabular-nums ${totPrev > 0 ? 'text-emerald-300' : totPrev < 0 ? 'text-rose-300' : 'text-slate-300'}">${formatBalance(totPrev)}</td>
+        <td class="py-3 px-2 text-right tabular-nums text-sm ${totTotal > 0 ? 'bg-emerald-800 text-emerald-200' : totTotal < 0 ? 'bg-rose-900 text-rose-200' : ''}">${formatBalance(totTotal)}</td>
+      </tr>
+    `;
+  }
+
+  const freeTotal = state.kvLinesSelected.filter(l => l.is_free_gift).reduce((s, l) => s + Number(l.quantity), 0);
+  const voucherTotal = state.dmsLinesSelected.filter(l => l.is_posm_voucher && l.order_type === 'Order').reduce((s, l) => s + Number(l.quantity), 0);
+
+  document.getElementById('kpi-kvPaid').innerText = fmtNum(totKvPaid);
+  document.getElementById('kpi-dmsOrder').innerText = fmtNum(totDms);
+  document.getElementById('kpi-prevDiff').innerText = formatBalance(totPrev);
+  document.getElementById('kpi-monthDiff').innerText = formatBalance(totPeriod);
+  document.getElementById('kpi-freeBanner').innerText = fmtNum(freeTotal);
+  document.getElementById('kpi-voucherBanner').innerText = fmtNum(voucherTotal);
+
+  const totEl = document.getElementById('kpi-totalDiff');
+  totEl.innerText = formatBalance(totTotal);
+  totEl.className = `text-3xl sm:text-4xl font-extrabold tracking-tight ${totTotal > 0 ? 'text-emerald-300' : totTotal < 0 ? 'text-rose-300' : 'text-white'}`;
+
+  document.getElementById('kpi-totalLabel').innerText =
+    (totPos === 0 && totNeg === 0) ? 'Đã khớp 100% số bán Kiot và số key DMS'
+    : `Chưa key DMS: ${fmtNum(totPos)} • Key dư: ${fmtNum(totNeg)} (thùng/két)`;
+  renderTransferNotice();
+}
+
+// =========================================================================
+// TAB 2: KIOT
+// =========================================================================
+const PAGE_ROWS = 50;
+let kvLimit = PAGE_ROWS, dmsLimit = PAGE_ROWS, lastKvKw = '', lastDmsKw = '';
+function kvMore() { kvLimit += PAGE_ROWS; renderKvCustomersTab(); }
+function dmsMore() { dmsLimit += PAGE_ROWS; renderDmsCustomersTab(); }
+function moreRow(cols, fn, n, label) {
+  return `<tr><td colspan="${cols}" class="p-1"><button onclick="${fn}()" class="w-full text-xs font-bold text-emerald-700 py-2.5">Xem thêm ${n} ${label}</button></td></tr>`;
+}
+function renderKvCustomersTab() {
+  const kw = document.getElementById('searchKvCust').value.toLowerCase().trim();
+  const custMap = new Map(state.kvCustomers.map(c => [c.kv_customer_code, c]));
+  const repMap = new Map(state.salesReps.map(r => [r.id, r.full_name]));
+
+  const agg = new Map();
+  state.kvLinesSelected.filter(l => listTier === 'ALL' || getLineTier('KIOTVIET', l) === listTier).forEach(line => {
+    if (!agg.has(line.kv_customer_code)) agg.set(line.kv_customer_code, { paid: 0, free: 0, lines: [] });
+    const entry = agg.get(line.kv_customer_code);
+    if (line.is_free_gift) entry.free += Number(line.quantity);
+    else entry.paid += Number(line.quantity);
+    entry.lines.push(line);
+  });
+
+  const list = Array.from(agg.entries()).filter(([code]) => {
+    const c = custMap.get(code) || {};
+    return !kw || code.toLowerCase().includes(kw) || (c.kv_customer_name || '').toLowerCase().includes(kw) || (c.phone || '').includes(kw);
+  }).sort((a, b) => b[1].paid - a[1].paid);
+
+  const tbody = document.getElementById('kvCustomersTableBody');
+  const tfoot = document.getElementById('kvCustomersTableFoot');
+
+  if (list.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="3" class="py-8 text-center text-xs text-slate-400">Không có điểm bán phát sinh trong kỳ chọn.</td></tr>`;
+    tfoot.innerHTML = '';
+    return;
+  }
+
+  let sumPaid = 0, sumFree = 0;
+  list.forEach(([, d]) => { sumPaid += d.paid; sumFree += d.free; });
+  if (kw !== lastKvKw) { kvLimit = PAGE_ROWS; lastKvKw = kw; }
+  tbody.innerHTML = list.slice(0, kvLimit).map(([code, data]) => {
+    const c = custMap.get(code) || { kv_customer_name: code };
+    const repName = repMap.get(c.sales_rep_id) || 'Chưa gán sale';
+
+    const byMonth = {};
+    data.lines.forEach(h => {
+      const m = h.sale_month.slice(0, 7);
+      if (!byMonth[m]) byMonth[m] = [];
+      const existing = byMonth[m].find(x => x.name === h.raw_product_name && x.isFree === h.is_free_gift);
+      if (existing) existing.qty += Number(h.quantity);
+      else byMonth[m].push({ name: h.raw_product_name, isFree: h.is_free_gift, qty: Number(h.quantity) });
+    });
+
+    const detId = `kv-row-${code}`;
+    return `
+      <tr onclick="toggleAccordion('${detId}')" class="hover:bg-slate-50 active:bg-slate-100 cursor-pointer transition">
+        <td class="py-2.5 px-2.5">
+          <div class="font-bold text-slate-900 leading-snug line-clamp-2">${esc(c.kv_customer_name)}</div>
+          <div class="text-[10px] text-slate-400 mt-0.5">${code} • <span class="text-emerald-700 font-medium">${esc(repName)}</span></div>
+        </td>
+        <td class="py-2.5 px-1.5 text-right font-extrabold text-slate-900 tabular-nums">${fmtNum(data.paid)}</td>
+        <td class="py-2.5 px-2 text-right font-extrabold tabular-nums bg-amber-50 text-amber-700">${data.free > 0 ? `+${fmtNum(data.free)}` : '-'}</td>
+      </tr>
+      <tr id="${detId}" class="hidden bg-slate-50">
+        <td colspan="3" class="p-3 border-t border-dashed border-slate-200 space-y-2">
+          ${Object.entries(byMonth).sort().reverse().map(([m, items]) => `
+            <div class="bg-white p-2 rounded-xl border border-slate-200 text-[11px] space-y-1">
+              <div class="font-bold text-emerald-800 border-b pb-1 flex justify-between gap-2"><span>Tháng ${m}</span><span class="tabular-nums">Tổng: ${fmtNum(items.filter(i => !i.isFree).reduce((a, i) => a + i.qty, 0))}${items.some(i => i.isFree) ? ` • 🎁 +${fmtNum(items.filter(i => i.isFree).reduce((a, i) => a + i.qty, 0))}` : ''}</span></div>
+              ${items.map(it => it.isFree ? `
+                <div class="flex justify-between items-center gap-2 py-1 px-2 rounded-lg bg-amber-50 border border-amber-200/80 text-amber-900">
+                  <span class="font-semibold">🎁 ${esc(it.name)} <span class="text-[10px] bg-amber-200/80 px-1.5 py-0.2 rounded font-bold">TẶNG 0Đ</span></span>
+                  <span class="font-extrabold text-amber-800 shrink-0 tabular-nums">+${fmtNum(it.qty)}</span>
+                </div>
+              ` : `
+                <div class="flex justify-between gap-2 py-0.5 px-1">
+                  <span class="text-slate-700">${esc(it.name)}</span>
+                  <span class="font-bold text-slate-900 shrink-0 tabular-nums">${fmtNum(it.qty)}</span>
+                </div>
+              `).join('')}
+            </div>
+          `).join('')}
+        </td>
+      </tr>
+    `;
+  }).join('') + (list.length > kvLimit ? moreRow(3, 'kvMore', list.length - kvLimit, 'điểm bán') : '');
+
+  const trNetKv = getTransferNet(listTier);
+  tfoot.innerHTML = `
+    <tr>
+      <td class="py-3 px-2.5 uppercase text-[11px]">Tổng cộng (${list.length} điểm bán)</td>
+      <td class="py-3 px-1.5 text-right tabular-nums">${fmtNum(sumPaid)}</td>
+      <td class="py-3 px-2 text-right tabular-nums text-amber-300">${sumFree > 0 ? `+${fmtNum(sumFree)}` : '0'}</td>
+    </tr>
+  ` + (trNetKv ? `
+    <tr class="bg-purple-900 text-purple-100 text-[11px] font-semibold">
+      <td class="py-2 px-2.5">Luân chuyển số đã duyệt (kỳ chọn)</td>
+      <td class="py-2 px-1.5 text-right tabular-nums">${formatBalance(trNetKv)}</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td class="py-3 px-2.5 uppercase text-[11px]">Tổng sau luân chuyển</td>
+      <td class="py-3 px-1.5 text-right tabular-nums">${fmtNum(sumPaid + trNetKv)}</td>
+      <td></td>
+    </tr>
+  ` : '');
+}
+
+// =========================================================================
+// TAB 3: DMS
+// =========================================================================
+function renderDmsCustomersTab() {
+  const kw = document.getElementById('searchDmsCust').value.toLowerCase().trim();
+  const outMap = new Map(state.dmsOutlets.map(o => [o.dms_outlet_code, o]));
+  const repMap = new Map(state.salesReps.map(r => [r.id, r.full_name]));
+
+  const agg = new Map();
+  state.dmsLinesSelected.filter(l => l.order_type === 'Order' && (listTier === 'ALL' || (!l.is_posm_voucher && getLineTier('DMS', l) === listTier))).forEach(line => {
+    if (!agg.has(line.dms_outlet_code)) agg.set(line.dms_outlet_code, { beerQty: 0, lines: [] });
+    const entry = agg.get(line.dms_outlet_code);
+    if (!line.is_posm_voucher) entry.beerQty += Number(line.quantity);
+    entry.lines.push(line);
+  });
+
+  const list = Array.from(agg.entries()).filter(([code]) => {
+    const o = outMap.get(code) || {};
+    return !kw || code.toLowerCase().includes(kw) || (o.dms_outlet_name || '').toLowerCase().includes(kw);
+  }).sort((a, b) => b[1].beerQty - a[1].beerQty);
+
+  const tbody = document.getElementById('dmsCustomersTableBody');
+  const tfoot = document.getElementById('dmsCustomersTableFoot');
+
+  if (list.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="2" class="py-8 text-center text-xs text-slate-400">Không tìm thấy Outlet DMS trong kỳ chọn.</td></tr>`;
+    tfoot.innerHTML = '';
+    return;
+  }
+
+  let sumBeer = 0;
+  list.forEach(([, d]) => { sumBeer += d.beerQty; });
+  if (kw !== lastDmsKw) { dmsLimit = PAGE_ROWS; lastDmsKw = kw; }
+  tbody.innerHTML = list.slice(0, dmsLimit).map(([code, data]) => {
+    const o = outMap.get(code) || { dms_outlet_name: code };
+    const repName = repMap.get(o.sales_rep_id) || 'Chưa gán sale';
+
+    const byMonth = {};
+    data.lines.forEach(h => {
+      const m = h.order_month.slice(0, 7);
+      if (!byMonth[m]) byMonth[m] = [];
+      const existing = byMonth[m].find(x => x.name === h.raw_product_name && x.isVoucher === h.is_posm_voucher);
+      if (existing) existing.qty += Number(h.quantity);
+      else byMonth[m].push({ name: h.raw_product_name, isVoucher: h.is_posm_voucher, qty: Number(h.quantity) });
+    });
+
+    const detId = `dms-row-${code}`;
+    return `
+      <tr onclick="toggleAccordion('${detId}')" class="hover:bg-slate-50 active:bg-slate-100 cursor-pointer transition">
+        <td class="py-2.5 px-2.5">
+          <div class="font-bold text-slate-900 leading-snug line-clamp-2">${esc(o.dms_outlet_name)}</div>
+          <div class="text-[10px] text-slate-400 mt-0.5">${code} • <span class="text-slate-600 font-medium">${esc(repName)}</span></div>
+        </td>
+        <td class="py-2.5 px-2 text-right font-extrabold text-emerald-700 tabular-nums bg-emerald-50/50">${fmtNum(data.beerQty)}</td>
+      </tr>
+      <tr id="${detId}" class="hidden bg-slate-50">
+        <td colspan="2" class="p-3 border-t border-dashed border-slate-200 space-y-2">
+          ${Object.entries(byMonth).sort().reverse().map(([m, items]) => `
+            <div class="bg-white p-2 rounded-xl border border-slate-200 text-[11px] space-y-1">
+              <div class="font-bold text-emerald-800 border-b pb-1 flex justify-between gap-2"><span>Tháng ${m}</span><span class="tabular-nums">Tổng: ${fmtNum(items.filter(i => !i.isVoucher).reduce((a, i) => a + i.qty, 0))}${items.some(i => i.isVoucher) ? ` • 🎟️ ${fmtNum(items.filter(i => i.isVoucher).reduce((a, i) => a + i.qty, 0))} suất` : ''}</span></div>
+              ${items.map(it => it.isVoucher ? `
+                <div class="flex justify-between items-center gap-2 py-1 px-2 rounded-lg bg-purple-50 border border-purple-200 text-purple-900">
+                  <span class="font-semibold">🎟️ ${esc(it.name)} <span class="text-[10px] bg-purple-200/80 px-1.5 py-0.2 rounded font-bold">VOUCHER</span></span>
+                  <span class="font-extrabold text-purple-800 shrink-0 tabular-nums">${fmtNum(it.qty)} suất</span>
+                </div>
+              ` : `
+                <div class="flex justify-between gap-2 py-0.5 px-1">
+                  <span class="text-slate-700">${esc(it.name)}</span>
+                  <span class="font-bold text-slate-900 shrink-0 tabular-nums">${fmtNum(it.qty)}</span>
+                </div>
+              `).join('')}
+            </div>
+          `).join('')}
+        </td>
+      </tr>
+    `;
+  }).join('') + (list.length > dmsLimit ? moreRow(2, 'dmsMore', list.length - dmsLimit, 'outlet') : '');
+
+  tfoot.innerHTML = `
+    <tr>
+      <td class="py-3 px-2.5 uppercase text-[11px]">Tổng cộng (${list.length} outlet)</td>
+      <td class="py-3 px-2 text-right tabular-nums bg-emerald-800 text-emerald-200">${fmtNum(sumBeer)}</td>
+    </tr>
+  `;
+}
+
+// =========================================================================
+// TAB 4: GHÉP KH
+// =========================================================================
+function getActiveSalesRepId() {
+  if (currentUser?.role === 'SALE') return currentUser.sales_rep_id;
+  return document.getElementById('filterSalesRep').value;
+}
+
+let showAllSugs = false;
+function toggleSugs() { showAllSugs = !showAllSugs; renderCustomerMatchTab(); }
+function renderCustomerMatchTab() {
+  const selectedRep = getActiveSalesRepId();
+  const linkedDmsNow = new Set(state.customerLinks.map(l => l.dms_outlet_code));
+  const sugs = state.suggestions.filter(s => (selectedRep === 'ALL' || s.sales_rep_id === selectedRep) && !linkedDmsNow.has(s.dms_outlet_code));
+  document.getElementById('sugCountBadge').innerText = sugs.length;
+  const sugContainer = document.getElementById('suggestionsContainer');
+
+  if (sugs.length === 0) {
+    sugContainer.innerHTML = `<p class="text-xs text-slate-400 text-center py-2">Không còn gợi ý ghép quán.</p>`;
+  } else {
+    sugContainer.innerHTML = (showAllSugs ? sugs.slice(0, 30) : sugs.slice(0, 1)).map(s => `
+      <div class="p-2 rounded-xl border border-slate-200 bg-slate-50/80 space-y-1.5">
+        <div class="text-[11px] leading-snug">
+          <div class="flex justify-between gap-2"><span class="font-bold text-slate-900 truncate">${esc(s.kv_customer_name)}</span><span class="text-[10px] text-slate-400 shrink-0">${s.kv_customer_code} • ${esc(s.sales_rep_name || '')}</span></div>
+          <div class="flex justify-between gap-2"><span class="font-bold text-emerald-800 truncate">&harr; ${esc(s.dms_outlet_name)}</span><span class="text-[10px] bg-amber-100 text-amber-800 px-1.5 rounded shrink-0">Giống ${s.similarity_score}%</span></div>
+          <div class="text-[10px] text-emerald-600">${s.dms_outlet_code}</div>
         </div>
+        <div class="grid grid-cols-2 gap-1.5">
+          <button onclick="rejectCustomerSuggestion('${s.kv_customer_code}', '${s.dms_outlet_code}')" class="bg-white text-rose-600 border border-rose-200 text-[11px] font-bold py-1.5 rounded-lg">Khác quán</button>
+          <button onclick="confirmCustomerLink('${s.kv_customer_code}', '${s.dms_outlet_code}', ${s.similarity_score}, 'AUTO_NAME')" class="bg-emerald-700 text-white text-[11px] font-bold py-1.5 rounded-lg">Là 1</button>
+        </div>
+      </div>
+    `).join('') + (sugs.length > 1 ? `<button onclick="toggleSugs()" class="w-full text-xs font-bold text-emerald-700 py-1.5">${showAllSugs ? 'Thu gọn' : 'Xem thêm ' + (sugs.length - 1) + ' gợi ý'}</button>` : '');
+  }
 
-        <!-- BẢNG ĐỐI CHIẾU SKU (TÁCH RÕ MÀU SẮC PREMIUM VS MAINSTREAM) -->
-        <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-          <div class="px-3 py-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between text-[10px] text-slate-500">
-            <span class="font-bold text-slate-700 uppercase">Bảng Đối Chiếu SKU</span>
-            <div class="flex items-center gap-2.5">
-              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-600"></span><b>+</b> Chưa key DMS</span>
-              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-rose-600"></span><b>(-)</b> Key dư DMS</span>
+  renderLinkedCustomersComparison();
+}
+
+async function confirmCustomerLink(kvCode, dmsCode, score, method, ignoreLinkId) {
+  // 1 outlet DMS chỉ được ghép với 1 quán Kiot (tránh tính trùng số key DMS)
+  const clash = state.customerLinks.find(l => l.dms_outlet_code === dmsCode && l.kv_customer_code !== kvCode && l.id !== ignoreLinkId);
+  if (clash) {
+    const other = state.kvCustomers.find(c => c.kv_customer_code === clash.kv_customer_code);
+    alert(`Outlet DMS này đã được ghép với quán Kiot "${other ? other.kv_customer_name : clash.kv_customer_code}". Hãy hủy ghép quán đó trước.`);
+    return false;
+  }
+  const { error } = await supabaseClient.from('customer_links').upsert({
+    kv_customer_code: kvCode, dms_outlet_code: dmsCode, match_score: score, match_method: method
+  }, { onConflict: 'kv_customer_code' });
+  if (error) {
+    alert(error.code === '23505' ? 'Outlet DMS này đã được ghép với quán khác!' : 'Lỗi ghép khách hàng: ' + error.message);
+    return false;
+  }
+  await onFilterChange();
+  return true;
+}
+
+async function rejectCustomerSuggestion(kvCode, dmsCode) {
+  const { error } = await supabaseClient.from('rejected_customer_suggestions').upsert({
+    kv_customer_code: kvCode, dms_outlet_code: dmsCode
+  });
+  if (error) {
+    state.suggestions = state.suggestions.filter(s => !(s.kv_customer_code === kvCode && s.dms_outlet_code === dmsCode));
+    renderCustomerMatchTab();
+    lucide.createIcons();
+    return;
+  }
+  await onFilterChange();
+}
+
+async function unlinkCustomer(linkId) {
+  if (!confirm('Hủy liên kết cặp khách hàng này?')) return;
+  await supabaseClient.from('customer_links').delete().eq('id', linkId);
+  await onFilterChange();
+}
+
+function openManualLinkModal(editLink = null) {
+  const selectedRep = getActiveSalesRepId();
+  const linkedKv = new Set(state.customerLinks.map(l => l.kv_customer_code));
+  const linkedDms = new Set(state.customerLinks.map(l => l.dms_outlet_code));
+
+  const kvSel = document.getElementById('manualKvSelect');
+  const dmsSel = document.getElementById('manualDmsSelect');
+  const titleEl = document.getElementById('manualLinkModalTitle');
+  document.getElementById('editingLinkId').value = editLink ? editLink.id : '';
+
+  if (editLink) {
+    titleEl.innerText = 'Đổi Outlet DMS Ghép Với Quán Này';
+    const curKv = state.kvCustomers.find(c => c.kv_customer_code === editLink.kv_customer_code);
+    kvSel.innerHTML = `<option value="${editLink.kv_customer_code}">[${esc(editLink.kv_customer_code)}] ${esc(curKv ? curKv.kv_customer_name : editLink.kv_customer_code)}</option>`;
+    kvSel.disabled = true;
+
+    const repFilter = curKv?.sales_rep_id || selectedRep;
+    const availDms = state.dmsOutlets.filter(o =>
+      (o.dms_outlet_code === editLink.dms_outlet_code || !linkedDms.has(o.dms_outlet_code)) &&
+      (repFilter === 'ALL' || o.sales_rep_id === repFilter)
+    );
+    dmsSel.innerHTML = availDms.map(o => `<option value="${o.dms_outlet_code}" ${o.dms_outlet_code === editLink.dms_outlet_code ? 'selected' : ''}>[${esc(o.dms_outlet_code)}] ${esc(o.dms_outlet_name)}</option>`).join('');
+  } else {
+    titleEl.innerText = 'Ghép Thủ Công Khách Hàng 2 Bên';
+    kvSel.disabled = false;
+    const availKv = state.kvCustomers.filter(c => !linkedKv.has(c.kv_customer_code) && (selectedRep === 'ALL' || c.sales_rep_id === selectedRep));
+    const availDms = state.dmsOutlets.filter(o => !linkedDms.has(o.dms_outlet_code) && (selectedRep === 'ALL' || o.sales_rep_id === selectedRep));
+
+    kvSel.innerHTML = availKv.map(c => `<option value="${c.kv_customer_code}">[${esc(c.kv_customer_code)}] ${esc(c.kv_customer_name)}</option>`).join('');
+    dmsSel.innerHTML = availDms.map(o => `<option value="${o.dms_outlet_code}">[${esc(o.dms_outlet_code)}] ${esc(o.dms_outlet_name)}</option>`).join('');
+  }
+
+  document.getElementById('manualLinkModal').classList.remove('hidden');
+}
+
+async function saveManualLink() {
+  const editLinkId = document.getElementById('editingLinkId').value;
+  const kvCode = document.getElementById('manualKvSelect').value;
+  const dmsCode = document.getElementById('manualDmsSelect').value;
+  if (!kvCode || !dmsCode) return;
+
+  // Đổi quán ghép: upsert theo kv_customer_code sẽ thay outlet DMS của đúng dòng cũ, không cần xóa trước
+  const ok = await confirmCustomerLink(kvCode, dmsCode, 100, 'MANUAL', editLinkId || null);
+  if (ok) closeModal('manualLinkModal');
+}
+
+function renderLinkedCustomersComparison() {
+  const kw = document.getElementById('searchLinkedCust').value.toLowerCase().trim();
+  const selectedRep = getActiveSalesRepId();
+  const kvMap = new Map(state.kvCustomers.map(c => [c.kv_customer_code, c]));
+  const dmsMap = new Map(state.dmsOutlets.map(o => [o.dms_outlet_code, o]));
+
+  const skuInfoMap = new Map();
+  state.skuMappings.forEach(m => {
+    const grp = state.productGroups.find(g => g.id === m.product_group_id);
+    if (grp) {
+      const tier = grp.tier || (grp.brand.toLowerCase().includes('huda') ? 'Mainstream' : 'Premium');
+      skuInfoMap.set(`${m.source_system}_${m.raw_code}`, { group_name: grp.group_name, tier });
+    }
+  });
+
+  const tbody = document.getElementById('linkedComparisonTableBody');
+  const tfoot = document.getElementById('linkedComparisonTableFoot');
+
+  const filteredLinks = state.customerLinks.filter(l => {
+    const kv = kvMap.get(l.kv_customer_code) || {};
+    const dms = dmsMap.get(l.dms_outlet_code) || {};
+    const repId = kv.sales_rep_id || dms.sales_rep_id;
+    if (selectedRep !== 'ALL' && repId !== selectedRep) return false;
+    return !kw || (kv.kv_customer_name || '').toLowerCase().includes(kw) || (dms.dms_outlet_name || '').toLowerCase().includes(kw);
+  });
+
+  if (filteredLinks.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="4" class="py-8 text-center text-xs text-slate-400">Chưa có cặp quán nào được ghép cho sale này.</td></tr>`;
+    tfoot.innerHTML = '';
+    return;
+  }
+
+  let totKv = 0, totDms = 0, totBal = 0;
+
+  // Gom dòng theo khách/outlet một lần (tránh lọc lại toàn bộ dòng cho từng cặp quán)
+  const kvByCust = new Map(), dmsByOutlet = new Map();
+  state.kvLinesSelected.forEach(x => {
+    if (x.is_free_gift) return;
+    if (!kvByCust.has(x.kv_customer_code)) kvByCust.set(x.kv_customer_code, []);
+    kvByCust.get(x.kv_customer_code).push(x);
+  });
+  state.dmsLinesSelected.forEach(x => {
+    if (x.order_type !== 'Order' || x.is_posm_voucher) return;
+    if (!dmsByOutlet.has(x.dms_outlet_code)) dmsByOutlet.set(x.dms_outlet_code, []);
+    dmsByOutlet.get(x.dms_outlet_code).push(x);
+  });
+
+  tbody.innerHTML = filteredLinks.map(l => {
+    const kv = kvMap.get(l.kv_customer_code) || { kv_customer_name: l.kv_customer_code };
+    const dms = dmsMap.get(l.dms_outlet_code) || { dms_outlet_name: l.dms_outlet_code };
+
+    const skuMatrix = {};
+    (kvByCust.get(l.kv_customer_code) || []).forEach(x => {
+      const info = skuInfoMap.get(`KIOTVIET_${x.raw_product_code}`) || { group_name: x.raw_product_name, tier: x.raw_product_name.toLowerCase().includes('huda') ? 'Mainstream' : 'Premium' };
+      if (matchTierFilter !== 'ALL' && info.tier !== matchTierFilter) return;
+      if (!skuMatrix[info.group_name]) skuMatrix[info.group_name] = { kv: 0, dms: 0, tier: info.tier };
+      skuMatrix[info.group_name].kv += Number(x.quantity);
+    });
+
+    (dmsByOutlet.get(l.dms_outlet_code) || []).forEach(x => {
+      const info = skuInfoMap.get(`DMS_${x.raw_product_code}`) || { group_name: x.raw_product_name, tier: x.raw_product_name.toLowerCase().includes('huda') ? 'Mainstream' : 'Premium' };
+      if (matchTierFilter !== 'ALL' && info.tier !== matchTierFilter) return;
+      if (!skuMatrix[info.group_name]) skuMatrix[info.group_name] = { kv: 0, dms: 0, tier: info.tier };
+      skuMatrix[info.group_name].dms += Number(x.quantity);
+    });
+
+    const selM = new Set(selectedMonths);
+    state.transfers.filter(t => t.status === 'APPROVED' && t.kv_customer_code === l.kv_customer_code && selM.has(String(t.month_date).slice(0, 10))).forEach(t => {
+      const g = state.productGroups.find(x => x.id === t.product_group_id);
+      if (!g) return;
+      const tier = g.tier || (g.brand.toLowerCase().includes('huda') ? 'Mainstream' : 'Premium');
+      if (matchTierFilter !== 'ALL' && tier !== matchTierFilter) return;
+      if (!skuMatrix[g.group_name]) skuMatrix[g.group_name] = { kv: 0, dms: 0, tier };
+      skuMatrix[g.group_name].kv -= Number(t.quantity);
+    });
+
+    let sumKv = 0, sumDms = 0;
+    Object.values(skuMatrix).forEach(v => { sumKv += v.kv; sumDms += v.dms; });
+    const bal = sumKv - sumDms;
+    let pos = 0, neg = 0;
+    Object.values(skuMatrix).forEach(v => { const d = v.kv - v.dms; if (d > 0) pos += d; else neg += -d; });
+
+    totKv += sumKv;
+    totDms += sumDms;
+    totBal += bal;
+
+    const detId = `link-row-${l.id}`;
+    const safeLinkJson = JSON.stringify({ id: l.id, kv_customer_code: l.kv_customer_code, dms_outlet_code: l.dms_outlet_code }).replace(/"/g, '&quot;');
+
+    return `
+      <tr onclick="toggleAccordion('${detId}')" class="hover:bg-slate-50 active:bg-slate-100 cursor-pointer transition">
+        <td class="py-2.5 px-2.5">
+          <div class="font-bold text-slate-900 leading-snug line-clamp-1">${esc(kv.kv_customer_name)}</div>
+          <div class="text-[10px] text-emerald-700 font-medium line-clamp-1">&harr; ${esc(dms.dms_outlet_name)}</div>
+          ${pos > 0 && neg > 0 ? `<div class="text-[10px] text-amber-700 font-semibold">Lệch từng SKU: chưa key ${fmtNum(pos)} • key dư ${fmtNum(neg)}</div>` : ''}
+        </td>
+        <td class="py-2.5 px-1.5 text-right font-bold text-slate-900 tabular-nums">${fmtNum(sumKv)}</td>
+        <td class="py-2.5 px-1.5 text-right font-bold text-slate-700 tabular-nums">${fmtNum(sumDms)}</td>
+        <td class="py-2.5 px-2 text-right font-extrabold tabular-nums ${balanceCellBg(bal)}">${formatBalance(bal)}</td>
+      </tr>
+      <tr id="${detId}" class="hidden bg-slate-50">
+        <td colspan="4" class="p-3 border-t border-dashed border-slate-200 space-y-2">
+          <div class="flex flex-wrap items-center justify-between gap-2 text-[10px]">
+            <span class="font-bold text-slate-500 uppercase">Chi tiết SKU kỳ chọn (${matchTierFilter === 'ALL' ? 'Tất cả' : matchTierFilter}):</span>
+            <div class="flex items-center gap-2">
+              <button onclick="event.stopPropagation(); openManualLinkModal(${safeLinkJson})" class="bg-blue-50 text-blue-700 border border-blue-200 px-2 py-1 rounded-lg font-bold flex items-center gap-1">
+                <i data-lucide="refresh-cw" class="w-3 h-3"></i> Đổi quán ghép
+              </button>
+              <button onclick="event.stopPropagation(); unlinkCustomer('${l.id}')" class="bg-rose-50 text-rose-600 border border-rose-200 px-2 py-1 rounded-lg font-bold flex items-center gap-1">
+                <i data-lucide="unlink" class="w-3 h-3"></i> Hủy ghép
+              </button>
             </div>
           </div>
-
-          <div class="overflow-x-auto">
-            <table class="w-full text-[11px] sm:text-xs border-collapse">
-              <thead>
-                <tr class="bg-slate-800 text-white font-bold text-[10px] sm:text-xs uppercase tracking-tight">
-                  <th class="py-2.5 px-2.5 text-left">Sản phẩm</th>
-                  <th class="py-2.5 px-1.5 text-right w-12 sm:w-16">Bán<br>Kiot</th>
-                  <th class="py-2.5 px-1.5 text-right w-12 sm:w-16">Key<br>DMS</th>
-                  <th class="py-2.5 px-1.5 text-right w-12 sm:w-16 bg-slate-700/80">Tồn<br>trước</th>
-                  <th class="py-2.5 px-2 text-right w-14 sm:w-20 bg-emerald-900">Chênh<br>lệch</th>
+          <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+            <table class="w-full text-[11px] border-collapse">
+              <thead class="bg-slate-100 text-slate-600 font-bold">
+                <tr>
+                  <th class="py-1.5 px-2 text-left">Sản phẩm</th>
+                  <th class="py-1.5 px-1.5 text-right">Kiot</th>
+                  <th class="py-1.5 px-1.5 text-right">DMS</th>
+                  <th class="py-1.5 px-2 text-right">Lệch</th>
                 </tr>
               </thead>
-              <tbody id="reconcileCompactBody" class="divide-y divide-slate-200">
-                <tr><td colspan="5" class="py-8 text-center text-slate-400">Đang tải dữ liệu...</td></tr>
+              <tbody class="divide-y divide-slate-100">
+                ${Object.keys(skuMatrix).length === 0
+                  ? `<tr><td colspan="4" class="py-3 text-center text-slate-400">Không phát sinh nhóm ${matchTierFilter} trong kỳ này.</td></tr>`
+                  : Object.entries(skuMatrix).map(([gName, val]) => {
+                    const diffSku = val.kv - val.dms;
+                    const tierDot = val.tier === 'Premium' ? 'text-indigo-700' : 'text-amber-700';
+                    return `
+                      <tr>
+                        <td class="py-1.5 px-2 font-medium text-slate-800"><span class="${tierDot} font-bold mr-1">${val.tier === 'Premium' ? '★' : '●'}</span>${esc(gName)}</td>
+                        <td class="py-1.5 px-1.5 text-right tabular-nums">${fmtNum(val.kv)}</td>
+                        <td class="py-1.5 px-1.5 text-right tabular-nums">${fmtNum(val.dms)}</td>
+                        <td class="py-1.5 px-2 text-right font-bold tabular-nums ${balanceTextColor(diffSku)}">${formatBalance(diffSku)}</td>
+                      </tr>
+                    `;
+                  }).join('')}
               </tbody>
-              <tfoot id="reconcileCompactFoot" class="bg-slate-900 text-white font-extrabold text-xs">
-              </tfoot>
             </table>
           </div>
-        </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  // Phần chưa ghép (để tổng khớp với Tab Đối chiếu)
+  const linkedKvSet = new Set(state.customerLinks.map(l => l.kv_customer_code));
+  const linkedDmsSet = new Set(state.customerLinks.map(l => l.dms_outlet_code));
+  let unKv = 0, unDms = 0;
+  state.kvLinesSelected.forEach(x => {
+    if (x.is_free_gift || linkedKvSet.has(x.kv_customer_code)) return;
+    if (matchTierFilter !== 'ALL' && getLineTier('KIOTVIET', x) !== matchTierFilter) return;
+    unKv += Number(x.quantity);
+  });
+  state.dmsLinesSelected.forEach(x => {
+    if (x.order_type !== 'Order' || x.is_posm_voucher || linkedDmsSet.has(x.dms_outlet_code)) return;
+    if (matchTierFilter !== 'ALL' && getLineTier('DMS', x) !== matchTierFilter) return;
+    unDms += Number(x.quantity);
+  });
+  const trNetL = getTransferNet(matchTierFilter, true);
+
+  tfoot.innerHTML = `
+    <tr>
+      <td class="py-3 px-2.5 uppercase text-[11px]">Tổng cộng (${filteredLinks.length} quán)</td>
+      <td class="py-3 px-1.5 text-right tabular-nums">${fmtNum(totKv)}</td>
+      <td class="py-3 px-1.5 text-right tabular-nums text-amber-300">${fmtNum(totDms)}</td>
+      <td class="py-3 px-2 text-right tabular-nums ${totBal > 0 ? 'bg-emerald-800 text-emerald-200' : totBal < 0 ? 'bg-rose-900 text-rose-200' : ''}">${formatBalance(totBal)}</td>
+    </tr>
+  ` + ((unKv || unDms) ? `
+    <tr class="bg-slate-700 text-slate-100 text-[11px] font-semibold">
+      <td class="py-2 px-2.5">Chưa ghép quán</td>
+      <td class="py-2 px-1.5 text-right tabular-nums">${fmtNum(unKv)}</td>
+      <td class="py-2 px-1.5 text-right tabular-nums">${fmtNum(unDms)}</td>
+      <td class="py-2 px-2 text-right tabular-nums">${formatBalance(unKv - unDms)}</td>
+    </tr>
+  ` : '') + (trNetL ? `
+    <tr class="bg-purple-900 text-purple-100 text-[11px] font-semibold">
+      <td class="py-2 px-2.5">Luân chuyển số đã duyệt (kỳ chọn)</td>
+      <td class="py-2 px-1.5 text-right tabular-nums">${formatBalance(trNetL)}</td>
+      <td></td>
+      <td class="py-2 px-2 text-right tabular-nums">${formatBalance(trNetL)}</td>
+    </tr>
+  ` : '');
+}
+
+// =========================================================================
+// TAB 5: 0Đ & KM
+// =========================================================================
+function renderPromoTab() {
+  const custMap = new Map(state.kvCustomers.map(c => [c.kv_customer_code, c.kv_customer_name]));
+  const outMap = new Map(state.dmsOutlets.map(o => [o.dms_outlet_code, o.dms_outlet_name]));
+  const repMap = new Map(state.salesReps.map(r => [r.id, r.full_name]));
+
+  const group = (lines, custKey, nameMap, dateKey) => {
+    const g = new Map();
+    lines.forEach(l => {
+      const k = l.raw_product_name;
+      if (!g.has(k)) g.set(k, { name: k, total: 0, shops: new Map() });
+      const e = g.get(k), q = Number(l.quantity || 0), code = l[custKey];
+      e.total += q;
+      if (!e.shops.has(code)) e.shops.set(code, { name: nameMap.get(code) || code, qty: 0, rows: [] });
+      const sh = e.shops.get(code);
+      sh.qty += q;
+      sh.rows.push({ date: l[dateKey], qty: q, rep: repMap.get(l.sales_rep_id) || '', note: l.combined_note || l.promotion_name || '' });
+    });
+    return Array.from(g.values()).sort((x, y) => y.total - x.total);
+  };
+  const detail = (e, color, plus) => Array.from(e.shops.values()).sort((x, y) => y.qty - x.qty).map(sh => `
+    <div class="bg-white rounded-xl border border-slate-200 p-2 text-[11px]">
+      <div class="flex justify-between gap-2 font-bold text-slate-900"><span>${esc(sh.name)}</span><span class="${color} tabular-nums shrink-0">${plus}${fmtNum(sh.qty)}</span></div>
+      ${sh.rows.map(r => `<div class="flex justify-between gap-2 text-[10px] text-slate-500 mt-0.5"><span>${fmtDate(r.date)} • ${esc(r.rep)}${r.note ? ' • ' + esc(r.note) : ''}</span><span class="tabular-nums shrink-0">${plus}${fmtNum(r.qty)}</span></div>`).join('')}
+    </div>`).join('');
+
+  const freeLines = state.kvLinesSelected.filter(l => l.is_free_gift);
+  const totalFree = freeLines.reduce((x, l) => x + Number(l.quantity), 0);
+  document.getElementById('badge-kvFreeTotal').innerText = fmtNum(totalFree);
+  const kvGroups = group(freeLines, 'kv_customer_code', custMap, 'sale_date');
+  const kvFreeBody = document.getElementById('kvFreeTableBody');
+  const kvFreeFoot = document.getElementById('kvFreeTableFoot');
+  if (kvGroups.length === 0) {
+    kvFreeBody.innerHTML = `<tr><td colspan="3" class="py-8 text-center text-xs text-slate-400">Không có hàng xuất 0đ trong kỳ chọn.</td></tr>`;
+    kvFreeFoot.innerHTML = '';
+  } else {
+    kvFreeBody.innerHTML = kvGroups.map((e, i) => `
+      <tr onclick="toggleAccordion('kvfree-${i}')" class="hover:bg-amber-50/40 cursor-pointer">
+        <td class="py-2.5 px-2.5 font-bold text-amber-900">🎁 ${esc(e.name)}</td>
+        <td class="py-2.5 px-2 text-right text-slate-500 tabular-nums">${e.shops.size}</td>
+        <td class="py-2.5 px-2 text-right font-extrabold text-amber-700 tabular-nums bg-amber-50/80">+${fmtNum(e.total)}</td>
+      </tr>
+      <tr id="kvfree-${i}" class="hidden bg-slate-50"><td colspan="3" class="p-2.5 space-y-1.5">${detail(e, 'text-amber-700', '+')}</td></tr>`).join('');
+    kvFreeFoot.innerHTML = `<tr><td colspan="2" class="py-3 px-2.5 uppercase text-[11px]">Tổng hàng tặng 0đ Kiot</td><td class="py-3 px-2 text-right tabular-nums text-amber-300">+${fmtNum(totalFree)}</td></tr>`;
+  }
+
+  const voucherLines = state.dmsLinesSelected.filter(l => l.is_posm_voucher && l.order_type === 'Order');
+  const totalVouchers = voucherLines.reduce((x, l) => x + Number(l.quantity), 0);
+  document.getElementById('badge-dmsVoucherTotal').innerText = fmtNum(totalVouchers);
+  const vGroups = group(voucherLines, 'dms_outlet_code', outMap, 'ordered_date');
+  
+  const vBody = document.getElementById('dmsVoucherTableBody');
+  const vFoot = document.getElementById('dmsVoucherTableFoot');
+  if (vGroups.length === 0) {
+    vBody.innerHTML = `<tr><td colspan="2" class="py-8 text-center text-xs text-slate-400">Không có voucher DMS trong kỳ chọn.</td></tr>`;
+    vFoot.innerHTML = '';
+  } else {
+    vBody.innerHTML = vGroups.map((e, i) => `
+      <tr onclick="toggleAccordion('vch-${i}')" class="hover:bg-purple-50/40 cursor-pointer">
+        <td class="py-2.5 px-2.5"><div class="font-bold text-purple-900">🎟️ ${esc(e.name)}</div><div class="text-[10px] text-slate-400">${e.shops.size} quán nhận</div></td>
+        <td class="py-2.5 px-2 text-right font-extrabold text-purple-700 tabular-nums bg-purple-50/80">${fmtNum(e.total)}</td>
+      </tr>
+      <tr id="vch-${i}" class="hidden bg-slate-50"><td colspan="2" class="p-2.5 space-y-1.5">${detail(e, 'text-purple-700', '')}</td></tr>`).join('');
+    vFoot.innerHTML = `<tr><td class="py-3 px-2.5 uppercase text-[11px]">Tổng suất voucher trả NPP</td><td class="py-3 px-2 text-right tabular-nums text-purple-300">${fmtNum(totalVouchers)}</td></tr>`;
+  }
+}
+
+// =========================================================================
+// QUẢN LÝ MÃ SKU MỚI & NẠP EXCEL (ADMIN / SS)
+// =========================================================================
+function openSkuModal() {
+  const container = document.getElementById('skuMappingList');
+  container.innerHTML = state.skuMappings.filter(m => !isIgnoredSku(m.raw_code)).map(m => `
+    <div class="p-3 rounded-xl border ${!m.product_group_id ? 'bg-amber-50 border-amber-300' : 'bg-slate-50 border-slate-200'} space-y-1.5">
+      <div class="flex items-center justify-between text-xs">
+        <span class="font-bold text-emerald-800">${m.source_system === 'KIOTVIET' ? 'KIOT' : m.source_system} • ${m.raw_code}</span>
       </div>
-
-      <!-- ==================== TAB 2: KIOT ==================== -->
-      <div id="view-kv" class="hidden space-y-2.5">
-        <div id="tierBar-kv"></div>
-        <div class="relative">
-          <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-3"></i>
-          <input type="text" id="searchKvCust" onkeyup="renderKvCustomersTab()" placeholder="Tìm tên quán, mã hoặc SĐT trên Kiot..." class="w-full bg-white pl-10 pr-4 py-2.5 text-sm border border-slate-200 rounded-2xl shadow-xs focus:ring-emerald-600 focus:border-emerald-600" />
-        </div>
-
-        <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-          <div class="px-3 py-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between text-[10px] text-slate-500">
-            <span class="font-bold text-slate-700 uppercase">Danh Sách Điểm Bán Kiot</span>
-            <span>Bấm vào tên quán để xem chi tiết</span>
-          </div>
-          <table class="w-full text-[11px] sm:text-xs border-collapse">
-            <thead>
-              <tr class="bg-slate-800 text-white font-bold text-[10px] sm:text-xs uppercase">
-                <th class="py-2.5 px-2.5 text-left">Điểm bán / Sale</th>
-                <th class="py-2.5 px-1.5 text-right w-14 sm:w-20">Mua<br>Kiot</th>
-                <th class="py-2.5 px-2 text-right w-14 sm:w-20 bg-amber-900/70">Tặng<br>0đ</th>
-              </tr>
-            </thead>
-            <tbody id="kvCustomersTableBody" class="divide-y divide-slate-200"></tbody>
-            <tfoot id="kvCustomersTableFoot" class="bg-slate-900 text-white font-extrabold text-xs"></tfoot>
-          </table>
-        </div>
-      </div>
-
-      <!-- ==================== TAB 3: DMS ==================== -->
-      <div id="view-dms" class="hidden space-y-2.5">
-        <div id="tierBar-dms"></div>
-        <div class="relative">
-          <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-3"></i>
-          <input type="text" id="searchDmsCust" onkeyup="renderDmsCustomersTab()" placeholder="Tìm tên Outlet hoặc mã DMS (Viet Bill)..." class="w-full bg-white pl-10 pr-4 py-2.5 text-sm border border-slate-200 rounded-2xl shadow-xs focus:ring-emerald-600 focus:border-emerald-600" />
-        </div>
-
-        <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-          <div class="px-3 py-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between text-[10px] text-slate-500">
-            <span class="font-bold text-slate-700 uppercase">Outlet DMS • NPP Viet Bill</span>
-            <span>Bấm vào tên quán để xem chi tiết</span>
-          </div>
-          <table class="w-full text-[11px] sm:text-xs border-collapse">
-            <thead>
-              <tr class="bg-slate-800 text-white font-bold text-[10px] sm:text-xs uppercase">
-                <th class="py-2.5 px-2.5 text-left">Outlet DMS / Sale</th>
-                <th class="py-2.5 px-2 text-right w-20 sm:w-28 bg-emerald-900">Đã Key<br>(Kỳ chọn)</th>
-              </tr>
-            </thead>
-            <tbody id="dmsCustomersTableBody" class="divide-y divide-slate-200"></tbody>
-            <tfoot id="dmsCustomersTableFoot" class="bg-slate-900 text-white font-extrabold text-xs"></tfoot>
-          </table>
-        </div>
-      </div>
-
-      <!-- ==================== TAB 4: GHÉP KH ==================== -->
-      <div id="view-custMatch" class="hidden space-y-3.5">
-        <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-          <div class="px-3.5 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between gap-2">
-            <div>
-              <h2 class="font-bold text-slate-800 text-xs sm:text-sm flex items-center gap-1.5">
-                <i data-lucide="sparkles" class="w-4 h-4 text-amber-500"></i> Gợi Ý Ghép Quán (<span id="sugCountBadge">0</span>)
-              </h2>
-            </div>
-            <button onclick="openManualLinkModal()" class="bg-emerald-700 active:scale-95 text-white text-xs font-bold px-3 py-1.5 rounded-xl flex items-center gap-1 shrink-0">
-              <i data-lucide="link" class="w-3.5 h-3.5"></i> Ghép tay
-            </button>
-          </div>
-          <div id="suggestionsContainer" class="p-3 space-y-2.5"></div>
-        </div>
-
-        <div class="space-y-2">
-          <!-- Bộ lọc hạng sản phẩm với màu sắc tách biệt rõ nét -->
-          <div class="grid grid-cols-3 bg-slate-200/80 p-1 rounded-xl text-[11px] sm:text-xs gap-1">
-            <button onclick="setMatchTierFilter('ALL')" id="tierBtn-ALL" class="py-1.5 font-bold rounded-lg bg-white text-slate-900 shadow-xs">
-              Tất cả SP
-            </button>
-            <button onclick="setMatchTierFilter('Premium')" id="tierBtn-Premium" class="py-1.5 font-semibold rounded-lg text-indigo-800">
-              ★ Premium
-            </button>
-            <button onclick="setMatchTierFilter('Mainstream')" id="tierBtn-Mainstream" class="py-1.5 font-semibold rounded-lg text-amber-800">
-              ● Mainstream
-            </button>
-          </div>
-
-          <div class="relative">
-            <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-3"></i>
-            <input type="text" id="searchLinkedCust" onkeyup="renderLinkedCustomersComparison()" placeholder="Tìm quán đã ghép..." class="w-full bg-white pl-10 pr-4 py-2.5 text-sm border border-slate-200 rounded-2xl shadow-xs" />
-          </div>
-
-          <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-            <div class="px-3 py-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between text-[10px] text-slate-500">
-              <span class="font-bold text-slate-700 uppercase">Đối Chiếu Điểm Bán Đã Ghép</span>
-            </div>
-            <table class="w-full text-[11px] sm:text-xs border-collapse">
-              <thead>
-                <tr class="bg-slate-800 text-white font-bold text-[10px] sm:text-xs uppercase">
-                  <th class="py-2.5 px-2.5 text-left">Điểm bán (Kiot &harr; DMS)</th>
-                  <th class="py-2.5 px-1.5 text-right w-12 sm:w-16">Bán<br>Kiot</th>
-                  <th class="py-2.5 px-1.5 text-right w-12 sm:w-16">Key<br>DMS</th>
-                  <th class="py-2.5 px-2 text-right w-14 sm:w-20 bg-emerald-900">Chênh<br>lệch</th>
-                </tr>
-              </thead>
-              <tbody id="linkedComparisonTableBody" class="divide-y divide-slate-200"></tbody>
-              <tfoot id="linkedComparisonTableFoot" class="bg-slate-900 text-white font-extrabold text-xs"></tfoot>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <!-- ==================== TAB 5: 0Đ & KM ==================== -->
-      <div id="view-promo" class="hidden space-y-3">
-        <div class="grid grid-cols-2 bg-slate-200/80 p-1 rounded-xl">
-          <button id="subPromoBtn-kv" onclick="switchPromoSub('kv')" class="py-2 text-xs font-bold rounded-lg bg-white text-amber-800 shadow-xs">
-            Hàng 0đ Kiot (<span id="badge-kvFreeTotal">0</span>)
-          </button>
-          <button id="subPromoBtn-dms" onclick="switchPromoSub('dms')" class="py-2 text-xs font-semibold rounded-lg text-slate-600">
-            Voucher DMS (<span id="badge-dmsVoucherTotal">0</span>)
-          </button>
-        </div>
-
-        <div id="promoSub-kv" class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-          <table class="w-full text-[11px] sm:text-xs border-collapse">
-            <thead>
-              <tr class="bg-amber-900 text-white font-bold text-[10px] sm:text-xs uppercase">
-                <th class="py-2.5 px-2.5 text-left">Sản phẩm 0đ (chạm xem quán nhận)</th>
-                <th class="py-2.5 px-2 text-right w-14 sm:w-20">Số quán</th>
-                <th class="py-2.5 px-2 text-right w-12 sm:w-16">SL</th>
-              </tr>
-            </thead>
-            <tbody id="kvFreeTableBody" class="divide-y divide-slate-200"></tbody>
-            <tfoot id="kvFreeTableFoot" class="bg-slate-900 text-white font-extrabold text-xs"></tfoot>
-          </table>
-        </div>
-
-        <div id="promoSub-dms" class="hidden space-y-2.5">
-          
-          <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-            <table class="w-full text-[11px] sm:text-xs border-collapse">
-              <thead>
-                <tr class="bg-emerald-900 text-white font-bold text-[10px] sm:text-xs uppercase">
-                  <th class="py-2.5 px-2.5 text-left">Loại voucher (chạm xem quán nhận)</th>
-                  <th class="py-2.5 px-2 text-right w-14 sm:w-20">Suất</th>
-                </tr>
-              </thead>
-              <tbody id="dmsVoucherTableBody" class="divide-y divide-slate-200"></tbody>
-              <tfoot id="dmsVoucherTableFoot" class="bg-slate-900 text-white font-extrabold text-xs"></tfoot>
-            </table>
-          </div>
-        </div>
-      </div>
-
-    </main>
-
-    <!-- MOBILE BOTTOM NAVIGATION BAR -->
-    <nav class="md:hidden fixed bottom-0 inset-x-0 bg-white border-t border-slate-200 z-40 px-1 py-1.5 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
-      <div class="grid grid-cols-5 gap-1">
-        <button onclick="switchTab('reconcile')" id="mTab-reconcile" class="flex flex-col items-center justify-center py-1 rounded-xl text-emerald-700 font-bold">
-          <i data-lucide="bar-chart-3" class="w-5 h-5"></i>
-          <span class="text-[10px] mt-0.5">Đối chiếu</span>
-        </button>
-        <button onclick="switchTab('kv')" id="mTab-kv" class="flex flex-col items-center justify-center py-1 rounded-xl text-slate-400">
-          <i data-lucide="store" class="w-5 h-5"></i>
-          <span class="text-[10px] mt-0.5">Kiot</span>
-        </button>
-        <button onclick="switchTab('dms')" id="mTab-dms" class="flex flex-col items-center justify-center py-1 rounded-xl text-slate-400">
-          <i data-lucide="smartphone" class="w-5 h-5"></i>
-          <span class="text-[10px] mt-0.5">DMS</span>
-        </button>
-        <button onclick="switchTab('custMatch')" id="mTab-custMatch" class="flex flex-col items-center justify-center py-1 rounded-xl text-slate-400">
-          <i data-lucide="git-merge" class="w-5 h-5"></i>
-          <span class="text-[10px] mt-0.5">Kiot/DMS</span>
-        </button>
-        <button onclick="switchTab('promo')" id="mTab-promo" class="flex flex-col items-center justify-center py-1 rounded-xl text-slate-400">
-          <i data-lucide="gift" class="w-5 h-5"></i>
-          <span class="text-[10px] mt-0.5">0đ & KM</span>
-        </button>
-      </div>
-    </nav>
-  </div>
-
-  <!-- ==================== MODAL QUẢN LÝ TÀI KHOẢN (CHỈ ADMIN) ==================== -->
-  <div id="usersModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
-    <div class="bg-white rounded-t-3xl sm:rounded-2xl max-w-lg w-full p-5 shadow-xl space-y-4 max-h-[88dvh] flex flex-col">
-      <div class="flex items-center justify-between border-b pb-3">
-        <h3 class="font-bold text-slate-800 text-base flex items-center gap-2">
-          <i data-lucide="users" class="w-5 h-5 text-emerald-700"></i> Quản Lý Tài Khoản Team BC
-        </h3>
-        <button onclick="closeModal('usersModal')" class="text-slate-400 p-1"><i data-lucide="x" class="w-5 h-5"></i></button>
-      </div>
-
-      <!-- Form tạo mới tài khoản (Có đủ 3 quyền: Sale / Sale Sup / Admin) -->
-      <form onsubmit="createAppUser(event)" class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-2.5 text-xs">
-        <p class="font-bold text-slate-700 uppercase">Cấp tài khoản mới (Bắt buộc đổi TK/MK lần đầu):</p>
-        <div class="grid grid-cols-2 gap-2">
-          <input type="text" id="newUsername" required placeholder="Tên đăng nhập..." class="px-3 py-2 border border-slate-300 rounded-xl bg-white" />
-          <input type="text" id="newPassword" required placeholder="Mật khẩu tạm..." class="px-3 py-2 border border-slate-300 rounded-xl bg-white" />
-        </div>
-        <div class="grid grid-cols-2 gap-2">
-          <select id="newUserRole" onchange="toggleNewUserSaleSelect()" class="px-3 py-2 border border-slate-300 rounded-xl bg-white font-semibold">
-            <option value="SALE">Quyền: Nhân viên Sale</option>
-            <option value="SS">Quyền: Sale Sup (SS)</option>
-            <option value="ADMIN">Quyền: Admin</option>
-          </select>
-          <select id="newUserSalesRep" class="px-3 py-2 border border-slate-300 rounded-xl bg-white font-semibold">
-            <option value="">-- Chọn tên Sale --</option>
-          </select>
-        </div>
-        <input type="text" id="newDisplayName" placeholder="Tên hiển thị (VD: SS Nguyễn Văn A - nếu là SS/Admin)" class="hidden w-full px-3 py-2 border border-slate-300 rounded-xl bg-white" />
-        <button type="submit" class="w-full bg-emerald-700 text-white font-bold py-2.5 rounded-xl">+ Cấp Tài Khoản</button>
-      </form>
-
-      <div class="overflow-y-auto flex-1 space-y-2" id="usersListContainer"></div>
+      <p class="text-xs text-slate-700 font-medium">${esc(m.raw_name)}</p>
+      <select onchange="updateSkuGroup('${m.id}', this.value)" class="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs font-semibold">
+        <option value="">-- Chọn nhóm chuẩn --</option>
+        ${state.productGroups.map(g => `<option value="${g.id}" ${g.id === m.product_group_id ? 'selected' : ''}>[${g.tier || 'Premium'}] ${g.group_name}</option>`).join('')}
+      </select>
     </div>
-  </div>
+  `).join('');
+  document.getElementById('skuModal').classList.remove('hidden');
+}
 
-  <div id="changePwModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
-    <div class="bg-white rounded-t-3xl sm:rounded-2xl max-w-sm w-full p-5 shadow-xl space-y-3">
-      <div class="flex items-center justify-between border-b pb-3">
-        <h3 class="font-bold text-slate-800 text-base">Đổi Mật Khẩu</h3>
-        <button onclick="closeModal('changePwModal')" class="text-slate-400 p-1"><i data-lucide="x" class="w-5 h-5"></i></button>
-      </div>
-      <form onsubmit="submitChangePw(event)" class="space-y-3">
-        <input type="password" id="cpCurrent" required placeholder="Mật khẩu hiện tại" class="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded-xl" />
-        <input type="password" id="cpNew" required minlength="6" placeholder="Mật khẩu mới (tối thiểu 6 ký tự)" class="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded-xl" />
-        <input type="password" id="cpConfirm" required minlength="6" placeholder="Nhập lại mật khẩu mới" class="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded-xl" />
-        <p id="cpMsg" class="hidden text-xs text-rose-600 font-semibold text-center"></p>
-        <button type="submit" id="btnCpSubmit" class="w-full bg-emerald-700 text-white font-bold text-sm py-3 rounded-xl">Lưu Mật Khẩu</button>
-      </form>
-    </div>
-  </div>
+async function updateSkuGroup(mappingId, groupId) {
+  await supabaseClient.from('sku_mappings').update({
+    product_group_id: groupId || null, is_verified: Boolean(groupId)
+  }).eq('id', mappingId);
+  await refreshAllData();
+}
 
-  <div id="settingsModal" onclick="if(event.target===this)closeModal('settingsModal')" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
-    <div class="bg-white rounded-t-3xl sm:rounded-3xl max-w-md w-full p-4 shadow-2xl space-y-3 max-h-[88dvh] overflow-y-auto">
-      <div class="flex items-center justify-between px-1">
-        <h3 class="font-extrabold text-slate-900 text-base flex items-center gap-2"><i data-lucide="settings" class="w-5 h-5 text-emerald-700"></i> Cài đặt</h3>
-        <button onclick="closeModal('settingsModal')" class="text-slate-400 p-1"><i data-lucide="x" class="w-5 h-5"></i></button>
-      </div>
-      <div class="flex items-center gap-3 bg-gradient-to-r from-emerald-900 to-teal-800 text-white rounded-2xl p-3.5">
-        <span id="settingsAvatar" class="w-11 h-11 rounded-full bg-white/20 flex items-center justify-center font-extrabold text-lg">?</span>
-        <div class="min-w-0"><div id="settingsName" class="font-bold text-sm truncate"></div><div id="settingsRole" class="text-[11px] text-emerald-200"></div></div>
-      </div>
-      <div class="space-y-1.5">
-      <button id="btnAdminUpload" onclick="menuGo('openUploadModal')" class="hidden w-full flex items-center gap-3 p-3 rounded-2xl bg-amber-50 hover:bg-amber-100 text-left active:scale-[.99] transition">
-        <span class="w-9 h-9 shrink-0 rounded-xl bg-amber-400 text-slate-900 flex items-center justify-center"><i data-lucide="upload-cloud" class="w-4 h-4"></i></span>
-        <span class="flex-1 min-w-0"><b class="block text-sm text-slate-900">Nạp file Excel</b></span>
-        <i data-lucide="chevron-right" class="w-4 h-4 text-slate-400 shrink-0"></i>
-      </button>
-      <button id="btnMenuSku" onclick="menuGo('openSkuModal')" class="hidden w-full flex items-center gap-3 p-3 rounded-2xl bg-slate-50 hover:bg-slate-100 text-left active:scale-[.99] transition">
-        <span class="w-9 h-9 shrink-0 rounded-xl bg-emerald-700 text-white flex items-center justify-center"><i data-lucide="layers" class="w-4 h-4"></i></span>
-        <span class="flex-1 min-w-0"><b class="block text-sm text-slate-900">Mã SKU</b></span>
-        <i data-lucide="chevron-right" class="w-4 h-4 text-slate-400 shrink-0"></i>
-      </button>
-      <button id="btnMenuLog" onclick="menuGo('openTransferLog')" class="hidden w-full flex items-center gap-3 p-3 rounded-2xl bg-slate-50 hover:bg-slate-100 text-left active:scale-[.99] transition">
-        <span class="w-9 h-9 shrink-0 rounded-xl bg-emerald-700 text-white flex items-center justify-center"><i data-lucide="history" class="w-4 h-4"></i></span>
-        <span class="flex-1 min-w-0"><b class="block text-sm text-slate-900">Nhật ký luân chuyển</b></span>
-        <i data-lucide="chevron-right" class="w-4 h-4 text-slate-400 shrink-0"></i>
-      </button>
-      <button id="btnAdminUsers" onclick="menuGo('openUsersModal')" class="hidden w-full flex items-center gap-3 p-3 rounded-2xl bg-slate-50 hover:bg-slate-100 text-left active:scale-[.99] transition">
-        <span class="w-9 h-9 shrink-0 rounded-xl bg-emerald-700 text-white flex items-center justify-center"><i data-lucide="users" class="w-4 h-4"></i></span>
-        <span class="flex-1 min-w-0"><b class="block text-sm text-slate-900">Quản lý tài khoản</b></span>
-        <i data-lucide="chevron-right" class="w-4 h-4 text-slate-400 shrink-0"></i>
-      </button>
-      <button id="btnMenuStorage" onclick="menuGo('openStorageModal')" class="hidden w-full flex items-center gap-3 p-3 rounded-2xl bg-slate-50 hover:bg-slate-100 text-left active:scale-[.99] transition">
-        <span class="w-9 h-9 shrink-0 rounded-xl bg-emerald-700 text-white flex items-center justify-center"><i data-lucide="database" class="w-4 h-4"></i></span>
-        <span class="flex-1 min-w-0"><b class="block text-sm text-slate-900">Dung lượng & dọn dữ liệu</b></span>
-        <i data-lucide="chevron-right" class="w-4 h-4 text-slate-400 shrink-0"></i>
-      </button>
-      <button onclick="menuGo('openChangePwModal')" class="w-full flex items-center gap-3 p-3 rounded-2xl bg-slate-50 hover:bg-slate-100 text-left active:scale-[.99] transition">
-        <span class="w-9 h-9 shrink-0 rounded-xl bg-emerald-700 text-white flex items-center justify-center"><i data-lucide="key" class="w-4 h-4"></i></span>
-        <span class="flex-1 min-w-0"><b class="block text-sm text-slate-900">Đổi mật khẩu</b></span>
-        <i data-lucide="chevron-right" class="w-4 h-4 text-slate-400 shrink-0"></i>
-      </button>
-      <button onclick="menuGo('handleLogout')" class="w-full flex items-center gap-3 p-3 rounded-2xl bg-rose-50 hover:bg-rose-100 text-left active:scale-[.99] transition">
-        <span class="w-9 h-9 shrink-0 rounded-xl bg-rose-500 text-white flex items-center justify-center"><i data-lucide="log-out" class="w-4 h-4"></i></span>
-        <span class="flex-1 min-w-0"><b class="block text-sm text-slate-900">Đăng xuất</b></span>
-        <i data-lucide="chevron-right" class="w-4 h-4 text-slate-400 shrink-0"></i>
-      </button>
-      </div>
-    </div>
-  </div>
+function openUploadModal() { document.getElementById('uploadModal').classList.remove('hidden'); }
+function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
 
-  <div id="transferLogModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
-    <div class="bg-white rounded-t-3xl sm:rounded-2xl max-w-lg w-full p-5 shadow-xl space-y-3 max-h-[88dvh] flex flex-col">
-      <div class="flex items-center justify-between border-b pb-3">
-        <h3 class="font-bold text-slate-800 text-base">Nhật Ký Luân Chuyển</h3>
-        <button onclick="closeModal('transferLogModal')" class="text-slate-400 p-1"><i data-lucide="x" class="w-5 h-5"></i></button>
-      </div>
-      <div id="transferLogList" class="overflow-y-auto flex-1 space-y-2"></div>
-    </div>
-  </div>
+function logUpload(msg) {
+  const box = document.getElementById('uploadLogBox');
+  box.classList.remove('hidden');
+  box.innerHTML += `<div>&gt; ${msg}</div>`;
+  box.scrollTop = box.scrollHeight;
+}
 
-  <div id="storageModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
-    <div class="bg-white rounded-t-3xl sm:rounded-2xl max-w-lg w-full p-5 shadow-xl space-y-3 max-h-[88dvh] flex flex-col">
-      <div class="flex items-center justify-between border-b pb-3">
-        <h3 class="font-bold text-slate-800 text-base">Dung Lượng & Dọn Dữ Liệu (Admin)</h3>
-        <button onclick="closeModal('storageModal')" class="text-slate-400 p-1"><i data-lucide="x" class="w-5 h-5"></i></button>
-      </div>
-      <div id="storageSummary" class="text-xs"></div>
-      <p class="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-xl p-2">Xóa tháng cũ sẽ làm Tồn trước/Lũy kế các tháng sau thay đổi và không khôi phục được. Dung lượng có thể giảm chậm sau khi xóa.</p>
-      <div id="storageMonths" class="overflow-y-auto flex-1 space-y-2"></div>
-    </div>
-  </div>
+async function processExcelUploads() {
+  const fileKv = document.getElementById('fileInputKv').files[0];
+  const fileDms = document.getElementById('fileInputDms').files[0];
+  if (!fileKv && !fileDms) return alert('Vui lòng chọn ít nhất 1 file Excel!');
 
-  <div id="transferModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
-    <div class="bg-white rounded-t-3xl sm:rounded-2xl max-w-lg w-full p-5 shadow-xl space-y-3 max-h-[88dvh] flex flex-col">
-      <div class="flex items-center justify-between border-b pb-3">
-        <h3 class="font-bold text-slate-800 text-base">Luân Chuyển Số</h3>
-        <button onclick="closeModal('transferModal')" class="text-slate-400 p-1"><i data-lucide="x" class="w-5 h-5"></i></button>
-      </div>
-      <div class="overflow-y-auto flex-1 space-y-3">
-        <form onsubmit="submitTransfer(event)" class="bg-slate-50 p-3 rounded-2xl border border-slate-200 space-y-2 text-xs">
-                    <div class="grid grid-cols-2 gap-2">
-            <label>Nguồn<select id="trFrom" onchange="refreshTrTo()" class="w-full mt-0.5 px-2 py-2 border border-slate-300 rounded-xl bg-white"></select></label>
-            <label>Sang sale<select id="trTo" class="w-full mt-0.5 px-2 py-2 border border-slate-300 rounded-xl bg-white"></select></label>
-          </div>
-          <label class="block" id="trKvWrap">Quán nguồn (tùy chọn)<input id="trKvSearch" type="text" oninput="refreshTrKv()" placeholder="Tìm quán..." class="w-full mt-0.5 mb-1 px-2 py-2 border border-slate-300 rounded-xl bg-white" /><select id="trKv" class="w-full mt-0.5 px-2 py-2 border border-slate-300 rounded-xl bg-white"></select></label>
-          <label class="block">Nhóm sản phẩm<select id="trGroup" class="w-full mt-0.5 px-2 py-2 border border-slate-300 rounded-xl bg-white"></select></label>
-          <div class="grid grid-cols-2 gap-2">
-            <label>Tháng áp dụng<select id="trMonth" class="w-full mt-0.5 px-2 py-2 border border-slate-300 rounded-xl bg-white"></select></label>
-            <label>Số lượng (thùng/két)<input id="trQty" type="number" min="1" step="1" class="w-full mt-0.5 px-2 py-2 border border-slate-300 rounded-xl bg-white" /></label>
-          </div>
-          <input id="trReason" type="text" placeholder="Lý do (bắt buộc)" class="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white" />
-          <p id="trMsg" class="hidden text-xs text-rose-600 font-semibold"></p>
-          <button type="submit" class="w-full bg-emerald-700 text-white font-bold py-2.5 rounded-xl">Gửi Yêu Cầu</button>
-        </form>
-        <div id="transferList" class="space-y-2"></div>
-      </div>
-    </div>
-  </div>
+  const btn = document.getElementById('btnProcessUpload');
+  btn.disabled = true;
+  document.getElementById('uploadLogBox').innerHTML = '';
 
-  <!-- ==================== MODAL NẠP EXCEL (ADMIN & SALE SUP) ==================== -->
-  <div id="uploadModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
-    <div class="bg-white rounded-t-3xl sm:rounded-2xl max-w-xl w-full p-5 sm:p-6 shadow-xl space-y-4">
-      <div class="flex items-center justify-between border-b pb-3">
-        <h3 class="font-bold text-slate-800 text-base flex items-center gap-2">
-          <i data-lucide="file-spreadsheet" class="w-5 h-5 text-amber-600"></i> Nạp File Excel (1–12 Tháng)
-        </h3>
-        <button onclick="closeModal('uploadModal')" class="text-slate-400 p-1"><i data-lucide="x" class="w-5 h-5"></i></button>
-      </div>
+  try {
+    if (fileKv) await importKiotVietExcel(fileKv);
+    if (fileDms) await importDmsExcel(fileDms);
+    logUpload('HOÀN TẤT! Đang tải lại số liệu...');
+    if (currentUser?.role === 'ADMIN') loadStorageUsage();
+    await refreshAllData();
+  } catch (err) {
+    console.error(err);
+    logUpload('LỖI: ' + err.message);
+  } finally {
+    btn.disabled = false;
+  }
+}
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div class="border-2 border-dashed border-slate-300 rounded-2xl p-3.5 text-center">
-          <p class="font-bold text-xs text-slate-800">1. File Kiot (.xlsx)</p>
-          <p class="text-[11px] text-slate-400 mb-2">Chi tiết hóa đơn bán hàng</p>
-          <input type="file" id="fileInputKv" accept=".xlsx,.xls" class="text-xs w-full file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-emerald-50 file:text-emerald-700" />
-        </div>
+function parseExcelDate(val) {
+  if (!val) return null;
+  if (val instanceof Date) return val;
+  if (typeof val === 'number') {
+    // Số serial Excel -> lấy đúng giờ/phút/giây ghi trong file, không phụ thuộc múi giờ của SheetJS
+    const u = new Date(Math.round((val - 25569) * 86400) * 1000);
+    return new Date(u.getUTCFullYear(), u.getUTCMonth(), u.getUTCDate(), u.getUTCHours(), u.getUTCMinutes(), u.getUTCSeconds());
+  }
+  if (typeof val === 'string') {
+    const m = val.trim().match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
+    if (m) return new Date(+m[3], +m[2] - 1, +m[1], +(m[4] || 0), +(m[5] || 0), +(m[6] || 0));
+  }
+  const d = new Date(val);
+  return isNaN(d.getTime()) ? null : d;
+}
 
-        <div class="border-2 border-dashed border-slate-300 rounded-2xl p-3.5 text-center">
-          <p class="font-bold text-xs text-slate-800">2. File DMS (.xlsx)</p>
-          <p class="text-[11px] text-slate-400 mb-2">Sheet Detail (lọc NPP Viet Bill)</p>
-          <input type="file" id="fileInputDms" accept=".xlsx,.xls" class="text-xs w-full file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-amber-50 file:text-amber-800" />
-        </div>
-      </div>
+function findSalesRepIdByKvName(rawSeller) {
+  if (!rawSeller) return null;
+  const norm = rawSeller.trim().toLowerCase();
+  for (const rep of state.salesReps) {
+    if ((rep.kv_seller_names || []).some(n => n.trim().toLowerCase() === norm)) return rep.id;
+    if (rep.phone && norm.includes(rep.phone)) return rep.id;
+  }
+  return null;
+}
 
-      <div id="uploadLogBox" class="hidden bg-slate-900 text-emerald-300 font-mono text-[11px] p-3 rounded-xl max-h-36 overflow-y-auto space-y-1"></div>
+function findSalesRepIdByDmsName(rawCvtcsr) {
+  if (!rawCvtcsr) return null;
+  const norm = rawCvtcsr.trim().toLowerCase();
+  const found = state.salesReps.find(r => r.dms_cvtcsr_name.trim().toLowerCase() === norm);
+  return found ? found.id : null;
+}
 
-      <div class="flex justify-end gap-2 pt-1">
-        <button onclick="closeModal('uploadModal')" class="px-4 py-2.5 text-sm text-slate-600 rounded-xl">Đóng</button>
-        <button id="btnProcessUpload" onclick="processExcelUploads()" class="px-5 py-2.5 text-sm font-bold bg-emerald-700 text-white rounded-xl flex items-center gap-1.5">
-          <i data-lucide="play" class="w-4 h-4"></i> Xử Lý & Lưu
-        </button>
-      </div>
-    </div>
-  </div>
+async function importKiotVietExcel(file) {
+  logUpload(`Đọc Kiot: ${file.name}...`);
+  await tick();
+  const buf = await file.arrayBuffer();
+  const wb = XLSX.read(buf, { type: 'array', cellDates: false });
+  const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: null });
+  if (rows.length && !('Mã hàng' in rows[0])) throw new Error('File Kiot sai định dạng (không có cột "Mã hàng").');
+  logUpload(`Đang xử lý ${rows.length} dòng Kiot...`);
+  await tick();
 
-  <!-- ==================== MODAL QUẢN LÝ MÃ SKU ==================== -->
-  <div id="skuModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
-    <div class="bg-white rounded-t-3xl sm:rounded-2xl max-w-3xl w-full p-5 shadow-xl space-y-3 max-h-[85dvh] flex flex-col">
-      <div class="flex items-center justify-between border-b pb-3">
-        <h3 class="font-bold text-slate-800 text-base">Bảng Quy Đổi Mã SKU Về Nhóm Chuẩn</h3>
-        <button onclick="closeModal('skuModal')" class="text-slate-400 p-1"><i data-lucide="x" class="w-5 h-5"></i></button>
-      </div>
-      <div class="overflow-y-auto flex-1 space-y-2" id="skuMappingList"></div>
-    </div>
-  </div>
+  const customersMap = new Map();
+  const kvExistRep = new Map(state.kvCustomers.map(c => [c.kv_customer_code, c.sales_rep_id]));
+  const noRepKv = new Map();
+  let skippedKw = 0, skippedCancel = 0;
+  const skippedNames = new Set();
+  const newSkusMap = new Map();
+  const lineCounter = new Map();
+  const salesLines = [];
+  const kvInvoiceCodes = new Set(); // mọi hóa đơn Carlsberg có trong file (kể cả đã hủy)
 
-  <!-- ==================== MODAL GHÉP TAY / ĐỔI QUÁN GHÉP ==================== -->
-  <div id="manualLinkModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
-    <div class="bg-white rounded-t-3xl sm:rounded-2xl max-w-lg w-full p-5 shadow-xl space-y-4">
-      <div class="flex items-center justify-between border-b pb-3">
-        <h3 id="manualLinkModalTitle" class="font-bold text-slate-800 text-base">Ghép Quán Kiot &harr; DMS</h3>
-        <button onclick="closeModal('manualLinkModal')" class="text-slate-400 p-1"><i data-lucide="x" class="w-5 h-5"></i></button>
-      </div>
-      <input type="hidden" id="editingLinkId" value="" />
-      <div class="space-y-3">
-        <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1">1. Điểm bán Kiot</label>
-          <select id="manualKvSelect" class="w-full px-3 py-2.5 text-xs border border-slate-300 rounded-xl disabled:bg-slate-100"></select>
-        </div>
-        <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1">2. Chọn Outlet DMS tương ứng</label>
-          <select id="manualDmsSelect" class="w-full px-3 py-2.5 text-xs border border-slate-300 rounded-xl"></select>
-        </div>
-      </div>
-      <div class="flex justify-end gap-2 pt-2">
-        <button onclick="closeModal('manualLinkModal')" class="px-4 py-2 text-sm text-slate-600 rounded-xl">Hủy</button>
-        <button onclick="saveManualLink()" class="px-5 py-2 text-sm font-bold bg-emerald-700 text-white rounded-xl">Lưu Ghép Quán</button>
-      </div>
-    </div>
-  </div>
+  for (const r of rows) {
+    const nhomHang = String(r['Nhóm hàng'] || '').toLowerCase();
+    const tenHang = String(r['Tên hàng'] || '').toLowerCase();
+    const dvt = String(r['ĐVT'] || '').toLowerCase();
+    if (KV_SKIP_NAME_PARTS.some(k => nhomHang.includes(k) || tenHang.includes(k)) || KV_SKIP_UNITS.includes(dvt)) continue;
+    if (!CARLSBERG_KEYWORDS.some(k => nhomHang.includes(k) || tenHang.includes(k))) {
+      skippedKw++; if (skippedNames.size < 8) skippedNames.add(String(r['Tên hàng'] || ''));
+      continue;
+    }
+    const invCodeRaw = String(r['Mã hóa đơn'] || '').trim();
+    if (invCodeRaw) kvInvoiceCodes.add(invCodeRaw);
+    const stt = String(r['Trạng thái'] || '').toLowerCase();
+    if (stt.includes('hủy') || stt.includes('huỷ')) { skippedCancel++; continue; }
 
-  <!-- ==================== JAVASCRIPT LOGIC ==================== -->
-  <script defer src="config.js"></script>
-  <script defer src="app.js"></script>
-</body>
-</html>
+    const dt = parseExcelDate(r['Thời gian']);
+    if (!dt) continue;
+    const saleMonth = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-01`;
+
+    const repId = findSalesRepIdByKvName(r['Người bán']);
+    const custCode = String(r['Mã khách hàng'] || 'KH_LE').trim();
+    const custName = String(r['Tên khách hàng'] || 'Khách lẻ').trim();
+    const rawCode = String(r['Mã hàng'] || '').trim();
+    const rawProdName = String(r['Tên hàng'] || '').trim();
+    const invoiceCode = String(r['Mã hóa đơn'] || '').trim();
+    const sellingPrice = Number(r['Giá bán'] || 0);
+
+    const keepRepKv = repId || customersMap.get(custCode)?.sales_rep_id || kvExistRep.get(custCode) || null;
+    if (!repId) { const nm = String(r['Người bán'] || '(trống)'); noRepKv.set(nm, (noRepKv.get(nm) || 0) + 1); }
+    customersMap.set(custCode, {
+      kv_customer_code: custCode,
+      kv_customer_name: custName,
+      phone: r['Điện thoại'] ? String(r['Điện thoại']).replace(/\.0$/, '') : null,
+      address: r['Địa chỉ (Khách hàng)'] || null,
+      sales_rep_id: keepRepKv
+    });
+
+    if (!state.skuMappings.some(m => m.source_system === 'KIOTVIET' && m.raw_code === rawCode)) {
+      newSkusMap.set(rawCode, { source_system: 'KIOTVIET', raw_code: rawCode, raw_name: rawProdName, is_verified: false });
+    }
+
+    const dupKey = `${invoiceCode}_${rawCode}_${sellingPrice}`;
+    const idx = (lineCounter.get(dupKey) || 0) + 1;
+    lineCounter.set(dupKey, idx);
+
+    const noteParts = [r['Ghi chú hàng hóa'], r['Ghi chú']].filter(Boolean).map(s => String(s).trim());
+    salesLines.push({
+      invoice_code: invoiceCode,
+      line_index: idx,
+      sale_date: dt.toISOString(),
+      sale_month: saleMonth,
+      status: String(r['Trạng thái'] || 'Hoàn thành'),
+      sales_rep_id: keepRepKv,
+      raw_seller_name: r['Người bán'],
+      kv_customer_code: custCode,
+      raw_product_code: rawCode,
+      raw_product_name: rawProdName,
+      unit: r['ĐVT'] || null,
+      quantity: Number(r['Số lượng'] || 0),
+      unit_price: Number(r['Đơn giá'] || 0),
+      discount_amount: Number(r['Giảm giá'] || 0),
+      selling_price: sellingPrice,
+      total_amount: Number(r['Thành tiền'] || 0),
+      combined_note: [...new Set(noteParts)].join(' | ') || null
+    });
+  }
+
+  logUpload(`Tìm thấy ${salesLines.length} dòng Carlsberg.`);
+  if (skippedCancel) logUpload(`Bỏ ${skippedCancel} dòng hóa đơn đã hủy.`);
+  if (skippedKw) logUpload(`⚠ Bỏ ${skippedKw} dòng không thuộc nhãn Carlsberg, vd: ${[...skippedNames].join('; ')}`);
+  if (noRepKv.size) logUpload(`⚠ Chưa khớp sale với người bán: ${[...noRepKv].map(([n, c]) => `${n} (${c})`).join(', ')}`);
+  if (customersMap.size > 0) {
+    const { error } = await supabaseClient.from('kv_customers').upsert(Array.from(customersMap.values()), { onConflict: 'kv_customer_code' });
+    if (error) throw error;
+  }
+  if (newSkusMap.size > 0) {
+    await supabaseClient.from('sku_mappings').upsert(Array.from(newSkusMap.values()), { onConflict: 'source_system,raw_code' });
+  }
+  // Xóa dòng cũ của các hóa đơn có trong file: hóa đơn đã hủy/sửa sẽ không còn sót số cũ
+  const invList = [...kvInvoiceCodes];
+  if (invList.length) {
+    logUpload(`Dọn dòng cũ của ${invList.length} hóa đơn có trong file...`);
+    for (let i = 0; i < invList.length; i += 100) {
+      const { error } = await supabaseClient.from('kv_sales_lines').delete().in('invoice_code', invList.slice(i, i + 100));
+      if (error) throw error;
+      await tick();
+    }
+  }
+  for (let i = 0; i < salesLines.length; i += 500) {
+    const { error } = await supabaseClient.from('kv_sales_lines').upsert(salesLines.slice(i, i + 500), {
+      onConflict: 'invoice_code,raw_product_code,selling_price,line_index'
+    });
+    if (error) throw error;
+    logUpload(`Kiot: đã lưu ${Math.min(i + 500, salesLines.length)}/${salesLines.length} dòng`);
+    await tick();
+  }
+  logUpload(`Đã lưu xong Kiot!`);
+}
+
+async function importDmsExcel(file) {
+  logUpload(`Đọc DMS: ${file.name}...`);
+  await tick();
+  const buf = await file.arrayBuffer();
+  const wb = XLSX.read(buf, { type: 'array', cellDates: false });
+  const sheetName = wb.SheetNames.includes('Detail') ? 'Detail' : wb.SheetNames[0];
+  const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { defval: null });
+  if (rows.length && !('OutletCode' in rows[0])) throw new Error('File DMS sai định dạng (không có cột "OutletCode").');
+  logUpload(`Đang xử lý ${rows.length} dòng DMS...`);
+  await tick();
+
+  const outletsMap = new Map();
+  const dmsExistRep = new Map(state.dmsOutlets.map(o => [o.dms_outlet_code, o.sales_rep_id]));
+  const noRepDms = new Map();
+  let skippedCancel = 0;
+  const statusSeen = new Set();
+  const newSkusMap = new Map();
+  const lineCounter = new Map();
+  const dmsLines = [];
+  const dmsOrderCodes = new Set(); // mọi đơn của NPP có trong file (kể cả đơn hủy)
+
+  for (const r of rows) {
+    if (String(r['DisCode'] || '').trim() !== DIS_CODE) continue;
+    const ordCodeRaw = String(r['OrderCode'] || '').trim();
+    if (ordCodeRaw) dmsOrderCodes.add(ordCodeRaw);
+    const st = String(r['OrderStatus'] || '').toLowerCase();
+    statusSeen.add(String(r['OrderStatus'] || ''));
+    if (/cancel|reject|hủy|huỷ|từ chối/.test(st)) { skippedCancel++; continue; }
+    const ordDt = parseExcelDate(r['OrderedDate']);
+    if (!ordDt) continue;
+    const delDt = parseExcelDate(r['DeliveriedDate']);
+    const orderMonth = `${ordDt.getFullYear()}-${String(ordDt.getMonth() + 1).padStart(2, '0')}-01`;
+
+    const repId = findSalesRepIdByDmsName(r['CVTCSR']);
+    const outletCode = String(r['OutletCode'] || '').trim();
+    const outletName = String(r['OutletName'] || '').trim();
+    const rawBrand = String(r['Brand'] || '').trim();
+    const rawCode = String(r['ProductCode'] || '').trim();
+    const rawProdName = String(r['Product'] || '').trim();
+    const orderCode = String(r['OrderCode'] || '').trim();
+    const orderType = String(r['OrderType'] || 'Order').trim();
+
+    const keepRepDms = repId || outletsMap.get(outletCode)?.sales_rep_id || dmsExistRep.get(outletCode) || null;
+    if (!repId) { const nm = String(r['CVTCSR'] || '(trống)'); noRepDms.set(nm, (noRepDms.get(nm) || 0) + 1); }
+    outletsMap.set(outletCode, {
+      dms_outlet_code: outletCode,
+      dms_outlet_name: outletName,
+      channel: r['Channel'] || null,
+      sub_channel: r['SubChannel'] || null,
+      sales_rep_id: keepRepDms
+    });
+
+    if (rawBrand !== 'POSM' && !state.skuMappings.some(m => m.source_system === 'DMS' && m.raw_code === rawCode)) {
+      newSkusMap.set(rawCode, {
+        source_system: 'DMS', raw_code: rawCode, raw_group_code: r['GroupCode'] || null, raw_name: rawProdName, is_verified: false
+      });
+    }
+
+    const dupKey = `${orderCode}_${rawCode}_${orderType}`;
+    const idx = (lineCounter.get(dupKey) || 0) + 1;
+    lineCounter.set(dupKey, idx);
+
+    dmsLines.push({
+      order_code: orderCode,
+      line_index: idx,
+      ordered_date: ordDt.toISOString(),
+      delivered_date: delDt ? delDt.toISOString() : null,
+      order_month: orderMonth,
+      order_status: String(r['OrderStatus'] || ''),
+      order_type: orderType,
+      dis_code: DIS_CODE,
+      sales_rep_id: keepRepDms,
+      raw_cvtcsr: r['CVTCSR'],
+      dms_outlet_code: outletCode,
+      raw_brand: rawBrand,
+      raw_product_code: rawCode,
+      raw_group_code: r['GroupCode'] ? String(r['GroupCode']) : null,
+      raw_product_name: rawProdName,
+      quantity: Number(r['Quantity'] || 0),
+      price: Number(r['Price'] || 0),
+      revenue: Number(r['Revenue'] || 0),
+      promotion_name: r['Promotion Name'] || null
+    });
+  }
+
+  logUpload(`Tìm thấy ${dmsLines.length} dòng NPP Viet Bill.`);
+  logUpload(`Trạng thái đơn trong file: ${[...statusSeen].join(', ') || '(trống)'}`);
+  if (skippedCancel) logUpload(`Bỏ ${skippedCancel} dòng đơn hủy/từ chối.`);
+  if (noRepDms.size) logUpload(`⚠ Chưa khớp sale với CVTCSR: ${[...noRepDms].map(([n, c]) => `${n} (${c})`).join(', ')}`);
+  if (outletsMap.size > 0) {
+    const { error } = await supabaseClient.from('dms_outlets').upsert(Array.from(outletsMap.values()), { onConflict: 'dms_outlet_code' });
+    if (error) throw error;
+  }
+  if (newSkusMap.size > 0) {
+    await supabaseClient.from('sku_mappings').upsert(Array.from(newSkusMap.values()), { onConflict: 'source_system,raw_code' });
+  }
+  const ordList = [...dmsOrderCodes];
+  if (ordList.length) {
+    logUpload(`Dọn dòng cũ của ${ordList.length} đơn DMS có trong file...`);
+    for (let i = 0; i < ordList.length; i += 100) {
+      const { error } = await supabaseClient.from('dms_order_lines').delete().in('order_code', ordList.slice(i, i + 100)).eq('dis_code', DIS_CODE);
+      if (error) throw error;
+      await tick();
+    }
+  }
+  for (let i = 0; i < dmsLines.length; i += 500) {
+    const { error } = await supabaseClient.from('dms_order_lines').upsert(dmsLines.slice(i, i + 500), {
+      onConflict: 'order_code,raw_product_code,order_type,line_index'
+    });
+    if (error) throw error;
+    logUpload(`DMS: đã lưu ${Math.min(i + 500, dmsLines.length)}/${dmsLines.length} dòng`);
+    await tick();
+  }
+  logUpload(`Đã lưu xong DMS!`);
+}
+
+let listTier = 'ALL';
+function getLineTier(src, line) {
+  if (!state._tierMap) {
+    state._tierMap = new Map();
+    state.skuMappings.forEach(m => {
+      const g = state.productGroups.find(x => x.id === m.product_group_id);
+      if (g) state._tierMap.set(`${m.source_system}_${m.raw_code}`, g.tier || (g.brand.toLowerCase().includes('huda') ? 'Mainstream' : 'Premium'));
+    });
+  }
+  return state._tierMap.get(`${src}_${line.raw_product_code}`) || (String(line.raw_product_name || '').toLowerCase().includes('huda') ? 'Mainstream' : 'Premium');
+}
+function renderTierBars() {
+  const opts = [['ALL', 'Tổng', 'bg-slate-900 text-white', 'text-slate-700'], ['Premium', '★ Premium', 'bg-indigo-700 text-white', 'text-indigo-800'], ['Mainstream', '● Mainstream', 'bg-amber-600 text-white', 'text-amber-800']];
+  const html = `<div class="grid grid-cols-3 bg-slate-200/80 p-1 rounded-xl text-[11px] sm:text-xs gap-1">${opts.map(([v, l, on, off]) => `<button onclick="setListTier('${v}')" class="py-1.5 rounded-lg ${listTier === v ? 'font-bold shadow-xs ' + on : 'font-semibold ' + off}">${l}</button>`).join('')}</div>`;
+  ['kv', 'dms'].forEach(t => { const el = document.getElementById('tierBar-' + t); if (el) el.innerHTML = html; });
+}
+function setListTier(t) { listTier = t; renderTierBars(); renderActiveTab(); }
+function fmtDate(iso) { if (!iso) return ''; const d = new Date(iso); return isNaN(d) ? String(iso).slice(0, 10) : d.toLocaleDateString('vi-VN'); }
+// ===== DUNG LƯỢNG (ADMIN) =====
+async function loadStorageUsage() {
+  if (currentUser?.role !== 'ADMIN') return;
+  let usedMB, est = false;
+  const { data, error } = await supabaseClient.rpc('get_db_size');
+  if (!error && data != null) usedMB = Number(data) / 1048576;
+  else {
+    const rs = await Promise.all(['kv_sales_lines', 'dms_order_lines'].map(t => supabaseClient.from(t).select('*', { count: 'exact', head: true })));
+    usedMB = rs.reduce((a, r) => a + (r.count || 0), 0) * EST_BYTES_PER_ROW / 1048576; est = true;
+  }
+  state.storage = { usedMB, est };
+  const pct = Math.min(100, Math.round(usedMB / DB_LIMIT_MB * 100)), c = 2 * Math.PI * 6;
+  const color = pct >= 85 ? '#fb7185' : pct >= 60 ? '#fbbf24' : '#34d399';
+  const btn = document.getElementById('btnStorageRing');
+  btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6" fill="none" stroke="rgba(255,255,255,.25)" stroke-width="2.5"/><circle cx="8" cy="8" r="6" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="${(c * pct / 100).toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 8 8)"/></svg>`;
+  btn.title = `Dữ liệu: ${usedMB.toFixed(1)}/${DB_LIMIT_MB} MB`;
+}
+async function openStorageModal() {
+  if (currentUser?.role !== 'ADMIN') return;
+  document.getElementById('storageModal').classList.remove('hidden');
+  await renderStorageModal();
+}
+async function renderStorageModal() {
+  const sum = document.getElementById('storageSummary'), box = document.getElementById('storageMonths');
+  sum.innerHTML = 'Đang tải...'; box.innerHTML = '';
+  await loadStorageUsage();
+  const u = state.storage.usedMB, pct = Math.min(100, u / DB_LIMIT_MB * 100);
+  sum.innerHTML = `<div class="flex justify-between font-bold text-slate-700"><span>${u.toFixed(1)} / ${DB_LIMIT_MB} MB ${state.storage.est ? '(ước tính theo số dòng)' : ''}</span><span>${pct.toFixed(0)}%</span></div>
+    <div class="h-2 bg-slate-200 rounded-full mt-1 overflow-hidden"><div class="h-2 ${pct >= 85 ? 'bg-rose-500' : pct >= 60 ? 'bg-amber-400' : 'bg-emerald-500'}" style="width:${pct}%"></div></div>
+    `;
+  const rows = await Promise.all(state.availableMonths.map(async m => {
+    const [a, b] = await Promise.all([
+      supabaseClient.from('kv_sales_lines').select('*', { count: 'exact', head: true }).eq('sale_month', m),
+      supabaseClient.from('dms_order_lines').select('*', { count: 'exact', head: true }).eq('order_month', m)]);
+    return { m, kv: a.count || 0, dms: b.count || 0 };
+  }));
+  box.innerHTML = rows.map(r => `<div class="p-3 rounded-xl border border-slate-200 flex items-center justify-between gap-2 text-xs">
+    <div><div class="font-bold text-slate-900">Tháng ${r.m.slice(5, 7)}/${r.m.slice(0, 4)}</div><div class="text-slate-500">Kiot ${fmtNum(r.kv)} dòng • DMS ${fmtNum(r.dms)} dòng</div></div>
+    <button onclick="deleteMonthData('${r.m}')" class="text-rose-600 border border-rose-200 hover:bg-rose-50 px-3 py-1.5 rounded-lg font-bold">Xóa tháng</button></div>`).join('');
+}
+async function deleteMonthData(m) {
+  if (currentUser?.role !== 'ADMIN') return;
+  const lbl = `${m.slice(5, 7)}/${m.slice(0, 4)}`;
+  if (!confirm(`XÓA toàn bộ dữ liệu Kiot + DMS tháng ${lbl}?\nKhông thể khôi phục.`)) return;
+  if ((prompt(`Gõ XOA để xác nhận xóa tháng ${lbl}`) || '').trim().toUpperCase() !== 'XOA') return alert('Đã hủy, chưa xóa gì.');
+  // Ưu tiên RPC (một transaction: xóa Kiot + DMS + luân chuyển của tháng đó)
+  const rpc = await supabaseClient.rpc('delete_month_data', { p_month: m });
+  if (rpc.error) {
+    const missing = rpc.error.code === 'PGRST202' || /could not find|schema cache/i.test(rpc.error.message || '');
+    if (!missing) return alert('Lỗi xóa: ' + rpc.error.message);
+    // Chưa chạy file SQL -> xóa tuần tự (không atomic)
+    const r1 = await supabaseClient.from('kv_sales_lines').delete().eq('sale_month', m);
+    const r2 = await supabaseClient.from('dms_order_lines').delete().eq('order_month', m);
+    if (r1.error || r2.error) return alert('Lỗi xóa: ' + (r1.error || r2.error).message);
+    await supabaseClient.from('sale_transfers').delete().eq('month_date', m);
+  }
+  selectedMonths = selectedMonths.filter(x => x !== m);
+  await refreshAllData();
+  await renderStorageModal();
+}
+
+// ===== LUÂN CHUYỂN SỐ GIỮA SALE (CẦN SS/ADMIN DUYỆT) =====
+function openSettings() { document.getElementById('settingsModal').classList.remove('hidden'); }
+function menuGo(fn) { closeModal('settingsModal'); window[fn](); }
+function refreshTrKv() {
+  const from = document.getElementById('trFrom').value;
+  const wrap = document.getElementById('trKvWrap');
+  if (wrap) wrap.classList.toggle('hidden', from === 'SS');
+  const norm = s => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd');
+  const kw = norm(document.getElementById('trKvSearch').value.trim());
+  const list = state.kvCustomers.filter(c => c.sales_rep_id === from && (!kw || norm(c.kv_customer_name).includes(kw) || norm(c.kv_customer_code).includes(kw)));
+  const sel = document.getElementById('trKv');
+  sel.innerHTML = '<option value="">Không chọn (trừ trên tổng sale)</option>' + list.map(c => `<option value="${esc(c.kv_customer_code)}">${esc(c.kv_customer_name)}</option>`).join('');
+  if (kw && list.length === 1) sel.selectedIndex = 1;
+}
+function refreshTrTo() {
+  refreshTrKv();
+  const from = document.getElementById('trFrom').value;
+  document.getElementById('trTo').innerHTML = state.salesReps.filter(r => r.id !== from).map(r => `<option value="${r.id}">${r.full_name}</option>`).join('');
+}
+async function logTransfer(action, t, note) {
+  const rep = id => id ? (state.salesReps.find(r => r.id === id)?.full_name || '?') : 'SS cấp số';
+  const grp = state.productGroups.find(g => g.id === t.product_group_id)?.group_name || '';
+  const m = String(t.month_date);
+  await supabaseClient.from('sale_transfer_logs').insert({
+    transfer_id: t.id ? String(t.id) : null, action, actor_id: String(currentUser.id), actor_name: currentUser.display_name, actor_role: currentUser.role,
+    detail: `${rep(t.from_rep_id)} → ${rep(t.to_rep_id)} • ${grp} • ${t.quantity} • T${m.slice(5, 7)}/${m.slice(0, 4)}${t.reason ? ' • Lý do: ' + t.reason : ''}${note ? ' • ' + note : ''}`
+  });
+}
+async function deleteTransfer(id) {
+  if (!isManagerRole()) return;
+  const t = state.transfers.find(x => x.id === id);
+  if (!t) return;
+  if (!confirm(t.status === 'APPROVED' ? 'Xóa luân chuyển ĐÃ DUYỆT?\nSố liệu của 2 sale sẽ trở về như chưa chuyển.' : 'Xóa yêu cầu này?')) return;
+  const { error } = await supabaseClient.from('sale_transfers').delete().eq('id', id);
+  if (error) return alert('Lỗi xóa: ' + error.message);
+  await logTransfer('DELETE', t, 'Trạng thái lúc xóa: ' + t.status);
+  await loadTransfers(); renderTransferList(); renderActiveTab();
+}
+async function openTransferLog() {
+  if (!isManagerRole()) return;
+  const box = document.getElementById('transferLogList');
+  box.innerHTML = '<p class="text-xs text-slate-400 text-center py-3">Đang tải...</p>';
+  document.getElementById('transferLogModal').classList.remove('hidden');
+  const { data, error } = await supabaseClient.from('sale_transfer_logs').select('*').order('created_at', { ascending: false }).limit(300);
+  if (error) { box.innerHTML = '<p class="text-xs text-rose-600 text-center py-3">Không tải được nhật ký. Vui lòng liên hệ Admin.</p>'; return; }
+  const rows = currentUser.role === 'ADMIN' ? data : data.filter(l => l.actor_role !== 'ADMIN');
+  const ac = { CREATE: ['Tạo yêu cầu', 'bg-blue-100 text-blue-800'], APPROVE: ['Duyệt', 'bg-emerald-100 text-emerald-800'], REJECT: ['Từ chối', 'bg-amber-100 text-amber-800'], CANCEL: ['Hủy yêu cầu', 'bg-slate-200 text-slate-600'], DELETE: ['Xóa', 'bg-rose-100 text-rose-800'] };
+  const dt = iso => new Date(iso).toLocaleString('vi-VN', { hour12: false, day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  box.innerHTML = rows.length === 0 ? '<p class="text-xs text-slate-400 text-center py-3">Chưa có thao tác nào.</p>' : rows.map(l => {
+    const [lb, cl] = ac[l.action] || [l.action, 'bg-slate-100'];
+    return `<div class="p-3 rounded-xl border border-slate-200 text-xs space-y-1">
+      <div class="flex justify-between gap-2"><span class="px-2 py-0.5 rounded font-bold ${cl}">${lb}</span><span class="text-[10px] text-slate-400">${dt(l.created_at)}</span></div>
+      <div class="text-slate-800">${esc(l.detail || '')}</div>
+      <div class="text-[10px] text-slate-500">Bởi: <b>${esc(l.actor_name || '')}</b> (${l.actor_role || ''})</div></div>`;
+  }).join('');
+}
+state.transfers = [];
+async function loadTransfers() {
+  const { data, error } = await supabaseClient.from('sale_transfers').select('*').order('created_at', { ascending: false }).limit(500);
+  state.transfersOk = !error;
+  state.transfers = error ? [] : (data || []);
+  const n = myTransfers().filter(t => t.status === 'PENDING').length;
+  const el = document.getElementById('badge-transfer');
+  if (el) { el.innerText = n; el.classList.toggle('hidden', n === 0); }
+}
+function myTransfers() {
+  if (currentUser?.role !== 'SALE') return state.transfers;
+  return state.transfers.filter(t => t.from_rep_id === currentUser.sales_rep_id || t.to_rep_id === currentUser.sales_rep_id);
+}
+function openTransferModal() {
+  const isSale = currentUser.role === 'SALE';
+  const opt = r => `<option value="${r.id}">${r.full_name}</option>`;
+  const me = state.salesReps.find(r => r.id === currentUser.sales_rep_id) || { id: currentUser.sales_rep_id, full_name: currentUser.display_name };
+  const fromSel = document.getElementById('trFrom');
+  fromSel.innerHTML = isSale ? opt(me) : state.salesReps.map(opt).join('') + '<option value="SS">SS cấp số</option>';
+  fromSel.disabled = isSale;
+  document.getElementById('trKvSearch').value = '';
+  refreshTrTo();
+  document.getElementById('trGroup').innerHTML = state.productGroups.map(g => `<option value="${g.id}">[${g.tier || 'Premium'}] ${g.group_name}</option>`).join('');
+  document.getElementById('trMonth').innerHTML = state.availableMonths.map(m => `<option value="${m}">Tháng ${m.slice(5, 7)}/${m.slice(0, 4)}</option>`).join('');
+  document.getElementById('trQty').value = ''; document.getElementById('trReason').value = '';
+  const msg = document.getElementById('trMsg');
+  if (!state.transfersOk) { msg.innerText = 'Chức năng luân chuyển chưa sẵn sàng. Vui lòng liên hệ Admin.'; msg.classList.remove('hidden'); }
+  else msg.classList.add('hidden');
+  renderTransferList();
+  document.getElementById('transferModal').classList.remove('hidden');
+}
+async function submitTransfer(e) {
+  e.preventDefault();
+  const v = id => document.getElementById(id).value;
+  const msg = document.getElementById('trMsg');
+  const fail = t => { msg.innerText = t; msg.classList.remove('hidden'); };
+  msg.classList.add('hidden');
+  const q = Number(v('trQty')), reason = v('trReason').trim();
+  const isSS = v('trFrom') === 'SS';
+  const fromId = isSS ? null : v('trFrom');
+  if (isSS && !isManagerRole()) return fail('Chỉ SS/Admin được cấp số.');
+  if (!v('trFrom') || !v('trTo') || fromId === v('trTo')) return fail('Nguồn và nơi nhận phải khác nhau!');
+  if (!(q > 0)) return fail('Số lượng phải lớn hơn 0!');
+  if (!reason) return fail('Vui lòng nhập lý do!');
+  const { error } = await supabaseClient.from('sale_transfers').insert({
+    month_date: v('trMonth'), from_rep_id: fromId, to_rep_id: v('trTo'), product_group_id: v('trGroup'), kv_customer_code: isSS ? null : (v('trKv') || null),
+    quantity: q, reason, status: 'PENDING', requested_by: currentUser.id, requested_by_name: currentUser.display_name
+  });
+  if (error) return fail('Lỗi gửi yêu cầu: ' + error.message);
+  await logTransfer('CREATE', { from_rep_id: fromId, to_rep_id: v('trTo'), product_group_id: v('trGroup'), quantity: q, month_date: v('trMonth'), reason });
+  document.getElementById('trQty').value = ''; document.getElementById('trReason').value = '';
+  await loadTransfers(); renderTransferList();
+}
+async function updateTransfer(id, patch, extra) {
+  let q = supabaseClient.from('sale_transfers').update(patch).eq('id', id).eq('status', 'PENDING');
+  if (extra) q = q.eq('requested_by', currentUser.id);
+  const { error } = await q;
+  if (error) return alert('Lỗi: ' + error.message);
+  const t0 = state.transfers.find(x => x.id === id);
+  if (t0) await logTransfer({ APPROVED: 'APPROVE', REJECTED: 'REJECT', CANCELLED: 'CANCEL' }[patch.status], t0, patch.decision_note);
+  await loadTransfers(); renderTransferList(); renderActiveTab();
+}
+function decideTransfer(id, status) {
+  if (!isManagerRole()) return;
+  let note = null;
+  if (status === 'REJECTED') { note = prompt('Lý do từ chối:'); if (note === null) return; }
+  else if (!confirm('Duyệt luân chuyển này? Số liệu đối chiếu của 2 sale sẽ thay đổi.')) return;
+  updateTransfer(id, { status, decided_by_name: currentUser.display_name, decided_at: new Date().toISOString(), decision_note: note || null });
+}
+function cancelTransfer(id) {
+  if (confirm('Hủy yêu cầu này?')) updateTransfer(id, { status: 'CANCELLED', decided_at: new Date().toISOString() }, true);
+}
+function renderTransferList() {
+  const rep = new Map(state.salesReps.map(r => [r.id, r.full_name])), grp = new Map(state.productGroups.map(g => [g.id, g.group_name]));
+  const st = { PENDING: ['Chờ duyệt', 'bg-amber-100 text-amber-800'], APPROVED: ['Đã duyệt', 'bg-emerald-100 text-emerald-800'], REJECTED: ['Từ chối', 'bg-rose-100 text-rose-800'], CANCELLED: ['Đã hủy', 'bg-slate-200 text-slate-600'] };
+  const dt = iso => iso ? new Date(iso).toLocaleString('vi-VN', { hour12: false, day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+  const list = myTransfers();
+  document.getElementById('transferList').innerHTML = list.length === 0 ? '<p class="text-xs text-slate-400 text-center py-3">Chưa có yêu cầu luân chuyển nào.</p>' : list.map(t => {
+    const [lb, cl] = st[t.status] || [t.status, 'bg-slate-100'];
+    return `<div class="p-3 rounded-xl border border-slate-200 text-xs space-y-1">
+      <div class="flex justify-between gap-2"><b class="text-slate-900">${t.from_rep_id ? esc(rep.get(t.from_rep_id) || '?') : 'SS cấp số'} &rarr; ${esc(rep.get(t.to_rep_id) || '?')}</b><span class="px-2 py-0.5 rounded font-bold ${cl}">${lb}</span></div>
+      <div class="text-slate-700">${grp.get(t.product_group_id) || ''} • <b>${fmtNum(t.quantity)}</b> • Tháng ${String(t.month_date).slice(5, 7)}/${String(t.month_date).slice(0, 4)}</div>
+      <div class="text-slate-500">${!t.from_rep_id ? '' : t.kv_customer_code ? 'Quán nguồn: <b>' + esc((state.kvCustomers.find(c => c.kv_customer_code === t.kv_customer_code) || {}).kv_customer_name || t.kv_customer_code) + '</b> • ' : 'Trừ trên tổng sale • '}Lý do: ${esc(t.reason || '')}</div>
+      <div class="text-[10px] text-slate-400">Gửi: ${esc(t.requested_by_name || '')} lúc ${dt(t.created_at)}${t.decided_at ? ` • ${lb}: ${esc(t.decided_by_name || '')} lúc ${dt(t.decided_at)}` : ''}${t.decision_note ? ` • ${esc(t.decision_note)}` : ''}</div>
+      ${isManagerRole() ? `<button onclick="deleteTransfer('${t.id}')" class="text-[11px] text-rose-600 font-bold hover:underline">Xóa yêu cầu</button>` : ''}
+      ${t.status === 'PENDING' ? `<div class="flex gap-2 pt-1">
+        ${isManagerRole() ? `<button onclick="decideTransfer('${t.id}','APPROVED')" class="flex-1 bg-emerald-700 text-white font-bold py-1.5 rounded-lg">Duyệt</button><button onclick="decideTransfer('${t.id}','REJECTED')" class="flex-1 bg-white border border-rose-200 text-rose-600 font-bold py-1.5 rounded-lg">Từ chối</button>` : ''}
+        ${t.requested_by === currentUser.id ? `<button onclick="cancelTransfer('${t.id}')" class="flex-1 bg-white border border-slate-300 text-slate-600 font-bold py-1.5 rounded-lg">Hủy yêu cầu</button>` : ''}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+// Tổng luân chuyển đã duyệt của sale đang chọn trong các tháng đã chọn (theo hạng SP nếu có lọc)
+function getTransferNet(tierFilter, skipLinkedFrom) {
+  const rep = getActiveSalesRepId();
+  const isAll = !rep || rep === 'ALL';
+  const linked = skipLinkedFrom ? new Set(state.customerLinks.map(l => l.kv_customer_code)) : null;
+  const sel = new Set(selectedMonths);
+  let net = 0;
+  state.transfers.filter(t => t.status === 'APPROVED' && sel.has(String(t.month_date).slice(0, 10))).forEach(t => {
+    const g = state.productGroups.find(x => x.id === t.product_group_id);
+    if (!g) return;
+    const tier = g.tier || (g.brand.toLowerCase().includes('huda') ? 'Mainstream' : 'Premium');
+    if (tierFilter && tierFilter !== 'ALL' && tier !== tierFilter) return;
+    const q = Number(t.quantity);
+    // Bên chuyển đi đã trừ trực tiếp ở dòng quán (nếu quán đã ghép) thì không trừ lại ở dòng tổng
+    const skip = linked && t.kv_customer_code && linked.has(t.kv_customer_code);
+    if (t.from_rep_id && (isAll || t.from_rep_id === rep) && !skip) net -= q;
+    if (isAll || t.to_rep_id === rep) net += q;
+  });
+  return net;
+}
+// Thông báo cho sale biết số luân chuyển đã duyệt liên quan tới mình
+function renderTransferNotice() {
+  const el = document.getElementById('transferNotice');
+  if (!el) return;
+  const rep = getActiveSalesRepId();
+  const sel = new Set(selectedMonths);
+  const list = (!rep || rep === 'ALL') ? [] : state.transfers.filter(t => t.status === 'APPROVED' && sel.has(String(t.month_date).slice(0, 10)) && (t.from_rep_id === rep || t.to_rep_id === rep));
+  if (!list.length) { el.classList.add('hidden'); return; }
+  const rn = new Map(state.salesReps.map(r => [r.id, r.full_name])), gn = new Map(state.productGroups.map(g => [g.id, g.group_name]));
+  el.innerHTML = '<div class="font-bold">Luân chuyển số đã duyệt trong kỳ</div>' + list.map(t => {
+    const out = t.from_rep_id === rep;
+    const q = t.kv_customer_code ? ((state.kvCustomers.find(c => c.kv_customer_code === t.kv_customer_code) || {}).kv_customer_name || t.kv_customer_code) : null;
+    return `<div>${out ? '−' : '+'}${fmtNum(t.quantity)} ${esc(gn.get(t.product_group_id) || '')} • ${out ? 'chuyển sang ' + esc(rn.get(t.to_rep_id) || '?') : 'nhận từ ' + (t.from_rep_id ? esc(rn.get(t.from_rep_id) || '?') : 'SS (cấp số)')}${q ? ' • quán ' + esc(q) : ''} <span class="text-purple-600">(${esc(t.reason || '')})</span></div>`;
+  }).join('');
+  el.classList.remove('hidden');
+}
+function fmtNum(n) { return Number(n || 0).toLocaleString('vi-VN'); }
+function toggleAccordion(id) { document.getElementById(id).classList.toggle('hidden'); }
