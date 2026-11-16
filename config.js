@@ -14,7 +14,7 @@ const KV_SKIP_UNITS = ['cái'];
 
 // Mã SKU không cần phân nhóm (POSM, quà tặng...)
 const IGNORED_SKU_PREFIX = 'DMS_POSM';
-const IGNORED_SKU_CODES = ['8001555'];
+const IGNORED_SKU_CODES = ['8001555', '10379'];
 
 // Giới hạn dung lượng Supabase (gói free) để hiện vòng tròn dung lượng
 const DB_LIMIT_MB = 500;
